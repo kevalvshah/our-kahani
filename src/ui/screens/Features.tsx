@@ -1,9 +1,12 @@
 import { FIND_A_HELPLINE, safetyFooter } from '../../features/safetyFooter';
 import { OFFICIAL_PACKS } from '../../packs/official';
+import { controller } from '../../state/controller';
 import { daysLeft, ROOM_DAYS } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
+import { useState } from 'preact/hooks';
 import { Em, Note, Row, ScreenTitle, Soon } from '../components';
 import { navigate, PATHS } from '../router';
+import { problemText } from './Today';
 
 // Screens whose features need the encrypted room records. They show the final design and real
 // copy, with no sample people or content; actions that are not built yet say "Soon".
@@ -143,12 +146,23 @@ export function Saved() {
 
 export function RoomData() {
   const { room, setRoom } = useRoom();
+  const [problem, setProblem] = useState<string | null>(null);
+  const [erasing, setErasing] = useState(false);
 
-  function erase() {
-    if (!room) return;
-    if (!confirm('Erase this room? The key is discarded and nobody can bring it back.')) return;
-    setRoom(null);
-    navigate(PATHS.today);
+  async function erase() {
+    if (!room || erasing) return;
+    if (!confirm('Erase this room for both of you? The ciphertext is deleted and the key discarded. Nobody can bring it back.')) return;
+    setErasing(true);
+    setProblem(null);
+    try {
+      await controller().erase(room);
+      setRoom(null);
+      navigate(PATHS.today);
+    } catch (e) {
+      setProblem(problemText(e));
+    } finally {
+      setErasing(false);
+    }
   }
 
   return (
@@ -163,6 +177,10 @@ export function RoomData() {
         <div>
           <dt>Room</dt>
           <dd>{room ? 'Hashtag not chosen yet' : 'No room yet'}</dd>
+        </div>
+        <div>
+          <dt>Your person</dt>
+          <dd>{room ? (room.partnerJoined ? 'Joined' : 'Not joined yet') : '—'}</dd>
         </div>
         <div>
           <dt>Ends</dt>
@@ -180,10 +198,15 @@ export function RoomData() {
         <button type="button" class="btn btn-secondary" disabled>
           <Em>🗓️</Em> Keep it four more weeks <Soon />
         </button>
-        <button type="button" class="btn btn-secondary btn-quiet" disabled={!room} onClick={erase}>
-          <Em>🧹</Em> Erase the room
+        <button type="button" class="btn btn-secondary btn-quiet" disabled={!room || erasing} onClick={erase}>
+          <Em>🧹</Em> {erasing ? 'Erasing…' : 'Erase the room'}
         </button>
       </div>
+      {problem && (
+        <p class="caption error" role="alert">
+          {problem}
+        </p>
+      )}
       <Note>Erasing deletes the ciphertext and discards the keys. Nobody can bring the room back, including us.</Note>
     </section>
   );

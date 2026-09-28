@@ -23,7 +23,13 @@ function walk(dir) {
   });
 }
 
+// The backend origin the CSP lets the app connect to is first-party, not third-party.
+const headersText = readFileSync(join(DIST, '_headers'), 'utf8');
+const connectSrc = (/Content-Security-Policy:.*?connect-src ([^;]+);/.exec(headersText)?.[1] ?? '').split(' ').filter((s) => s.startsWith('https://'));
+
 const problems = [];
+if (headersText.includes('%SUPABASE_ORIGIN%')) problems.push('dist/_headers: Supabase origin was not filled in');
+if (connectSrc.length !== 1) problems.push(`dist/_headers: expected exactly one backend origin in connect-src, found ${connectSrc.length}`);
 for (const file of walk(DIST)) {
   if (!/\.(html|js|css|mjs|json|webmanifest)$/.test(file)) continue;
   const text = readFileSync(file, 'utf8');
@@ -35,7 +41,8 @@ for (const file of walk(DIST)) {
     if (/<link[^>]+href=["']?https?:/i.test(text)) problems.push(`${file}: external stylesheet or link`);
   }
   for (const url of text.match(/https?:\/\/[A-Za-z0-9.-]+[^\s"'`)]*/g) ?? []) {
-    if (!ALLOWED_URLS.has(url)) problems.push(`${file}: third-party URL ${url}`);
+    const firstParty = connectSrc.some((origin) => url === origin || url.startsWith(`${origin}/`));
+    if (!ALLOWED_URLS.has(url) && !firstParty) problems.push(`${file}: third-party URL ${url}`);
   }
 }
 

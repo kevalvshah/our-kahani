@@ -217,6 +217,19 @@ h1:focus { outline: none; }
 .option-emoji { font-size: 2.625rem; line-height: 1.1; }
 .option.is-picked .option-emoji { animation: k-pop 0.4s ease; }
 .option-label { font-weight: 600; font-size: 1.0625rem; line-height: 1.15; }
+.seal { margin-top: 14px; }
+.error { color: var(--k-pink); font-weight: 600; }
+.reveal { margin-top: 20px; max-width: 35rem; animation: k-rise 0.45s ease both; }
+.reveal-banner { font-family: var(--k-serif); font-size: 1.5625rem; line-height: 1.15; margin: 0 0 12px; }
+.reveal-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; animation: k-lift 0.8s ease both; }
+.reveal-row {
+  display: flex; gap: 12px; padding: 13px 14px; border-radius: 16px;
+  background: var(--k-surface); border: 1.5px solid var(--k-line); border-left-width: 6px;
+}
+.reveal-mine { border-left-color: var(--k-accent); }
+.reveal-theirs { border-left-color: var(--k-pink); }
+.reveal-who { min-width: 5.5rem; font-size: 0.8125rem; font-weight: 600; color: var(--k-muted); }
+.reveal-answer { font-weight: 600; font-size: 0.90625rem; }
 .wait { margin-top: 14px; padding: 11px 14px; border-radius: 14px; background: var(--k-accent-soft); font-size: 0.875rem; line-height: 1.5; }
 
 /* ---------- Panels ---------- */

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { isInAppBrowser } from '../platform/inAppBrowser';
+import { controller } from '../state/controller';
 import { dayOfSeason, daysLeft, SEASON_DAYS, type Room } from '../state/room';
-import { RoomContext } from '../state/roomContext';
+import { RoomContext, type RoomStatus } from '../state/roomContext';
 import { Em, Link } from './components';
 import { PATHS, useRoute, type Route } from './router';
 import { Blocked } from './screens/Blocked';
@@ -42,7 +43,31 @@ export function App() {
 
 function Shell() {
   const [room, setRoom] = useState<Room | null>(null);
+  const [status, setStatus] = useState<RoomStatus>('loading');
+  const [offline, setOffline] = useState(false);
   const route = useRoute();
+
+  // Load this device's room (key from IndexedDB, details from the server).
+  useEffect(() => {
+    let live = true;
+    void controller()
+      .load()
+      .then((r) => {
+        if (!live) return;
+        setRoom(r.state === 'ready' ? r.room : null);
+        setOffline(r.state === 'ready' && !!r.offline);
+        setStatus(r.state === 'lost-access' ? 'lost-access' : 'ready');
+      })
+      .catch(() => live && setStatus('ready'));
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  function updateRoom(next: Room | null) {
+    setRoom(next);
+    setStatus('ready');
+  }
   const main = useRef<HTMLElement>(null);
   const first = useRef(true);
 
@@ -62,7 +87,7 @@ function Shell() {
     : 'Season 1 · Pehli Baat';
 
   return (
-    <RoomContext.Provider value={{ room, setRoom }}>
+    <RoomContext.Provider value={{ room, status, offline, setRoom: updateRoom }}>
       <a class="skip" href="#main">Skip to content</a>
       <div class="shell">
         <aside class="sidebar">

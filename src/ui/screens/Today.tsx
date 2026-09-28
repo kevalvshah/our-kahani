@@ -1,29 +1,42 @@
-import { newId } from '../../crypto/ids';
-import { buildInviteUrl } from '../../crypto/invite';
-import { generateRoomKeyBytes, importRoomKey } from '../../crypto/roomKey';
-import { safetyCode } from '../../crypto/safetyCode';
-import { dayOfSeason, SEASON_DAYS, type Room } from '../../state/room';
+import { useEffect, useState } from 'preact/hooks';
+import { ApiError } from '../../net/api';
+import { SessionError } from '../../net/session';
+import { controller } from '../../state/controller';
+import { dayOfSeason, SEASON_DAYS } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
 import { Em, Link, Note, Row, Soon } from '../components';
 import { navigate, PATHS } from '../router';
 
+/** Plain words for anything that can go wrong while making or joining a room. */
+export function problemText(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.code === 'offline') return 'You seem to be offline. Check your connection and try again.';
+    if (e.code === 'too-many-rooms') return 'You already have three open rooms on this device.';
+    if (e.code === 'invalid-invite') return 'This invite is not valid any more. Invites last 48 hours: ask for a new one.';
+    if (e.code === 'room-full') return 'This room already has two people.';
+  }
+  if (e instanceof SessionError) return 'We could not reach our server just now. Please try again in a moment.';
+  return 'Something went wrong. Please try again.';
+}
+
 export function useCreateRoom() {
   const { setRoom } = useRoom();
-  return async function create() {
-    const raw = generateRoomKeyBytes();
-    const key = await importRoomKey(raw);
-    const id = newId();
-    const room: Room = {
-      id,
-      role: 'creator',
-      key,
-      safetyCode: await safetyCode(raw),
-      invite: buildInviteUrl(location.origin, id, raw),
-      startedAt: Date.now(),
-    };
-    setRoom(room);
-    navigate(PATHS.invite);
-  };
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function create() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setRoom(await controller().create());
+      navigate(PATHS.invite);
+    } catch (e) {
+      setError(problemText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return { create, busy, error };
 }
 
 function isInstalled(): boolean {
@@ -34,9 +47,22 @@ function isInstalled(): boolean {
 }
 
 export function Today() {
-  const { room } = useRoom();
-  const create = useCreateRoom();
+  const { room, status } = useRoom();
+  const { create, busy, error } = useCreateRoom();
+  const [answered, setAnswered] = useState(0);
   const day = room ? dayOfSeason(room) : 1;
+
+  useEffect(() => {
+    if (!room) return;
+    let live = true;
+    void controller()
+      .cardStatus(room, 'warm.1')
+      .then((s) => live && setAnswered(s.mine ? 1 : 0))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [room?.id]);
 
   return (
     <section>
@@ -51,7 +77,19 @@ export function Today() {
         reply — no scores, no streaks, skipping is always fine.
       </p>
 
-      {room ? (
+      {status === 'loading' ? (
+        <p class="caption" role="status">
+          Opening your room…
+        </p>
+      ) : status === 'lost-access' ? (
+        <div class="panel panel-gold" role="status">
+          <div class="panel-title">This browser lost its sign-in for your room</div>
+          <p class="small">
+            Your room's key is still on this phone, but the browser cleared the rest. Your twelve recovery words will
+            bring it back; that arrives in the next update.
+          </p>
+        </div>
+      ) : room ? (
         <>
           <ol class="days" aria-label={`Day ${day} of ${SEASON_DAYS}`}>
             {Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).map((n) => (
@@ -64,7 +102,14 @@ export function Today() {
               </li>
             ))}
           </ol>
-          <p class="caption">0 of {SEASON_DAYS} answered</p>
+          <p class="caption">
+            {answered} of {SEASON_DAYS} answered
+          </p>
+          {!room.partnerJoined && room.role === 'creator' && (
+            <p class="caption">
+              Waiting for your person to join. <Link href={PATHS.invite}>Show the invite link</Link>
+            </p>
+          )}
           <Link class="btn btn-cta" href={PATHS.card}>
             <span>
               <Em>🎉</Em> Open today's card
@@ -77,13 +122,21 @@ export function Today() {
         </>
       ) : (
         <>
-          <button type="button" class="btn btn-cta" onClick={create}>
+          <button type="button" class="btn btn-cta" onClick={create} disabled={busy} aria-busy={busy}>
             <span>
-              <Em>🎉</Em> Create a room
+              <Em>🎉</Em> {busy ? 'Making your room…' : 'Create a room'}
             </span>
-            <span class="cta-meta" aria-hidden="true">Start →</span>
+            <span class="cta-meta" aria-hidden="true">
+              Start →
+            </span>
           </button>
-          <p class="caption">Your person joins with a link. No sign-up, no email, no phone number.</p>
+          {error ? (
+            <p class="caption error" role="alert">
+              {error}
+            </p>
+          ) : (
+            <p class="caption">Your person joins with a link. No sign-up, no email, no phone number.</p>
+          )}
         </>
       )}
 
@@ -103,7 +156,6 @@ export function Today() {
           ? 'Added to your Home Screen, so it opens like an app and your keys stay put. It is still just the website.'
           : 'Your room arrives as a link in your chat. One tap, no login, no account.'}
       </Note>
-      <Note>Preview: rooms are not saved yet, so reloading the page starts over.</Note>
     </section>
   );
 }
