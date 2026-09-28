@@ -1,8 +1,10 @@
-// Room keys on this device, in IndexedDB. The key used for encryption is stored as a
-// non-extractable CryptoKey: page scripts can use it but can never read its bytes.
+// Room keys on this device, in IndexedDB. Keys used for encryption are stored as
+// non-extractable CryptoKeys: page scripts can use them but can never read their bytes.
 //
-// The creator also keeps the raw key bytes, only so the invite link can be shown again, and
-// only until the partner has joined or the invite expires (then `forgetInvite` drops them).
+// Raw key bytes are kept only while needed:
+//   - `inviteKey`: the creator's copy for re-showing the invite link, dropped once the partner
+//     has joined;
+//   - `setupRaw`: the room and notes keys, until the recovery backup is saved, then dropped.
 //
 // Safari may delete this storage after 7 days without a visit (Home Screen apps are exempt);
 // the recovery phrase is the way back, and `requestPersistence` asks the browser to keep it.
@@ -13,15 +15,19 @@ export interface StoredRoom {
   id: string;
   role: 'creator' | 'invitee';
   key: CryptoKey;
-  /** Six emoji derived from the key, kept so they can be shown again without the raw key. */
+  /** This person's own key for private saved notes. The partner never has it. */
+  notesKey: CryptoKey;
+  /** Six emoji derived from the room key, kept so they can be shown again. */
   safetyCode: string[];
-  /** Raw key bytes for re-showing the invite; creator only, dropped once the partner joins. */
   inviteKey?: Bytes;
+  setupRaw?: { roomKey: Bytes; notesKey: Bytes };
+  /** True once the recovery backup is saved on the server. */
+  backedUp: boolean;
   savedAt: number;
 }
 
 const DB_NAME = 'our-kahani';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const ROOMS = 'rooms';
 const META = 'meta';
 const CURRENT = 'current-room';
@@ -31,8 +37,11 @@ function open(idb: IDBFactory): Promise<IDBDatabase> {
     const req = idb.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(ROOMS)) db.createObjectStore(ROOMS, { keyPath: 'id' });
-      if (!db.objectStoreNames.contains(META)) db.createObjectStore(META);
+      // Version 1 stored rooms without a notes key; they cannot be upgraded, so start clean.
+      if (db.objectStoreNames.contains(ROOMS)) db.deleteObjectStore(ROOMS);
+      if (db.objectStoreNames.contains(META)) db.deleteObjectStore(META);
+      db.createObjectStore(ROOMS, { keyPath: 'id' });
+      db.createObjectStore(META);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -53,6 +62,18 @@ export function createKeystore(idb: IDBFactory = indexedDB) {
   let dbPromise: Promise<IDBDatabase> | null = null;
   const db = () => (dbPromise ??= open(idb));
 
+  async function get(id: string): Promise<StoredRoom | null> {
+    const d = await db();
+    return (await run<StoredRoom>(d, [ROOMS], 'readonly', (tx) => tx.objectStore(ROOMS).get(id))) ?? null;
+  }
+
+  async function put(room: StoredRoom): Promise<void> {
+    const d = await db();
+    await run(d, [ROOMS], 'readwrite', (tx) => {
+      tx.objectStore(ROOMS).put(room);
+    });
+  }
+
   return {
     async save(room: StoredRoom): Promise<void> {
       const d = await db();
@@ -65,24 +86,22 @@ export function createKeystore(idb: IDBFactory = indexedDB) {
     async current(): Promise<StoredRoom | null> {
       const d = await db();
       const id = await run<string>(d, [META], 'readonly', (tx) => tx.objectStore(META).get(CURRENT));
-      if (!id) return null;
-      return (await run<StoredRoom>(d, [ROOMS], 'readonly', (tx) => tx.objectStore(ROOMS).get(id))) ?? null;
-    },
-
-    /** The id of the room this device was last in, even if its key is gone. */
-    async currentId(): Promise<string | null> {
-      const d = await db();
-      return (await run<string>(d, [META], 'readonly', (tx) => tx.objectStore(META).get(CURRENT))) ?? null;
+      return id ? get(id) : null;
     },
 
     async forgetInvite(id: string): Promise<void> {
-      const d = await db();
-      const room = await run<StoredRoom>(d, [ROOMS], 'readonly', (tx) => tx.objectStore(ROOMS).get(id));
+      const room = await get(id);
       if (!room?.inviteKey) return;
       const { inviteKey: _dropped, ...rest } = room;
-      await run(d, [ROOMS], 'readwrite', (tx) => {
-        tx.objectStore(ROOMS).put(rest);
-      });
+      await put(rest);
+    },
+
+    /** Called once the recovery backup is saved: the raw key bytes are no longer needed. */
+    async markBackedUp(id: string): Promise<void> {
+      const room = await get(id);
+      if (!room) return;
+      const { setupRaw: _dropped, ...rest } = room;
+      await put({ ...rest, backedUp: true });
     },
 
     async remove(id: string): Promise<void> {

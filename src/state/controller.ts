@@ -1,12 +1,13 @@
 import { newId } from '../crypto/ids';
 import { buildInviteUrl } from '../crypto/invite';
 import { joinToken, joinVerifier } from '../crypto/joinToken';
-import { createKeystore, requestPersistence, type Keystore } from '../crypto/keystore';
+import { createKeystore, requestPersistence, type Keystore, type StoredRoom } from '../crypto/keystore';
 import { generateRoomKeyBytes, importRoomKey } from '../crypto/roomKey';
 import { safetyCode } from '../crypto/safetyCode';
 import type { Bytes } from '../crypto/bytes';
-import { KIND_CHOICE, openChoice, sealChoice } from '../features/answers';
-import { createApi, type Api } from '../net/api';
+import { isPrivateKind } from '../data/kinds';
+import { openJson, sealJson } from '../data/payload';
+import { createApi, type AnswerStatus, type Api, type RoomRow } from '../net/api';
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../net/config';
 import { createSessionManager, type SessionManager } from '../net/session';
 import type { Room } from './room';
@@ -17,15 +18,17 @@ import type { Room } from './room';
 export type LoadResult =
   | { state: 'none' }
   | { state: 'ready'; room: Room; offline?: boolean }
-  /** The key is on this device but its sign-in was cleared: the recovery phrase brings it back. */
+  /** The key is on this device but its sign-in was cleared: the recovery words bring it back. */
   | { state: 'lost-access'; roomId: string };
 
-export interface CardStatus {
-  /** This person's sealed choice, if any. */
-  mine: string | null;
-  partnerAnswered: boolean;
-  /** Only available once both have answered (the server withholds it before). */
-  partner: string | null;
+/** A decrypted record, as the app uses it. */
+export interface DataRecord<T = unknown> {
+  id: string;
+  kind: number;
+  ref: string;
+  mine: boolean;
+  data: T;
+  createdAt: number;
 }
 
 interface Deps {
@@ -56,26 +59,50 @@ function defaultDeps(): Deps {
 export function createController(deps: Deps = defaultDeps()) {
   const { api, session, keystore } = deps;
 
-  async function toRoom(
-    stored: { id: string; role: Room['role']; key: CryptoKey; safetyCode: string[]; inviteKey?: Bytes },
-    server: { created_at: string; ends_at: string; members: { role: string }[] } | null,
-  ): Promise<Room> {
+  async function toRoom(stored: StoredRoom, server: RoomRow | null): Promise<Room> {
     const partnerJoined = (server?.members.length ?? 1) >= 2;
     if (partnerJoined && stored.inviteKey) await keystore.forgetInvite(stored.id);
     return {
       id: stored.id,
       role: stored.role,
       key: stored.key,
+      notesKey: stored.notesKey,
       safetyCode: stored.safetyCode,
-      invite:
-        stored.inviteKey && !partnerJoined ? buildInviteUrl(deps.origin, stored.id, stored.inviteKey) : undefined,
+      invite: stored.inviteKey && !partnerJoined ? buildInviteUrl(deps.origin, stored.id, stored.inviteKey) : undefined,
       partnerJoined,
-      startedAt: server ? Date.parse(server.created_at) : Date.now(),
-      endsAt: server ? Date.parse(server.ends_at) : Date.now() + 28 * 86_400_000,
+      backedUp: stored.backedUp,
+      startedAt: server ? Date.parse(server.created_at) : stored.savedAt,
+      endsAt: server ? Date.parse(server.ends_at) : stored.savedAt + 28 * 86_400_000,
     };
   }
 
+  async function store(opts: {
+    id: string;
+    role: Room['role'];
+    raw: Bytes;
+    notesRaw: Bytes;
+    inviteKey?: Bytes;
+    backedUp: boolean;
+  }): Promise<StoredRoom> {
+    const stored: StoredRoom = {
+      id: opts.id,
+      role: opts.role,
+      key: await importRoomKey(opts.raw),
+      notesKey: await importRoomKey(opts.notesRaw),
+      safetyCode: await safetyCode(opts.raw),
+      inviteKey: opts.inviteKey,
+      setupRaw: opts.backedUp ? undefined : { roomKey: opts.raw, notesKey: opts.notesRaw },
+      backedUp: opts.backedUp,
+      savedAt: Date.now(),
+    };
+    await keystore.save(stored);
+    void requestPersistence();
+    return stored;
+  }
+
   return {
+    userId: () => session.userId(),
+
     async load(): Promise<LoadResult> {
       const stored = await keystore.current().catch(() => null);
       if (!stored) return { state: 'none' };
@@ -84,7 +111,7 @@ export function createController(deps: Deps = defaultDeps()) {
       try {
         const server = await api.getRoom(stored.id);
         if (!server) {
-          // Erased by the partner, expired, or this browser lost its sign-in.
+          // Erased by the partner, or ended.
           await keystore.remove(stored.id);
           return { state: 'none' };
         }
@@ -96,22 +123,15 @@ export function createController(deps: Deps = defaultDeps()) {
 
     async create(): Promise<Room> {
       const raw = generateRoomKeyBytes();
-      const verifier = await joinVerifier(await joinToken(raw));
-      const id = await api.createRoom(verifier);
-      const key = await importRoomKey(raw);
-      const code = await safetyCode(raw);
-      await keystore.save({ id, role: 'creator', key, safetyCode: code, inviteKey: raw, savedAt: Date.now() });
-      void requestPersistence();
-      return toRoom({ id, role: 'creator', key, safetyCode: code, inviteKey: raw }, await api.getRoom(id));
+      const id = await api.createRoom(await joinVerifier(await joinToken(raw)));
+      const stored = await store({ id, role: 'creator', raw, notesRaw: generateRoomKeyBytes(), inviteKey: raw, backedUp: false });
+      return toRoom(stored, await api.getRoom(id));
     },
 
     async join(roomId: string, raw: Bytes): Promise<Room> {
       const role = await api.joinRoom(roomId, await joinToken(raw));
-      const key = await importRoomKey(raw);
-      const code = await safetyCode(raw);
-      await keystore.save({ id: roomId, role, key, safetyCode: code, savedAt: Date.now() });
-      void requestPersistence();
-      return toRoom({ id: roomId, role, key, safetyCode: code }, await api.getRoom(roomId));
+      const stored = await store({ id: roomId, role, raw, notesRaw: generateRoomKeyBytes(), backedUp: false });
+      return toRoom(stored, await api.getRoom(roomId));
     },
 
     async refresh(room: Room): Promise<Room | null> {
@@ -125,35 +145,79 @@ export function createController(deps: Deps = defaultDeps()) {
       session.signOut();
     },
 
-    async cardStatus(room: Room, ref: string): Promise<CardStatus> {
-      const me = session.userId();
-      const [status, rows] = await Promise.all([api.answers(room.id), api.records(room.id, KIND_CHOICE, ref)]);
-      const partnerAnswered = status.some((s) => s.kind === KIND_CHOICE && s.ref === ref && !s.mine);
-      const decrypt = async (authorIsMe: boolean) => {
-        const row = rows.find((r) => (r.author_id === me) === authorIsMe);
-        return row ? openChoice(room.key, { roomId: room.id, recordId: row.id }, row.envelope) : null;
-      };
-      return { mine: await decrypt(true), partnerAnswered, partner: await decrypt(false) };
+    /** Forget this room on this device only (e.g. it was erased elsewhere). */
+    async forget(roomId: string): Promise<void> {
+      await keystore.remove(roomId);
     },
 
-    /** Seals and sends an answer. Returns false if it is locked (both have answered). */
-    async answer(room: Room, ref: string, choice: string): Promise<boolean> {
+    // ---- Recovery words ----------------------------------------------------
+
+    newPhrase: async () => (await import('../crypto/recovery')).newPhrase(),
+
+    /** Saves the backup wrapped under the words; the raw key bytes are then dropped. */
+    async saveBackup(room: Room, entropy: Bytes): Promise<Room> {
+      const stored = await keystore.current();
+      if (!stored || stored.id !== room.id || !stored.setupRaw) throw new Error('Nothing to back up');
+      const { sealBackup, lookupToken } = await import('../crypto/recovery');
+      const envelope = await sealBackup(entropy, room.id, stored.setupRaw);
+      await api.saveBackup(room.id, await lookupToken(entropy), envelope);
+      await keystore.markBackedUp(room.id);
+      return { ...room, backedUp: true };
+    },
+
+    /** Brings a room back from the 12 words on a new or cleared browser. */
+    async recover(words: string): Promise<Room> {
+      const { wordsToEntropy, lookupToken, openBackup } = await import('../crypto/recovery');
+      const entropy = await wordsToEntropy(words);
+      session.signOut(); // a fresh anonymous account takes over the old one's place
+      const { roomId, role, envelope } = await api.recoverRoom(await lookupToken(entropy));
+      const backup = await openBackup(entropy, roomId, envelope);
+      const stored = await store({ id: roomId, role, raw: backup.roomKey, notesRaw: backup.notesKey, backedUp: true });
+      return toRoom(stored, await api.getRoom(roomId));
+    },
+
+    // ---- Records -----------------------------------------------------------
+
+    /** Every record this person may read, decrypted on the phone. */
+    async records(room: Room): Promise<DataRecord[]> {
       const me = session.userId();
-      const rows = await api.records(room.id, KIND_CHOICE, ref);
-      const mine = rows.find((r) => r.author_id === me);
-      if (mine) {
-        return api.updateRecord(mine.id, await sealChoice(room.key, { roomId: room.id, recordId: mine.id }, choice));
+      const rows = await api.allRecords(room.id);
+      const out: DataRecord[] = [];
+      for (const row of rows) {
+        const key = isPrivateKind(row.kind) ? room.notesKey : room.key;
+        try {
+          const data = await openJson(key, { roomId: room.id, recordId: row.id, kind: row.kind }, row.envelope);
+          out.push({ id: row.id, kind: row.kind, ref: row.ref, mine: row.author_id === me, data, createdAt: Date.parse(row.created_at) });
+        } catch {
+          // Unreadable (e.g. written with a key this device does not have): skip it.
+        }
+      }
+      return out;
+    },
+
+    answerStatus(room: Room): Promise<AnswerStatus[]> {
+      return api.answers(room.id);
+    },
+
+    /** Encrypts and saves one record. Pass the id of this person's existing record to update it. */
+    async put(room: Room, kind: number, ref: string, data: unknown, existingId?: string): Promise<{ id: string; ok: boolean }> {
+      const key = isPrivateKind(kind) ? room.notesKey : room.key;
+      if (existingId) {
+        const envelope = await sealJson(key, { roomId: room.id, recordId: existingId, kind }, data);
+        return { id: existingId, ok: await api.updateRecord(existingId, envelope) };
       }
       const id = newId();
-      await api.insertRecord({
-        id,
-        roomId: room.id,
-        kind: KIND_CHOICE,
-        ref,
-        envelope: await sealChoice(room.key, { roomId: room.id, recordId: id }, choice),
-      });
-      return true;
+      const envelope = await sealJson(key, { roomId: room.id, recordId: id, kind }, data);
+      await api.insertRecord({ id, roomId: room.id, kind, ref, envelope });
+      return { id, ok: true };
     },
+
+    remove(id: string): Promise<void> {
+      return api.deleteRecord(id);
+    },
+
+    voteKeep: (room: Room, keep: boolean) => api.voteKeep(room.id, keep),
+    myKeepVote: (room: Room) => api.myKeepVote(room.id),
   };
 }
 

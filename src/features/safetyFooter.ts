@@ -41,3 +41,11 @@ export function safetyFooter(languages: readonly string[]): SafetyFooter {
   }
   return { country: null, lines: [] };
 }
+
+/** A country chosen in the profile wins; otherwise the browser's language settings. */
+export function safetyFooterFor(country: string | undefined, languages: readonly string[]): SafetyFooter {
+  const known = country ? VERIFIED[country] : undefined;
+  if (known) return { country: known.name, lines: known.lines };
+  if (country) return { country: null, lines: [] };
+  return safetyFooter(languages);
+}

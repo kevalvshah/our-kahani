@@ -49,7 +49,16 @@ export class ApiError extends Error {
   override name = 'ApiError';
   constructor(
     message: string,
-    readonly code: 'invalid-invite' | 'room-full' | 'too-many-rooms' | 'not-found' | 'offline' | 'other',
+    readonly code:
+      | 'invalid-invite'
+      | 'room-full'
+      | 'room-full-data'
+      | 'photo-limit'
+      | 'room-ended'
+      | 'too-many-rooms'
+      | 'not-found'
+      | 'offline'
+      | 'other',
   ) {
     super(message);
   }
@@ -61,6 +70,10 @@ function failWith(error: { code?: string; message?: string } | null, offline: bo
   if (code === 'P0002') throw new ApiError('This invite is not valid', 'invalid-invite');
   if (code === 'P0003') throw new ApiError('This room already has two people', 'room-full');
   if (code === 'P0001') throw new ApiError('Too many open rooms', 'too-many-rooms');
+  if (code === 'P0004') throw new ApiError('This room is full', 'room-full-data');
+  if (code === 'P0005') throw new ApiError('This room already has 20 photos', 'photo-limit');
+  if (code === 'P0006') throw new ApiError('This room has ended', 'room-ended');
+  if (code === 'P0007') throw new ApiError('Those words do not match a room', 'not-found');
   throw new ApiError(error?.message || 'Something went wrong', 'other');
 }
 
@@ -148,6 +161,57 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
         fail(error);
       }
       return (data ?? []).length === 1;
+    },
+
+    /** Every record this person may read in the room (the server applies the reveal rules). */
+    async allRecords(roomId: string): Promise<RecordRow[]> {
+      const { data, error } = await db
+        .from('records')
+        .select('id, room_id, author_id, kind, ref, envelope, created_at')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+        .limit(5000);
+      if (error) fail(error);
+      return ((data ?? []) as (Omit<RecordRow, 'envelope'> & { envelope: string })[]).map((r) => ({
+        ...r,
+        envelope: fromBytea(r.envelope),
+      }));
+    },
+
+    async deleteRecord(id: string): Promise<void> {
+      const { error } = await db.from('records').delete().eq('id', id);
+      if (error) fail(error);
+    },
+
+    /** Votes to keep the room four more weeks. Returns true when both have voted (extended). */
+    async voteKeep(roomId: string, keep: boolean): Promise<boolean> {
+      const { data, error } = await db.rpc('vote_keep', { p_room: roomId, p_keep: keep });
+      if (error) fail(error);
+      return data === true;
+    },
+
+    /** This person's own keep vote (the partner's is never visible). */
+    async myKeepVote(roomId: string): Promise<boolean> {
+      const { data, error } = await db.from('keep_votes').select('cycle').eq('room_id', roomId);
+      if (error) fail(error);
+      return (data ?? []).length > 0;
+    },
+
+    async saveBackup(roomId: string, token: Bytes, envelope: Bytes): Promise<void> {
+      const { error } = await db.rpc('save_backup', {
+        p_room: roomId,
+        p_token: toBytea(token),
+        p_envelope: toBytea(envelope),
+      });
+      if (error) fail(error);
+    },
+
+    async recoverRoom(token: Bytes): Promise<{ roomId: string; role: 'creator' | 'invitee'; envelope: Bytes }> {
+      const { data, error } = await db.rpc('recover_room', { p_token: toBytea(token) });
+      if (error) fail(error);
+      const row = (data as { room_id: string; role: 'creator' | 'invitee'; envelope: string }[] | null)?.[0];
+      if (!row) throw new ApiError('Those words do not match a room', 'not-found');
+      return { roomId: row.room_id, role: row.role, envelope: fromBytea(row.envelope) };
     },
 
     async eraseRoom(roomId: string): Promise<void> {

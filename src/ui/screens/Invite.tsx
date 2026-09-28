@@ -4,7 +4,8 @@ import { controller } from '../../state/controller';
 import { useRoom } from '../../state/roomContext';
 import { Em, Link, ScreenTitle } from '../components';
 import { PATHS } from '../router';
-import { problemText, useCreateRoom } from './Today';
+import { problemText } from '../problems';
+import { useCreateRoom } from './Today';
 
 export function Invite() {
   const { room, setRoom } = useRoom();
@@ -132,9 +133,9 @@ function TwelveWords() {
         Your twelve words <Em>📝</Em>
       </div>
       <p class="small">
-        Coming next: twelve words to write down. They are the only way back if this browser forgets you — which
-        Safari does after a week of not opening the room. On iPhone, add Our Kahani to your Home Screen to make
-        that far less likely.
+        You wrote down twelve words when you set up. They are the only way back if this browser forgets you, which
+        Safari does after a week of not opening the room. On iPhone, add Our Kahani to your Home Screen to make that far
+        less likely.
       </p>
     </div>
   );
@@ -198,7 +199,7 @@ export function Join() {
       </ScreenTitle>
       <SafetyCode code={room.safetyCode} />
       <Link class="btn btn-primary btn-block" href={PATHS.today}>
-        Go to today →
+        Continue →
       </Link>
     </section>
   );
