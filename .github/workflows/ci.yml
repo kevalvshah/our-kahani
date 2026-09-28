@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Static checks, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npm run typecheck
+      - name: Unit tests with coverage limits
+        run: npm run test:coverage
+      - name: Build and check output (no inline scripts, no third-party hosts, bundle budget)
+        run: npm run build
+      - name: Audit production dependencies
+        run: npm run audit:prod
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 14
+
+  e2e:
+    name: Browser tests (${{ matrix.project }})
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit, android-chrome, iphone-safari]
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Functional, security, accessibility, responsive and visual tests
+        run: npx playwright test --project=${{ matrix.project }}
+      - name: Collect new visual baselines (if any were missing)
+        if: always()
+        run: |
+          mkdir -p new-baselines
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git ls-files --others --exclude-standard -- 'e2e/*-snapshots/*' | xargs -r cp --parents -t new-baselines
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: new-visual-baselines-${{ matrix.project }}
+          path: new-baselines
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Cloudflare Pages is connected to this repo and builds every push itself: pull requests
+  # get a preview URL, main goes to production. These jobs wait until Cloudflare serves the
+  # exact commit, then run the functional and security tests against the real deployment
+  # (real Cloudflare headers). Merges to main are gated by branch protection on the checks above.
+  preview-smoke:
+    name: Smoke test Cloudflare preview
+    needs: checks
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
+    env:
+      HOME: /root
+      BRANCH: ${{ github.head_ref }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Work out the preview URL
+        run: |
+          alias=$(printf '%s' "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | cut -c1-28 | sed 's/-*$//')
+          echo "BASE_URL=https://$alias.our-kahani.pages.dev" >> "$GITHUB_ENV"
+      - name: Wait for Cloudflare to serve this commit
+        run: node scripts/wait-for-deploy.mjs "$BASE_URL" "$SHA" 900
+      - name: Functional and security tests against the preview
+        run: npx playwright test --project=chromium --project=iphone-safari --grep "@functional|@security"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: preview-smoke-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  production-smoke:
+    name: Smoke test production
+    needs: [checks, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL || 'https://our-kahani.pages.dev' }}
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --ipc=host
+    env:
+      HOME: /root
+      # Set the PRODUCTION_URL repository variable to https://kahani.unicodegroup.com once the
+      # custom domain is attached in Cloudflare.
+      BASE_URL: ${{ vars.PRODUCTION_URL || 'https://our-kahani.pages.dev' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Wait for Cloudflare to serve this commit
+        run: node scripts/wait-for-deploy.mjs "$BASE_URL" "$GITHUB_SHA" 900
+      - name: Functional and security tests against production
+        run: npx playwright test --project=chromium --project=iphone-safari --grep "@functional|@security"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: production-smoke-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14

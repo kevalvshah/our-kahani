@@ -84,6 +84,23 @@ describe('envelope', () => {
     await expect(sealText(key, bad, text)).rejects.toBeInstanceOf(EnvelopeError);
   });
 
+  it('fails when the plaintext is not valid UTF-8 text', async () => {
+    const key = await newKey();
+    const env = await seal(key, ctx, Uint8Array.of(0xff, 0xfe));
+    await expect(openText(key, ctx, env)).rejects.toBeInstanceOf(EnvelopeError);
+    expect(await open(key, ctx, env)).toEqual(Uint8Array.of(0xff, 0xfe));
+  });
+
+  it('rejects unsafe context when opening too', async () => {
+    const key = await newKey();
+    const env = await sealText(key, ctx, text);
+    await expect(open(key, { ...ctx, roomId: 'a|b' }, env)).rejects.toBeInstanceOf(EnvelopeError);
+  });
+
+  it('refuses room keys of the wrong length', async () => {
+    await expect(importRoomKey(new Uint8Array(16))).rejects.toThrow('wrong length');
+  });
+
   it('uses non-extractable keys', async () => {
     const key = await newKey();
     expect(key.extractable).toBe(false);

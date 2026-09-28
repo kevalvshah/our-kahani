@@ -1,0 +1,35 @@
+import { defineConfig, devices } from '@playwright/test';
+
+const PORT = 4173;
+// Set BASE_URL to test a deployed site instead of a local build (post-deploy smoke test).
+const BASE_URL = process.env.BASE_URL;
+
+export default defineConfig({
+  testDir: 'e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
+  // In CI, missing visual baselines are written (and uploaded) instead of failing the run.
+  updateSnapshots: process.env.CI ? 'missing' : 'none',
+  expect: { toHaveScreenshot: { animations: 'disabled' } },
+  use: {
+    baseURL: BASE_URL ?? `http://localhost:${PORT}`,
+    trace: 'retain-on-failure',
+  },
+  // Latest Chromium, Firefox and WebKit on laptop and phone sizes (docs/WEB-ONLY.md).
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'android-chrome', use: { ...devices['Pixel 7'] } },
+    { name: 'iphone-safari', use: { ...devices['iPhone 14'] } },
+  ],
+  webServer: BASE_URL ? undefined : {
+    // Tests run against the production build, served with the production headers.
+    command: `npx vite build && npx vite preview --port ${PORT} --strictPort`,
+    url: `http://localhost:${PORT}`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
+});

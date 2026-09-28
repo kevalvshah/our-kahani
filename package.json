@@ -5,19 +5,36 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run typecheck && vite build && node scripts/write-version.mjs && node scripts/check-dist.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check:dist": "node scripts/check-dist.mjs",
+    "test:coverage": "vitest run --coverage",
+    "test:functional": "playwright test --grep @functional",
+    "test:security": "playwright test --grep @security",
+    "test:a11y": "playwright test --grep \"@a11y|@responsive\"",
+    "test:visual": "playwright test --grep @visual",
+    "test:visual:update": "playwright test --grep @visual --update-snapshots",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "qa": "npm run build && npm run test:coverage && npm run audit:prod && npm run test:e2e"
   },
   "dependencies": {
     "preact": "10.29.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@preact/preset-vite": "2.10.6",
+    "@types/node": "24.19.0",
+    "@vitest/coverage-v8": "5.0.2",
     "typescript": "7.0.2",
     "vite": "8.3.1",
     "vitest": "5.0.2"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

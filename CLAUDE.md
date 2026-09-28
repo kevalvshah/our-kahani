@@ -90,7 +90,9 @@ See `docs/STORAGE-BUDGET.md`.
   review every translation before release.
 
 ## How to work here
-- Small steps. Run `npm test` and the isolation and plaintext-canary tests before saying done.
+- Small steps. Run `npm run qa` (build checks, unit tests with coverage, audit, all browser
+  tests) and the isolation and plaintext-canary tests before saying done. See `docs/QA.md`.
+- New screens go in `SCREENS` in `e2e/helpers.ts` so accessibility and visual tests cover them.
 - Any change under `src/crypto/` or `supabase/` needs a short note in the PR on what the
   server can see afterwards.
 - Ask before adding a dependency. Check bundle size and whether it phones home.
@@ -99,4 +101,4 @@ See `docs/STORAGE-BUDGET.md`.
 
 ## More detail (read when relevant, do not import)
 `docs/ARCHITECTURE.md` `docs/SECURITY.md` `docs/STORAGE-BUDGET.md` `docs/WEB-ONLY.md`
-`docs/PRODUCT.md` `docs/CONTENT-PACKS.md` `docs/BUILD-PLAN.md` `docs/OPEN-DECISIONS.md`
+`docs/PRODUCT.md` `docs/CONTENT-PACKS.md` `docs/BUILD-PLAN.md` `docs/OPEN-DECISIONS.md` `docs/QA.md`

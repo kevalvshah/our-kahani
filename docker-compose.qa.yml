@@ -1,0 +1,17 @@
+# Runs the browser test suite in the same pinned Linux container CI uses.
+# Same browsers, same fonts, same screenshots on every machine.
+#   docker compose -f docker-compose.qa.yml run --rm qa                       # full e2e suite
+#   docker compose -f docker-compose.qa.yml run --rm qa npm run test:visual:update
+services:
+  qa:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    working_dir: /work
+    ipc: host
+    environment:
+      CI: "1"
+    volumes:
+      - .:/work
+      - qa_node_modules:/work/node_modules   # Linux node_modules, separate from the host's
+    command: bash -lc "npm ci && npx playwright test"
+volumes:
+  qa_node_modules:
