@@ -158,7 +158,22 @@ by the repo owner:
    `Smoke test Cloudflare preview` checks to pass. This is the approval gate for production.
 4. Optional: require a review approval on pull requests, so a second person signs off each release.
 
-No Cloudflare secrets are stored in GitHub: Cloudflare pulls from the repo itself.
+No Cloudflare deploy secrets are stored in GitHub: Cloudflare pulls from the repo itself.
+
+### Preview deployments behind Cloudflare Access
+
+Preview URLs (`<branch>.our-kahani.pages.dev`) are protected with Cloudflare Access, so only
+you can open them. For CI to smoke-test them:
+
+1. Cloudflare Zero Trust > **Access > Service Auth > Service Tokens > Create service token**
+   (name it `github-ci`). Copy the Client ID and Client Secret.
+2. In the Access application protecting the previews, add a policy with action **Service Auth**
+   that includes that service token.
+3. GitHub **Settings > Secrets and variables > Actions**: add `CF_ACCESS_CLIENT_ID` and
+   `CF_ACCESS_CLIENT_SECRET`.
+
+Without them, "Smoke test Cloudflare preview" passes with a warning and skips the tests; the
+production smoke test after each merge still runs (production is public).
 
 ## Traceability: rules to tests
 

@@ -15,6 +15,14 @@ export default defineConfig({
   expect: { toHaveScreenshot: { animations: 'disabled' } },
   use: {
     baseURL: BASE_URL ?? `http://localhost:${PORT}`,
+    // Cloudflare Access service token, only when testing a protected preview deployment.
+    extraHTTPHeaders:
+      BASE_URL && process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET
+        ? {
+            'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+            'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+          }
+        : undefined,
     trace: 'retain-on-failure',
   },
   // Latest Chromium, Firefox and WebKit on laptop and phone sizes (docs/WEB-ONLY.md).

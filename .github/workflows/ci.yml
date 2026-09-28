@@ -102,6 +102,10 @@ jobs:
       HOME: /root
       BRANCH: ${{ github.head_ref }}
       SHA: ${{ github.event.pull_request.head.sha }}
+      # Previews are behind Cloudflare Access. An Access service token lets CI through
+      # (see docs/QA.md). Without it, the preview smoke test is skipped with a warning.
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -114,8 +118,20 @@ jobs:
           alias=$(printf '%s' "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | cut -c1-28 | sed 's/-*$//')
           echo "BASE_URL=https://$alias.our-kahani.pages.dev" >> "$GITHUB_ENV"
       - name: Wait for Cloudflare to serve this commit
-        run: node scripts/wait-for-deploy.mjs "$BASE_URL" "$SHA" 900
+        id: wait
+        run: |
+          set +e
+          node scripts/wait-for-deploy.mjs "$BASE_URL" "$SHA" 900
+          code=$?
+          if [ "$code" = "3" ]; then
+            echo "::warning::Preview is behind Cloudflare Access and CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET are not set; skipping the preview smoke test. Production is still smoke-tested after merge. See docs/QA.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          exit $code
       - name: Functional and security tests against the preview
+        if: steps.wait.outputs.ready == 'true'
         run: npx playwright test --project=chromium --project=iphone-safari --grep "@functional|@security"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
