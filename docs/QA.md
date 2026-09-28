@@ -15,9 +15,10 @@ Playwright with no test accounts or secrets.
 | Performance budget | JS under 60 KB and CSS under 15 KB gzipped | Node script | `scripts/check-dist.mjs` | Yes |
 | Dependency audit | No known high or critical issues in shipped dependencies | `npm audit` | `package.json` | Yes |
 | Functional end to end | Create room, invite, join, broken links, Instagram gate | Playwright | `e2e/invite.spec.ts` | Yes, 5 browsers and devices |
+| App shell and screens | Every screen by URL and reload, phone tabs vs laptop sidebar, card picking, "Make it ours" settings, country-aware safety footer, erase room, unbuilt features marked "Soon" | Playwright | `e2e/app.spec.ts` | Yes |
 | Security end to end | Security headers, no CSP violations, no third-party requests, key never stored or logged, page cannot be framed | Playwright | `e2e/security.spec.ts` | Yes |
-| Accessibility | WCAG 2.2 AA on every screen in light and dark mode, keyboard-only flow, visible focus | Playwright + axe-core | `e2e/a11y.spec.ts` | Yes |
-| Responsive | No sideways scrolling at 320, 375, 768, 1280 px; touch targets at least 44 px | Playwright | `e2e/a11y.spec.ts` | Yes |
+| Accessibility | WCAG 2.2 AA on every screen in light and dark mode, keyboard-only flow, visible focus, skip link, one h1 per screen | Playwright + axe-core | `e2e/a11y.spec.ts` | Yes |
+| Responsive | No sideways scrolling at 320, 375, 768, 1280 px on every screen; touch targets at least 44 px on every screen | Playwright | `e2e/a11y.spec.ts` | Yes |
 | Visual regression | Every screen, light and dark, looks the same as the approved screenshot | Playwright screenshots | `e2e/visual.spec.ts` | Yes (Linux only) |
 | Deployment smoke | The real Cloudflare deployment (preview for PRs, production for `main`) works with its real headers | Playwright | same specs, `BASE_URL` set | Yes, after Cloudflare deploys |
 | Server security | Room isolation, hidden answers, plaintext canary, room lifecycle | Vitest (planned) | `src/security-pending.test.ts` | Listed as "todo" until Supabase lands |
@@ -157,7 +158,22 @@ by the repo owner:
    `Smoke test Cloudflare preview` checks to pass. This is the approval gate for production.
 4. Optional: require a review approval on pull requests, so a second person signs off each release.
 
-No Cloudflare secrets are stored in GitHub: Cloudflare pulls from the repo itself.
+No Cloudflare deploy secrets are stored in GitHub: Cloudflare pulls from the repo itself.
+
+### Preview deployments behind Cloudflare Access
+
+Preview URLs (`<branch>.our-kahani.pages.dev`) are protected with Cloudflare Access, so only
+you can open them. For CI to smoke-test them:
+
+1. Cloudflare Zero Trust > **Access > Service Auth > Service Tokens > Create service token**
+   (name it `github-ci`). Copy the Client ID and Client Secret.
+2. In the Access application protecting the previews, add a policy with action **Service Auth**
+   that includes that service token.
+3. GitHub **Settings > Secrets and variables > Actions**: add `CF_ACCESS_CLIENT_ID` and
+   `CF_ACCESS_CLIENT_SECRET`.
+
+Without them, "Smoke test Cloudflare preview" passes with a warning and skips the tests; the
+production smoke test after each merge still runs (production is public).
 
 ## Traceability: rules to tests
 
@@ -212,6 +228,10 @@ If a CI run found it, link the run and attach the trace.
 - WebKit does not move focus to buttons with Tab unless a Safari setting is on, so the
   keyboard tests are skipped on WebKit; check keyboard use on a real Mac manually.
 - Some Windows machines block the test Firefox from starting; use the container or rely on CI.
+- Firefox in the CI container occasionally stalls on a first page load; the one automatic retry
+  covers it and the run reports the test as "flaky". A test that fails twice fails the run.
+- Full-page screenshots on phone sizes show the bottom tabs part-way down the page: that is how
+  full-page capture stitches sticky elements, not how the app looks on a phone.
 - Server-side tests (isolation, reveal, canary, lifecycle) arrive with the Supabase schema.
 - The security headers in the main browser tests come from `vite preview`; the preview and
   production smoke tests check the real Cloudflare ones.

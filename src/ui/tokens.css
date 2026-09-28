@@ -1,0 +1,114 @@
+/* Design tokens (design_handoff_our_kahani_reskin). Theme, accent, text size, motion,
+   texture and emoji icons are attributes on <html>, set from the device-only settings in
+   src/ui/look.ts. With no stored choice, theme and motion follow the phone. */
+
+@import '@fontsource/instrument-sans/latin-400.css';
+@import '@fontsource/instrument-sans/latin-500.css';
+@import '@fontsource/instrument-sans/latin-600.css';
+@import '@fontsource/instrument-sans/latin-700.css';
+@import '@fontsource/instrument-serif/latin-400.css';
+@import '@fontsource/instrument-serif/latin-400-italic.css';
+
+:root {
+  --k-bg: #f3eee5;
+  --k-surface: #ffffff;
+  --k-surface2: #ede7dc;
+  --k-ink: #10201e;
+  --k-muted: #5d6b68;
+  --k-line: #dcd3c4;
+  --k-accent: #04837a;
+  --k-accent-soft: #dceeeb;
+  --k-on-accent: #ffffff;
+  --k-gold: #b5760a;
+  --k-gold-soft: #fbebcc;
+  --k-pink: #c22357;
+  --k-pink-soft: #fbe0e8;
+  --k-dot: rgba(16, 32, 30, 0.1);
+  --k-shadow: rgba(16, 32, 30, 0.1);
+
+  --k-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --k-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --k-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+/* Dark: chosen explicitly, or following the phone when no theme is stored. */
+:root[data-k-theme='dark'] {
+  --k-bg: #0b1211;
+  --k-surface: #131f1e;
+  --k-surface2: #1b2a28;
+  --k-ink: #eef3f1;
+  --k-muted: #93a5a1;
+  --k-line: #263835;
+  --k-accent: #35b3a6;
+  --k-accent-soft: #0f2e2b;
+  --k-on-accent: #06201d;
+  --k-gold: #e9ae44;
+  --k-gold-soft: #39290b;
+  --k-pink: #f87fa0;
+  --k-pink-soft: #3b1522;
+  --k-dot: rgba(238, 243, 241, 0.09);
+  --k-shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-k-theme]) {
+    --k-bg: #0b1211;
+    --k-surface: #131f1e;
+    --k-surface2: #1b2a28;
+    --k-ink: #eef3f1;
+    --k-muted: #93a5a1;
+    --k-line: #263835;
+    --k-accent: #35b3a6;
+    --k-accent-soft: #0f2e2b;
+    --k-on-accent: #06201d;
+    --k-gold: #e9ae44;
+    --k-gold-soft: #39290b;
+    --k-pink: #f87fa0;
+    --k-pink-soft: #3b1522;
+    --k-dot: rgba(238, 243, 241, 0.09);
+    --k-shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+
+/* Accents override only accent, accent-soft and on-accent. */
+:root[data-k-accent='kumkum'] { --k-accent: #ae2049; --k-accent-soft: #f7e2e7; --k-on-accent: #ffffff; }
+:root[data-k-accent='marigold'] { --k-accent: #a96a06; --k-accent-soft: #f8ebd2; --k-on-accent: #ffffff; }
+:root[data-k-accent='neel'] { --k-accent: #2f4fa8; --k-accent-soft: #e2e8f8; --k-on-accent: #ffffff; }
+:root[data-k-theme='dark'][data-k-accent='kumkum'] { --k-accent: #f0718d; --k-accent-soft: #3a1220; --k-on-accent: #1a0810; }
+:root[data-k-theme='dark'][data-k-accent='marigold'] { --k-accent: #e0a337; --k-accent-soft: #33260c; --k-on-accent: #1a1305; }
+:root[data-k-theme='dark'][data-k-accent='neel'] { --k-accent: #8aa6ee; --k-accent-soft: #16204a; --k-on-accent: #0a1026; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-k-theme])[data-k-accent='kumkum'] { --k-accent: #f0718d; --k-accent-soft: #3a1220; --k-on-accent: #1a0810; }
+  :root:not([data-k-theme])[data-k-accent='marigold'] { --k-accent: #e0a337; --k-accent-soft: #33260c; --k-on-accent: #1a1305; }
+  :root:not([data-k-theme])[data-k-accent='neel'] { --k-accent: #8aa6ee; --k-accent-soft: #16204a; --k-on-accent: #0a1026; }
+}
+
+/* Text size scales everything (all sizes are rem) and still respects the browser's own size. */
+:root { font-size: 100%; }
+:root[data-k-text='small'] { font-size: 94%; }
+:root[data-k-text='large'] { font-size: 112%; }
+
+/* Motion: calm when chosen, or when the phone asks for reduced motion and nothing is stored. */
+:root[data-k-motion='calm'] *,
+:root[data-k-motion='calm'] *::before,
+:root[data-k-motion='calm'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-k-motion]) *,
+  :root:not([data-k-motion]) *::before,
+  :root:not([data-k-motion]) *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Emoji icons off hides the decorative tiles only, never the words. */
+:root[data-k-emoji='off'] [data-k-em] { display: none !important; }
+
+@keyframes k-lift { from { filter: blur(10px); opacity: 0.5; } to { filter: blur(0); opacity: 1; } }
+@keyframes k-rise { from { transform: translateY(10px) scale(0.98); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes k-pop { 0% { transform: scale(0.9); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }

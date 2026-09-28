@@ -102,3 +102,4 @@ See `docs/STORAGE-BUDGET.md`.
 ## More detail (read when relevant, do not import)
 `docs/ARCHITECTURE.md` `docs/SECURITY.md` `docs/STORAGE-BUDGET.md` `docs/WEB-ONLY.md`
 `docs/PRODUCT.md` `docs/CONTENT-PACKS.md` `docs/BUILD-PLAN.md` `docs/OPEN-DECISIONS.md` `docs/QA.md`
+`docs/DESIGN.md` (visual design: tokens, screens, what differs from the handoff)

@@ -57,7 +57,35 @@ export async function createRoom(page: Page) {
 }
 
 /** Every screen the app has today. Add new screens here and a11y + visual pick them up. */
-export const SCREENS = ['home', 'invite', 'joined', 'incomplete', 'in-app-browser'] as const;
+export const SCREENS = [
+  'home',
+  'home-with-room',
+  'invite',
+  'joined',
+  'incomplete',
+  'in-app-browser',
+  'card-picked',
+  'packs',
+  'movie',
+  'photo',
+  'gentle',
+  'saved',
+  'room',
+  'look',
+] as const;
+
+/** Screens reached by URL, with the heading each one shows. */
+export const PAGES: Record<string, string> = {
+  '/packs': 'Card packs',
+  '/movie': 'Movie Night',
+  '/right-now': 'Right Now',
+  '/gentle': 'Gentle Corner',
+  '/saved': 'Saved',
+  '/room': 'Room data',
+  '/look': 'Make it ours',
+  '/invite': 'Invite & safety code',
+  '/card': 'How does affection land best for you?',
+};
 export type Screen = (typeof SCREENS)[number];
 
 /** Opens a screen and returns the page showing it (a new page for the in-app browser). */
@@ -78,6 +106,28 @@ export async function openScreen(
       const { invite } = await createRoom(page);
       await page.goto(invite);
       await expect(page.getByRole('heading', { name: "You're in" })).toBeVisible();
+      return page;
+    }
+    case 'home-with-room':
+      await createRoom(page);
+      await page.locator('.tab, .side-link').filter({ hasText: 'Today' }).locator('visible=true').click();
+      await expect(page.getByRole('link', { name: /Open today's card/ })).toBeVisible();
+      return page;
+    case 'card-picked':
+      await page.goto('/card');
+      await page.getByRole('button', { name: 'Kind words' }).click();
+      await expect(page.getByRole('status')).toContainText('Picked.');
+      return page;
+    case 'packs':
+    case 'movie':
+    case 'photo':
+    case 'gentle':
+    case 'saved':
+    case 'room':
+    case 'look': {
+      const path = screen === 'photo' ? '/right-now' : `/${screen}`;
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1, name: PAGES[path] })).toBeVisible();
       return page;
     }
     case 'incomplete':

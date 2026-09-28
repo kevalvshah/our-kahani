@@ -32,9 +32,10 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      // Security-critical code must stay fully tested. UI is covered by the e2e suite.
-      include: ['src/crypto/**', 'src/platform/**'],
-      exclude: ['**/*.test.ts', '**/__snapshots__/**'],
+      // Security-critical code and app logic must stay fully tested. UI is covered by e2e.
+      include: ['src/crypto/**', 'src/platform/**', 'src/features/**', 'src/state/**', 'src/ui/look.ts'],
+      // Preact context wiring is UI glue, covered by the e2e suite.
+      exclude: ['**/*.test.ts', '**/__snapshots__/**', 'src/state/roomContext.ts'],
       reporter: ['text', 'html', 'json-summary'],
       thresholds: { lines: 100, functions: 100, statements: 100, branches: 95 },
     },
