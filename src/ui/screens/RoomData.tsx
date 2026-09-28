@@ -11,6 +11,7 @@ import { daysLeft } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
 import { Back, Done, Problem, Wait } from '../components';
 import { problemText } from '../problems';
+import { NotificationSwitch } from '../Notifications';
 import { navigate, PATHS } from '../router';
 
 const fmtDate = (ms: number) => new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -148,6 +149,7 @@ export function RoomDataScreen() {
         </div>
         <Problem text={keep.problem ?? problem} />
         <AnswerOrder />
+        <NotificationSwitch />
         <p class="small muted">
           Using a laptop too? Open this site there and choose “I have my twelve words”. Your room opens on that device instead
           of this one.

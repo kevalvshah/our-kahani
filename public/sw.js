@@ -1,10 +1,10 @@
-// Offline shell for Our Kahani. Caches only the app's own files: never the backend, never
+// Offline shell and notifications for Our Kahani. Caches only the app's own files: never the backend, never
 // /media, never anything with a room's data in it. Room data stays encrypted in IndexedDB.
 //
 // - /assets/* (hashed, immutable): cache first.
 // - Page loads: network first, falling back to the cached app shell when offline.
 
-const SHELL = 'ok-shell-v1';
+const SHELL = 'ok-shell-v2';
 const ASSETS = 'ok-assets-v1';
 const MAX_ASSETS = 80;
 
@@ -64,4 +64,28 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => (await caches.match('/')) ?? Response.error()),
     );
   }
+});
+
+// Notifications. A push never carries anything (no payload): whatever woke us, the phone shows
+// the same line, so nothing about the room can appear on a lock screen.
+self.addEventListener('push', (event) => {
+  event.waitUntil(
+    self.registration.showNotification('Our Kahani', {
+      body: 'Your room needs attention',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: 'room',
+      renotify: false,
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => new URL(w.url).origin === self.location.origin);
+      return open ? open.focus() : self.clients.openWindow('/');
+    }),
+  );
 });

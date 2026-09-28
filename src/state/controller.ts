@@ -9,6 +9,7 @@ import { isPrivateKind } from '../data/kinds';
 import { openJson, sealJson } from '../data/payload';
 import { createApi, type AnswerStatus, type Api, type RoomRow } from '../net/api';
 import { createMedia, type Media } from '../net/media';
+import { createPush, type Push } from '../net/push';
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../net/config';
 import { createSessionManager, type SessionManager } from '../net/session';
 import type { Room } from './room';
@@ -37,6 +38,7 @@ interface Deps {
   session: SessionManager;
   keystore: Keystore;
   media: Media;
+  push: Push;
   origin: string;
 }
 
@@ -55,6 +57,7 @@ function defaultDeps(): Deps {
     api: createApi({ url: SUPABASE_URL, apiKey: SUPABASE_PUBLISHABLE_KEY, session }),
     keystore: createKeystore(),
     media: createMedia(session),
+    push: createPush({ url: SUPABASE_URL, apiKey: SUPABASE_PUBLISHABLE_KEY, session }),
     origin: location.origin,
   };
 }
@@ -107,6 +110,8 @@ export function createController(deps: Deps = defaultDeps()) {
     userId: () => session.userId(),
     /** Encrypted photo store, sharing this app's one sign-in. */
     media: deps.media,
+    /** Optional notifications (the switch on the Room data screen). */
+    push: deps.push,
 
     async load(): Promise<LoadResult> {
       const stored = await keystore.current().catch(() => null);
@@ -215,6 +220,9 @@ export function createController(deps: Deps = defaultDeps()) {
       const id = newId();
       const envelope = await sealJson(key, { roomId: room.id, recordId: id, kind }, data);
       await api.insertRecord({ id, roomId: room.id, kind, ref, envelope });
+      // A content-free nudge for the partner (if they switched notifications on). Never for
+      // private notes: saving stays silent.
+      if (!isPrivateKind(kind) && room.partnerJoined) deps.push.notify(room.id);
       return { id, ok: true };
     },
 

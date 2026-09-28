@@ -39,7 +39,19 @@ Caps: 5000 records and 20 photos per room; 16 KB per envelope; 40 media objects 
 ## Functions (RPC)
 `create_room`, `join_room`, `room_answers` (who has answered what, never content),
 `erase_room`, `vote_keep`, `save_backup`, `recover_room`, `media_allowed`,
-`media_purge_list`, `storage_health`.
+`media_purge_list`, `storage_health`, `push_subscribe`, `push_unsubscribe`, `push_targets`
+(plus service-role-only `push_secret`, `push_init`, `push_forget`).
+
+## Notifications (optional, per device)
+Switch on the Room data screen. The browser's push address is stored by `push_subscribe`
+(`public.push_subscriptions`, only reachable through functions). When someone sends a shared
+record, the app calls the Supabase Edge Function `push` (`supabase/functions/push`), which asks
+`push_targets()` under the sender's own token for the partner's addresses (at most one nudge per
+10 minutes) and sends each an **empty** Web Push signed with VAPID. The service worker shows only
+"Your room needs attention". The VAPID key pair is made by the function on first use and kept in
+`private.push_config`; only the service role can read it. Private notes never nudge.
+Tested in `e2e/pwa.spec.ts` (installable, installed window offline, subscribe, nudge, the fixed
+line) and `src/net/vapid.test.ts`, `src/net/push.test.ts`.
 
 ## Sync
 The app polls every 10 seconds and when the tab becomes visible (`src/data/RoomData.tsx`).

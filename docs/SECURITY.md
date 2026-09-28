@@ -36,6 +36,9 @@ backups or logs. Only the two people in a room can.
 - SHA-256 hashes of the join token and of the recovery lookup token, and the recovery backup
   sealed under a key from the 12 words.
 - For photos and voice notes: the R2 object id, size and time, all ciphertext.
+- If a person switches notifications on: their device's push address (a random URL at Google,
+  Mozilla, Apple or Microsoft) and when they last nudged their partner. Pushes carry no payload;
+  the push service learns only that a push arrived.
 - IP addresses in host logs. Keep logs minimal and short-lived.
 It never sees a name, answer, note, hashtag, caption, photo, voice note, key or the 12 words.
 
