@@ -11,6 +11,9 @@ const ALLOWED_URLS = new Set([
   'http://www.w3.org/2000/svg',
   'http://www.w3.org/1999/xlink',
   'http://www.w3.org/XML/1998/namespace',
+  // Links a person can tap (never fetched by the app; CSP connect-src stays 'self').
+  // Required by CLAUDE.md rule 9 for the Gentle Corner safety footer.
+  'https://findahelpline.com',
 ]);
 
 function walk(dir) {

@@ -1,116 +1,131 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { newId } from '../crypto/ids';
-import { buildInviteUrl, parseJoinPath, takeInviteKeyFromLocation } from '../crypto/invite';
-import { generateRoomKeyBytes, importRoomKey } from '../crypto/roomKey';
-import { safetyCode } from '../crypto/safetyCode';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { isInAppBrowser } from '../platform/inAppBrowser';
+import { dayOfSeason, daysLeft, SEASON_DAYS, type Room } from '../state/room';
+import { RoomContext } from '../state/roomContext';
+import { Em, Link } from './components';
+import { PATHS, useRoute, type Route } from './router';
+import { Blocked } from './screens/Blocked';
+import { Card } from './screens/Card';
+import { Gentle, Movie, Packs, Photo, RoomData, Saved } from './screens/Features';
+import { Invite, Join } from './screens/Invite';
+import { LookScreen } from './screens/Look';
+import { Today } from './screens/Today';
 
-// Stage 1 shell. Keys live in memory only until key storage and Supabase are wired up.
+// One app, every browser: phones get the header and bottom tabs; at laptop width the sidebar
+// takes over and the tabs and header hide (all in CSS, see app.css).
+
+const NAV: { route: Exclude<Route, 'join'>; label: string; emoji: string }[] = [
+  { route: 'today', label: 'Today', emoji: '🏠' },
+  { route: 'card', label: 'Card', emoji: '🃏' },
+  { route: 'packs', label: 'Packs', emoji: '🗂️' },
+  { route: 'movie', label: 'Movie Night', emoji: '🍿' },
+  { route: 'photo', label: 'Right Now', emoji: '📷' },
+  { route: 'gentle', label: 'Gentle Corner', emoji: '💛' },
+  { route: 'saved', label: 'Saved', emoji: '🔖' },
+  { route: 'room', label: 'Room data', emoji: '🗄️' },
+  { route: 'invite', label: 'Invite', emoji: '🔗' },
+  { route: 'look', label: 'Make it ours', emoji: '🎨' },
+];
+
+const TABS: { route: Exclude<Route, 'join'>; label: string; emoji: string }[] = [
+  { route: 'today', label: 'Today', emoji: '🏠' },
+  { route: 'packs', label: 'Packs', emoji: '🃏' },
+  { route: 'saved', label: 'Saved', emoji: '🔖' },
+  { route: 'room', label: 'Room', emoji: '🗄️' },
+];
 
 export function App() {
-  if (isInAppBrowser(navigator.userAgent)) return <OpenInBrowser />;
-  const joinRoomId = parseJoinPath(location.pathname);
-  return (
-    <main class="page">
-      <header>
-        <h1>Our Kahani</h1>
-        <p class="tagline">From pehli baat to our kahani.</p>
-      </header>
-      {joinRoomId ? <Join roomId={joinRoomId} /> : <Create />}
-      <p class="note">Preview build: nothing is saved or sent yet.</p>
-    </main>
-  );
+  // Checked before anything touches the invite key.
+  if (isInAppBrowser(navigator.userAgent)) return <Blocked />;
+  return <Shell />;
 }
 
-function OpenInBrowser() {
-  // Do not read the fragment here: the person needs the full link to reopen it.
-  return (
-    <main class="page">
-      <h1>Open this in Safari or Chrome</h1>
-      <p>
-        This browser inside the app can't keep your room safe. Tap the ••• menu and choose
-        "Open in browser" (or "Open in Safari"), then carry on there.
-      </p>
-    </main>
-  );
-}
+function Shell() {
+  const [room, setRoom] = useState<Room | null>(null);
+  const route = useRoute();
+  const main = useRef<HTMLElement>(null);
+  const first = useRef(true);
 
-function Create() {
-  const [room, setRoom] = useState<{ invite: string; code: string[] } | null>(null);
-  const [copied, setCopied] = useState(false);
-  const heading = useRef<HTMLHeadingElement>(null);
-
-  // The button that was pressed is gone; move focus to the result for keyboard and
+  // After in-app navigation, move focus to the new screen's heading for keyboard and
   // screen reader users.
-  useLayoutEffect(() => {
-    if (room) heading.current?.focus();
-  }, [room]);
-
-  async function create() {
-    const raw = generateRoomKeyBytes();
-    await importRoomKey(raw);
-    setRoom({ invite: buildInviteUrl(location.origin, newId(), raw), code: await safetyCode(raw) });
-  }
-
-  async function copy() {
-    if (!room) return;
-    await navigator.clipboard.writeText(room.invite);
-    setCopied(true);
-  }
-
-  if (!room) {
-    return (
-      <section class="card">
-        <button class="primary" onClick={create}>Create a room</button>
-      </section>
-    );
-  }
-  return (
-    <section class="card">
-      <h2 ref={heading} tabIndex={-1}>Send this link to your person</h2>
-      <p class="hint">Use a chat that is end-to-end encrypted, or read it out. Anyone with the link can open the room.</p>
-      <p class="invite">{room.invite}</p>
-      <button class="primary" onClick={copy}>{copied ? 'Copied' : 'Copy link'}</button>
-      <SafetyCode code={room.code} />
-    </section>
-  );
-}
-
-function Join({ roomId }: { roomId: string }) {
-  const [state, setState] = useState<{ code: string[] } | 'missing' | 'loading'>('loading');
-
   useEffect(() => {
-    const raw = takeInviteKeyFromLocation(location, history);
-    if (!raw) {
-      setState('missing');
+    if (first.current) {
+      first.current = false;
       return;
     }
-    void importRoomKey(raw).then(() => safetyCode(raw)).then((code) => setState({ code }));
-  }, [roomId]);
+    main.current?.querySelector<HTMLElement>('h1')?.focus();
+  }, [route]);
 
-  if (state === 'loading') return null;
-  if (state === 'missing') {
-    return (
-      <section class="card">
-        <h2>This invite link is incomplete</h2>
-        <p>Ask for the link again and open the whole thing in Safari or Chrome.</p>
-      </section>
-    );
-  }
-  return (
-    <section class="card">
-      <h2>You're in</h2>
-      <SafetyCode code={state.code} />
-    </section>
-  );
-}
+  const active = (r: Route) => r === route || (r === 'today' && route === 'card');
+  const kicker = room
+    ? `Day ${dayOfSeason(room)} of ${SEASON_DAYS} · room ends in ${daysLeft(room)} days`
+    : 'Season 1 · Pehli Baat';
 
-function SafetyCode({ code }: { code: string[] }) {
   return (
-    <div class="safety">
-      <p class="label">Your safety code</p>
-      <p class="emoji" aria-label={`Safety code: ${code.join(' ')}`}>{code.join(' ')}</p>
-      <p class="hint">Compare this on a call. If it matches on both phones, nobody swapped your invite link on the way.</p>
-    </div>
+    <RoomContext.Provider value={{ room, setRoom }}>
+      <a class="skip" href="#main">Skip to content</a>
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-mark">Our Kahani</div>
+          <div class="kicker sidebar-kicker">{kicker}</div>
+          <nav aria-label="All screens">
+            {NAV.map((n) => (
+              <Link
+                key={n.route}
+                href={PATHS[n.route]}
+                class={route === n.route ? 'side-link is-active' : 'side-link'}
+                aria-current={route === n.route ? 'page' : undefined}
+              >
+                <Em>{n.emoji}</Em>
+                <span>{n.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <p class="sidebar-foot">Encrypted on this device. Sign-in is a link, never an email address.</p>
+        </aside>
+
+        <div class="column">
+          <header class="app-header">
+            <div>
+              <div class="header-mark">Our Kahani</div>
+              <div class="kicker">{kicker}</div>
+            </div>
+            <span class="e2e" title="End-to-end encrypted">
+              E2E<span class="sr-only"> end-to-end encrypted</span>
+            </span>
+          </header>
+
+          <main id="main" ref={main} class="scroll">
+            <div class="content">
+              {route === 'today' && <Today />}
+              {route === 'card' && <Card />}
+              {route === 'packs' && <Packs />}
+              {route === 'movie' && <Movie />}
+              {route === 'photo' && <Photo />}
+              {route === 'gentle' && <Gentle />}
+              {route === 'saved' && <Saved />}
+              {route === 'room' && <RoomData />}
+              {route === 'invite' && <Invite />}
+              {route === 'look' && <LookScreen />}
+              {route === 'join' && <Join />}
+            </div>
+          </main>
+
+          <nav class="tabs" aria-label="Main">
+            {TABS.map((t) => (
+              <Link
+                key={t.route}
+                href={PATHS[t.route]}
+                class={active(t.route) ? 'tab is-active' : 'tab'}
+                aria-current={route === t.route ? 'page' : undefined}
+              >
+                <Em>{t.emoji}</Em>
+                <span class="tab-label">{t.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </RoomContext.Provider>
   );
 }

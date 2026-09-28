@@ -15,9 +15,10 @@ Playwright with no test accounts or secrets.
 | Performance budget | JS under 60 KB and CSS under 15 KB gzipped | Node script | `scripts/check-dist.mjs` | Yes |
 | Dependency audit | No known high or critical issues in shipped dependencies | `npm audit` | `package.json` | Yes |
 | Functional end to end | Create room, invite, join, broken links, Instagram gate | Playwright | `e2e/invite.spec.ts` | Yes, 5 browsers and devices |
+| App shell and screens | Every screen by URL and reload, phone tabs vs laptop sidebar, card picking, "Make it ours" settings, country-aware safety footer, erase room, unbuilt features marked "Soon" | Playwright | `e2e/app.spec.ts` | Yes |
 | Security end to end | Security headers, no CSP violations, no third-party requests, key never stored or logged, page cannot be framed | Playwright | `e2e/security.spec.ts` | Yes |
-| Accessibility | WCAG 2.2 AA on every screen in light and dark mode, keyboard-only flow, visible focus | Playwright + axe-core | `e2e/a11y.spec.ts` | Yes |
-| Responsive | No sideways scrolling at 320, 375, 768, 1280 px; touch targets at least 44 px | Playwright | `e2e/a11y.spec.ts` | Yes |
+| Accessibility | WCAG 2.2 AA on every screen in light and dark mode, keyboard-only flow, visible focus, skip link, one h1 per screen | Playwright + axe-core | `e2e/a11y.spec.ts` | Yes |
+| Responsive | No sideways scrolling at 320, 375, 768, 1280 px on every screen; touch targets at least 44 px on every screen | Playwright | `e2e/a11y.spec.ts` | Yes |
 | Visual regression | Every screen, light and dark, looks the same as the approved screenshot | Playwright screenshots | `e2e/visual.spec.ts` | Yes (Linux only) |
 | Deployment smoke | The real Cloudflare deployment (preview for PRs, production for `main`) works with its real headers | Playwright | same specs, `BASE_URL` set | Yes, after Cloudflare deploys |
 | Server security | Room isolation, hidden answers, plaintext canary, room lifecycle | Vitest (planned) | `src/security-pending.test.ts` | Listed as "todo" until Supabase lands |
