@@ -20,7 +20,7 @@ import type { Room } from './room';
 export type LoadResult =
   | { state: 'none' }
   | { state: 'ready'; room: Room; offline?: boolean }
-  /** The key is on this device but its sign-in was cleared: the recovery words bring it back. */
+  /** The key is on this device but its sign-in was cleared: the hashtag and room phrase bring it back. */
   | { state: 'lost-access'; roomId: string };
 
 /** A decrypted record, as the app uses it. */
@@ -161,28 +161,27 @@ export function createController(deps: Deps = defaultDeps()) {
       await keystore.remove(roomId);
     },
 
-    // ---- Recovery words ----------------------------------------------------
+    // ---- Room phrase (hashtag + a phrase each person picks) -----------------
 
-    newPhrase: async () => (await import('../crypto/recovery')).newPhrase(),
-
-    /** Saves the backup wrapped under the words; the raw key bytes are then dropped. */
-    async saveBackup(room: Room, entropy: Bytes): Promise<Room> {
+    /** Saves the backup wrapped under hashtag + phrase; the raw key bytes are then dropped. */
+    async saveBackup(room: Room, hashtag: string, phrase: string): Promise<Room> {
       const stored = await keystore.current();
       if (!stored || stored.id !== room.id || !stored.setupRaw) throw new Error('Nothing to back up');
-      const { sealBackup, lookupToken } = await import('../crypto/recovery');
-      const envelope = await sealBackup(entropy, room.id, stored.setupRaw);
-      await api.saveBackup(room.id, await lookupToken(entropy), envelope);
+      const { sealBackup, lookupToken, phraseSecret } = await import('../crypto/recovery');
+      const secret = await phraseSecret(hashtag, phrase);
+      const envelope = await sealBackup(secret, room.id, stored.setupRaw);
+      await api.saveBackup(room.id, await lookupToken(secret), envelope);
       await keystore.markBackedUp(room.id);
       return { ...room, backedUp: true };
     },
 
-    /** Brings a room back from the 12 words on a new or cleared browser. */
-    async recover(words: string): Promise<Room> {
-      const { wordsToEntropy, lookupToken, openBackup } = await import('../crypto/recovery');
-      const entropy = await wordsToEntropy(words);
+    /** Brings a room back from its hashtag and this person's phrase on a new or cleared browser. */
+    async recover(hashtag: string, phrase: string): Promise<Room> {
+      const { phraseSecret, lookupToken, openBackup } = await import('../crypto/recovery');
+      const secret = await phraseSecret(hashtag, phrase);
       session.signOut(); // a fresh anonymous account takes over the old one's place
-      const { roomId, role, envelope } = await api.recoverRoom(await lookupToken(entropy));
-      const backup = await openBackup(entropy, roomId, envelope);
+      const { roomId, role, envelope } = await api.recoverRoom(await lookupToken(secret));
+      const backup = await openBackup(secret, roomId, envelope);
       const stored = await store({ id: roomId, role, raw: backup.roomKey, notesRaw: backup.notesKey, backedUp: true });
       return toRoom(stored, await api.getRoom(roomId));
     },

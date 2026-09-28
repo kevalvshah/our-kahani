@@ -166,6 +166,7 @@ describe('api', () => {
     expect(calls[0]!.url).toBe('https://p/rest/v1/rpc/save_backup');
     expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ p_room: 'r', p_token: '\\x01', p_envelope: '\\x0203' });
     await expect(api(() => pgError('XX000')).a.saveBackup('r', new Uint8Array(1), new Uint8Array(1))).rejects.toBeInstanceOf(ApiError);
+    await expect(api(() => pgError('23505')).a.saveBackup('r', new Uint8Array(1), new Uint8Array(1))).rejects.toMatchObject({ code: 'phrase-taken' });
   });
 
   it('recovers a room from the lookup token', async () => {

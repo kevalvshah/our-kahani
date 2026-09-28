@@ -151,8 +151,8 @@ export function RoomDataScreen() {
         <AnswerOrder />
         <NotificationSwitch />
         <p class="small muted">
-          Using a laptop too? Open this site there and choose “I have my twelve words”. Your room opens on that device instead
-          of this one.
+          Using a laptop too? Open this site there, choose “Enter my room” and type your hashtag and phrase. Your room opens on
+          that device instead of this one.
         </p>
         {confirm ? (
           <div class="panel panel-pink">

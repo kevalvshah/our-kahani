@@ -1,6 +1,6 @@
 import type { Page, Request } from '@playwright/test';
 import { BACKEND_HOST, expect, test } from './helpers';
-import { createAndSetUp, joinAndSetUp } from './flow';
+import { createAndSetUp, joinAndSetUp, lockHashtag, setPhrase } from './flow';
 
 // The whole product, end to end, as two people on two phones.
 
@@ -13,7 +13,7 @@ function recordBackendTraffic(page: Page) {
 }
 
 test.describe('the full journey', { tag: '@journey' }, () => {
-  test('two people: setup, words, hashtag, cards, reveal, packs, games, saved notes; nothing readable leaves either phone', async ({ page, newDevice }) => {
+  test('two people: setup, hashtag and phrases, cards, reveal, packs, games, saved notes; nothing readable leaves either phone', async ({ page, newDevice }) => {
     test.setTimeout(240_000);
     const aTraffic = recordBackendTraffic(page);
     const { invite, code } = await createAndSetUp(page, 'Asha');
@@ -28,14 +28,18 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     await b.goto('/invite');
     await expect(b.locator('.emoji').first()).toHaveText(code);
 
-    // Hashtag: Asha suggests, Ravi agrees, it locks.
-    await page.goto('/');
-    await expect(page.getByText('Name your room together')).toBeVisible({ timeout: 20_000 });
-    await page.getByRole('button', { name: 'Suggest this one' }).click();
-    await expect(page.getByText(/You suggested #/)).toBeVisible();
-    await b.goto('/');
-    await b.getByRole('button', { name: 'Agree and lock it 🔒' }).click({ timeout: 20_000 });
+    // Hashtag: Asha suggests, Ravi agrees, it locks and becomes the room's name. Then each picks
+    // their own room phrase (a weak one is refused).
+    const hashtag = await lockHashtag(page, b);
+    expect(hashtag).toMatch(/^#\w+/);
+    await b.getByLabel('Your phrase (four or more words)').fill('ravi ravi');
+    await b.getByLabel('Type it again').fill('ravi ravi');
+    await b.getByRole('button', { name: 'Save my phrase' }).click();
+    await expect(b.getByRole('alert')).toContainText('at least 4 words');
+    await setPhrase(b, 'monsoon evenings with adrak chai');
+    await setPhrase(page, 'mango lassi on sunday mornings');
     await expect(b.locator('.hashtag-pill')).toBeVisible({ timeout: 20_000 });
+    await expect(b.locator('.header-mark, .sidebar-mark').filter({ hasText: hashtag }).first()).toBeAttached();
 
     // Day 1: the invited person answers first; hidden until both; then the reveal with names.
     await page.goto('/card/day/1');
@@ -108,29 +112,44 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     // Plaintext canary: no name, answer, why, custom option, note or key ever went over the wire.
     const everything = [...aTraffic, ...bTraffic].join('\n');
     expect(everything.length).toBeGreaterThan(0);
-    for (const canary of ['Asha', 'Ravi', 'Adrak', 'Chai on the balcony', 'Rooftop', 'Saathi', '"chai"', '"pick"', 'Namaste', key]) {
+    for (const canary of ['Asha', 'Ravi', 'Adrak', 'Chai on the balcony', 'Rooftop', 'Saathi', '"chai"', '"pick"', 'Namaste', 'mango', 'monsoon', hashtag.slice(1), key]) {
       expect(everything, `"${canary}" was sent to the server`).not.toContain(canary);
     }
   });
 
-  test('recovery: the twelve words bring the room back on a fresh browser', async ({ page, newDevice }) => {
-    test.setTimeout(120_000);
-    const { words } = await createAndSetUp(page, 'Mira');
-    // Alone in the room, so switch off "the invited person answers first".
-    await page.goto('/room');
-    await page.getByRole('switch', { name: 'Take turns answering' }).click();
-    await expect(page.getByRole('switch', { name: 'Take turns answering' })).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
+  test('recovery: hashtag + phrase bring the room back on a fresh browser; a wrong phrase does not', async ({ page, newDevice }) => {
+    test.setTimeout(180_000);
+    const { invite } = await createAndSetUp(page, 'Mira');
+    const b = await newDevice();
+    await joinAndSetUp(b, invite, 'Kabir');
+    const hashtag = await lockHashtag(page, b);
+    await setPhrase(b, 'kite festival on the terrace');
+    await setPhrase(page, 'filter coffee and rainy mornings');
+
+    // Kabir answers first (the default), then Mira.
+    await b.goto('/card/day/1');
+    await b.getByRole('button', { name: 'Coffee' }).click();
+    await b.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(b.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
     await page.goto('/card/day/1');
-    await page.getByRole('button', { name: 'Chai' }).click();
+    await page.getByRole('button', { name: 'Chai' }).click({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Seal my answer' }).click();
-    await expect(page.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /open both/ })).toBeVisible({ timeout: 20_000 });
 
     const fresh = await newDevice();
     await fresh.goto('/recover');
-    await fresh.getByLabel('Your twelve words').fill(words.join(' '));
-    await fresh.getByRole('button', { name: 'Unlock my room' }).click();
-    await expect(fresh.getByRole('heading', { name: /Namaste, Mira/ })).toBeVisible({ timeout: 20_000 });
+    await fresh.getByLabel("Your room's hashtag").fill(hashtag.toLowerCase());
+    await fresh.getByLabel('Your phrase').fill('filter coffee and sunny mornings');
+    await fresh.getByRole('button', { name: 'Enter the room' }).click();
+    await expect(fresh.getByRole('alert')).toContainText('do not match', { timeout: 30_000 });
+
+    // Case and extra spaces do not matter.
+    await fresh.getByLabel('Your phrase').fill('  Filter Coffee and   rainy mornings ');
+    await fresh.getByRole('button', { name: 'Enter the room' }).click();
+    await expect(fresh.getByRole('heading', { name: /Namaste, Mira/ })).toBeVisible({ timeout: 30_000 });
+    await expect(fresh.locator('.header-mark, .sidebar-mark').filter({ hasText: hashtag }).first()).toBeAttached();
     await fresh.goto('/card/day/1');
-    await expect(fresh.getByRole('button', { name: 'Chai' })).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
+    await fresh.getByRole('button', { name: /open both/ }).click({ timeout: 20_000 });
+    await expect(fresh.locator('.reveal-theirs')).toContainText('Coffee');
   });
 });

@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { K } from '../data/kinds';
 import { RoomDataProvider, useMaybeRoomData } from '../data/RoomData';
 import { firstWaiting } from '../features/progress';
 import { isInAppBrowser } from '../platform/inAppBrowser';
@@ -29,7 +30,7 @@ const RoomDataScreen = lazy(() => import('./screens/RoomData').then((m) => m.Roo
 const RetentionModal = lazy(() => import('./screens/RoomData').then((m) => m.RetentionModal));
 const Saved = lazy(() => import('./screens/Saved').then((m) => m.Saved));
 const ProfileSetup = lazy(() => import('./screens/Setup').then((m) => m.ProfileSetup));
-const RecoveryWords = lazy(() => import('./screens/Setup').then((m) => m.RecoveryWords));
+const RoomPhrase = lazy(() => import('./screens/Setup').then((m) => m.RoomPhrase));
 const Recover = lazy(() => import('./screens/Setup').then((m) => m.Recover));
 
 // One app, every browser: phones get the header and bottom tabs; at laptop width the sidebar
@@ -68,6 +69,8 @@ function Shell() {
   const [room, setRoom] = useState<Room | null>(null);
   const [status, setStatus] = useState<RoomStatus>('loading');
   const [offline, setOffline] = useState(false);
+  // The room's hashtag once both have locked it: the room's name in the header and tab title.
+  const [roomName, setRoomName] = useState<string | null>(null);
   const route = useRoute();
   const main = useRef<HTMLElement>(null);
   const first = useRef(true);
@@ -114,7 +117,7 @@ function Shell() {
       </a>
       <div class="shell">
         <aside class="sidebar">
-          <div class="sidebar-mark">Our Kahani</div>
+          <div class="sidebar-mark">{roomName ?? 'Our Kahani'}</div>
           <div class="kicker sidebar-kicker">{kicker}</div>
           <nav aria-label="All screens">
             {NAV.map((n) => (
@@ -130,7 +133,7 @@ function Shell() {
         <div class="column">
           <header class="app-header">
             <div>
-              <div class="header-mark">Our Kahani</div>
+              <div class="header-mark">{roomName ?? 'Our Kahani'}</div>
               <div class="kicker">{kicker}</div>
             </div>
             <Link class="e2e" href={PATHS.privacy} title="End-to-end encrypted">
@@ -147,7 +150,7 @@ function Shell() {
             <div class="content">
               {room ? (
                 <RoomDataProvider room={room}>
-                  <InRoom route={route} />
+                  <InRoom route={route} onName={setRoomName} />
                 </RoomDataProvider>
               ) : (
                 <NoRoom route={route} />
@@ -188,8 +191,17 @@ function NoRoom({ route }: { route: Route }) {
 }
 
 /** Screens inside a room, after first-run setup. */
-function InRoom({ route }: { route: Route }) {
+function InRoom({ route, onName }: { route: Route; onName: (name: string | null) => void }) {
   const d = useMaybeRoomData()!;
+  const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag ?? null;
+  useEffect(() => {
+    onName(hashtag);
+    document.title = hashtag ? `${hashtag} · Our Kahani` : 'Our Kahani';
+    return () => {
+      onName(null);
+      document.title = 'Our Kahani';
+    };
+  }, [hashtag]);
   if (route.name === 'join') return <Join />;
   if (!d.loaded) {
     return (
@@ -198,9 +210,10 @@ function InRoom({ route }: { route: Route }) {
       </p>
     );
   }
-  // First run: your name, then the twelve words. Both are required before anything else.
+  // First run: your name. Once you have both locked the hashtag, each picks a room phrase
+  // (hashtag + phrase is the way back in on another device); nothing else opens until then.
   if (!d.myProfile) return <ProfileSetup />;
-  if (!d.room.backedUp) return <RecoveryWords />;
+  if (!d.room.backedUp && d.list(K.HASHTAG).length > 0) return <RoomPhrase />;
   return (
     <>
       <Screen route={route} />

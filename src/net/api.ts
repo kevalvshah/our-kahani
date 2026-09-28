@@ -57,6 +57,7 @@ export class ApiError extends Error {
       | 'room-ended'
       | 'too-many-rooms'
       | 'not-found'
+      | 'phrase-taken'
       | 'paused'
       | 'read-only'
       | 'offline'
@@ -75,7 +76,7 @@ function failWith(error: { code?: string; message?: string } | null, offline: bo
   if (code === 'P0004') throw new ApiError('This room is full', 'room-full-data');
   if (code === 'P0005') throw new ApiError('This room already has 20 photos', 'photo-limit');
   if (code === 'P0006') throw new ApiError('This room has ended', 'room-ended');
-  if (code === 'P0007') throw new ApiError('Those words do not match a room', 'not-found');
+  if (code === 'P0007') throw new ApiError('That hashtag and phrase do not match a room', 'not-found');
   if (code === 'P0008') throw new ApiError('New rooms are paused', 'paused');
   if (code === '25006') throw new ApiError('The server is read-only for now', 'read-only');
   throw new ApiError(error?.message || 'Something went wrong', 'other');
@@ -207,6 +208,8 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
         p_token: toBytea(token),
         p_envelope: toBytea(envelope),
       });
+      // Another person already uses this hashtag + phrase (same lookup): ask for another phrase.
+      if (error?.code === '23505') throw new ApiError('Pick a different phrase', 'phrase-taken');
       if (error) fail(error);
     },
 
@@ -214,7 +217,7 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
       const { data, error } = await db.rpc('recover_room', { p_token: toBytea(token) });
       if (error) fail(error);
       const row = (data as { room_id: string; role: 'creator' | 'invitee'; envelope: string }[] | null)?.[0];
-      if (!row) throw new ApiError('Those words do not match a room', 'not-found');
+      if (!row) throw new ApiError('That hashtag and phrase do not match a room', 'not-found');
       return { roomId: row.room_id, role: row.role, envelope: fromBytea(row.envelope) };
     },
 

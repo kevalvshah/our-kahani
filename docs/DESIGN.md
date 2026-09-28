@@ -190,7 +190,7 @@ discards the keys for good.
 ### 9. Invite & safety code (`invite`)
 Monospace invite link with the `#k=…` fragment coloured in accent to make the point that the key
 lives after the hash; Copy link / Share; safety-code card with five emoji at 34px and the
-compare-on-a-call explanation; gold panel on writing down the twelve words, Safari's 7-day storage
+compare-on-a-call explanation; gold panel on the hashtag + room phrase, Safari's 7-day storage
 eviction, and adding to the Home Screen.
 
 ### 10. Make it ours (`look`)

@@ -18,8 +18,8 @@ No other servers. Railway is not needed.
   (names, answers, notes, hashtag, photo captions) lives inside `envelope`.
 - `keep_votes`: room_id, user_id, cycle. Each person sees only their own vote.
 - `private.join_verifiers`: SHA-256 of the key-derived join token.
-- `private.key_backups`: SHA-256 of a lookup token from the 12 words, and the key backup
-  sealed under a key from the same words.
+- `private.key_backups`: SHA-256 of a lookup token from hashtag + room phrase, and the key backup
+  sealed under a key from the same secret.
 - `private.media_purge`: ids of erased or ended rooms, for 8 days, so R2 files are deleted.
 
 Record kinds (`src/data/kinds.ts`), enforced by `private.can_read_record`:

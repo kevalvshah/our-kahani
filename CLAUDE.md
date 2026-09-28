@@ -22,9 +22,14 @@ script, and Google Fonts.
 3. The room key is made on the creator's device and reaches the partner in the invite link
    fragment (after `#`), which browsers do not send to servers. Import it, then remove the
    fragment from the address bar. Never log a full invite URL.
-4. A 12-word recovery phrase is mandatory at setup. Safari deletes IndexedDB and localStorage
-   after 7 days of Safari use without interaction, so keys can vanish. Handle "key not found"
-   gracefully. Request persistent storage. Nudge iPhone users to add to Home Screen.
+4. The way back into a room is its hashtag plus a room phrase each person picks (owner's
+   decision, replacing the 12 random words). The phrase is mandatory once the hashtag locks:
+   at least 4 words, checked against names and the hashtag, stretched with PBKDF2-SHA256
+   (600,000 rounds, salted with the hashtag) before HKDF derives the lookup token and wrap key.
+   The phrase never leaves the device. A weak phrase could be guessed offline by whoever holds
+   the database: never lower these limits without asking. Safari deletes IndexedDB and
+   localStorage after 7 days of Safari use without interaction, so keys can vanish. Handle "key
+   not found" gracefully. Request persistent storage. Nudge iPhone users to add to Home Screen.
 5. "Answers stay hidden until both reply" is enforced by the server using metadata only
    (submitted flags), never by hiding data in the client. Withhold the partner's ciphertext
    until the rule passes. Realtime carries "answered" pings only, never content.
@@ -49,9 +54,11 @@ script, and Google Fonts.
   reminders by default. Optional generic notification only ("Your room needs attention").
 - Downloads are built on the device (the server cannot read data): a zip with answers .xlsx,
   the person's private notes .xlsx, photos, voice notes, README. See `docs/SECURITY.md`.
-- The room hashtag is a permanent, cosmetic nickname. One person suggests, the other agrees or
-  counters, then it locks for good. Write-once in the database. Never use it to look up or
-  authorise anything. Different name later means delete the room and start a new one.
+- The room hashtag is the room's permanent name. One person suggests, the other agrees or
+  counters, then it locks for good. Write-once in the database, and encrypted like everything
+  else. It is shown as the room name and is part of the salt for the room phrase, but never
+  used alone to look up or authorise anything. Different name later means delete the room and
+  start a new one.
 
 ## Hard rules: browser only
 - Target: latest two versions of Safari (iOS 16.4+ and macOS), Chrome, Edge, Firefox, on phone

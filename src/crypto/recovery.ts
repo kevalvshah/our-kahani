@@ -1,73 +1,76 @@
-import { concat, fromBase64Url, fromUtf8, randomBytes, toBase64Url, utf8, type Bytes } from './bytes';
+import { concat, fromBase64Url, fromUtf8, utf8, toBase64Url, type Bytes } from './bytes';
 import { open, seal } from './envelope';
 import { ROOM_KEY_BYTES } from './roomKey';
-import { WORDLIST } from './wordlist';
 
-// The 12-word recovery phrase (standard BIP39 English, 128 bits + 4-bit checksum). From the
-// words, HKDF derives two unrelated keys:
+// Getting back into a room on a new device: the room's hashtag plus a phrase each person picks
+// for themselves. PBKDF2 (600,000 rounds of SHA-256, salted with the hashtag) turns them into a
+// secret, and HKDF derives two unrelated keys from that:
 //   - a lookup token: the server stores only its SHA-256, to find the backup;
 //   - a wrap key: encrypts the backup (room key + private-notes key) on the phone.
-// The server can hand the backup back, never open it. The words themselves never leave the
-// phone and are never stored.
+// The server can hand the backup back, never open it. The phrase never leaves the phone and is
+// never stored. Because a person chooses it, its strength matters: whoever holds the database
+// could try guesses offline, so we ask for four or more words and make every guess slow.
 
-export const PHRASE_WORDS = 12;
-const ENTROPY_BYTES = 16;
+export const PBKDF2_ROUNDS = 600_000;
+export const MIN_WORDS = 4;
+const MIN_LETTERS = 16;
 const SALT = new Uint8Array(32);
-
-async function sha256(bytes: Bytes): Promise<Bytes> {
-  return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-}
-
-export async function entropyToWords(entropy: Bytes): Promise<string[]> {
-  if (entropy.length !== ENTROPY_BYTES) throw new Error('Entropy must be 16 bytes');
-  const checksum = (await sha256(entropy))[0]! >> 4; // first 4 bits
-  let bits = '';
-  for (const b of entropy) bits += b.toString(2).padStart(8, '0');
-  bits += checksum.toString(2).padStart(4, '0');
-  const words: string[] = [];
-  for (let i = 0; i < PHRASE_WORDS; i++) words.push(WORDLIST[parseInt(bits.slice(i * 11, i * 11 + 11), 2)]!);
-  return words;
-}
-
-export async function newPhrase(): Promise<{ words: string[]; entropy: Bytes }> {
-  const entropy = randomBytes(ENTROPY_BYTES);
-  return { words: await entropyToWords(entropy), entropy };
-}
 
 export class PhraseError extends Error {
   override name = 'PhraseError';
 }
 
-/** Parses what a person typed: any spacing or case. Throws with a plain message if it is wrong. */
-export async function wordsToEntropy(input: string): Promise<Bytes> {
-  const words = input.toLowerCase().trim().split(/[\s,]+/).filter(Boolean);
-  if (words.length !== PHRASE_WORDS) throw new PhraseError(`That is ${words.length} words; it should be 12.`);
-  let bits = '';
-  for (const w of words) {
-    const i = WORDLIST.indexOf(w);
-    if (i < 0) throw new PhraseError(`“${w}” is not one of the recovery words. Check the spelling.`);
-    bits += i.toString(2).padStart(11, '0');
-  }
-  const entropy = new Uint8Array(ENTROPY_BYTES);
-  for (let i = 0; i < ENTROPY_BYTES; i++) entropy[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
-  const checksum = parseInt(bits.slice(128), 2);
-  if ((await sha256(entropy))[0]! >> 4 !== checksum) {
-    throw new PhraseError('Those words do not fit together. Check their order and spelling.');
-  }
-  return entropy;
+/** Any spacing or case, the same everywhere: "  Mango  LASSI " → "mango lassi". */
+export function normalisePhrase(input: string): string {
+  return input.normalize('NFKC').toLowerCase().trim().split(/\s+/).filter(Boolean).join(' ');
 }
 
-async function hkdf(entropy: Bytes, info: string): Promise<Bytes> {
-  const ikm = await crypto.subtle.importKey('raw', entropy, 'HKDF', false, ['deriveBits']);
+/** "#ChaiAurCoffee" → "chaiaurcoffee" (the hashtag is part of the salt, so case must not matter). */
+export function hashtagSalt(hashtag: string): string {
+  return hashtag.normalize('NFKC').replace(/^#+/, '').replace(/[^\p{L}\p{N}_]/gu, '').toLowerCase();
+}
+
+/**
+ * A plain-words reason the phrase is too easy to guess, or null when it is fine.
+ * `avoid` are words that must not make up the phrase on their own (names, the hashtag).
+ */
+export function phraseProblem(input: string, avoid: string[] = []): string | null {
+  const phrase = normalisePhrase(input);
+  const words = phrase ? phrase.split(' ') : [];
+  if (words.length < MIN_WORDS) return `Use at least ${MIN_WORDS} words, like “mango lassi on sundays”.`;
+  if (phrase.replace(/[^\p{L}\p{N}]/gu, '').length < MIN_LETTERS) return 'A little longer, please: a few real words, not letters.';
+  if (new Set(words).size < MIN_WORDS - 1) return 'Use different words, not the same one again and again.';
+  const avoided = new Set(avoid.flatMap((a) => normalisePhrase(a.replace(/^#+/, '')).split(' ')).filter(Boolean));
+  if (words.filter((w) => !avoided.has(w)).length < MIN_WORDS - 1) return 'Pick words that are not just your names or the hashtag.';
+  return null;
+}
+
+/** The secret behind the lookup token and wrap key. Slow on purpose (about a second on a phone). */
+export async function phraseSecret(hashtag: string, input: string, rounds = PBKDF2_ROUNDS): Promise<Bytes> {
+  const tag = hashtagSalt(hashtag);
+  if (!tag) throw new PhraseError('Type your room’s hashtag.');
+  const phrase = normalisePhrase(input);
+  if (!phrase) throw new PhraseError('Type your phrase.');
+  const base = await crypto.subtle.importKey('raw', utf8(phrase), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: utf8(`our-kahani/room-phrase/v1|${tag}`), iterations: rounds },
+    base,
+    256,
+  );
+  return new Uint8Array(bits);
+}
+
+async function hkdf(secret: Bytes, info: string): Promise<Bytes> {
+  const ikm = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits']);
   return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: SALT, info: utf8(info) }, ikm, 256));
 }
 
-export function lookupToken(entropy: Bytes): Promise<Bytes> {
-  return hkdf(entropy, 'our-kahani/recovery/lookup/v1');
+export function lookupToken(secret: Bytes): Promise<Bytes> {
+  return hkdf(secret, 'our-kahani/recovery/lookup/v1');
 }
 
-async function wrapKey(entropy: Bytes): Promise<CryptoKey> {
-  const raw = await hkdf(entropy, 'our-kahani/recovery/wrap/v1');
+async function wrapKey(secret: Bytes): Promise<CryptoKey> {
+  const raw = await hkdf(secret, 'our-kahani/recovery/wrap/v1');
   return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
@@ -79,14 +82,14 @@ export interface Backup {
 const backupCtx = (roomId: string) => ({ roomId, recordId: 'backup', kind: 0 });
 
 /** Plaintext padded to a fixed size so every backup is the same length. */
-export async function sealBackup(entropy: Bytes, roomId: string, backup: Backup): Promise<Bytes> {
+export async function sealBackup(secret: Bytes, roomId: string, backup: Backup): Promise<Bytes> {
   const json = utf8(JSON.stringify({ v: 1, room: toBase64Url(backup.roomKey), notes: toBase64Url(backup.notesKey) }));
   const padded = concat(json, new Uint8Array(160 - json.length).fill(0x20));
-  return seal(await wrapKey(entropy), backupCtx(roomId), padded);
+  return seal(await wrapKey(secret), backupCtx(roomId), padded);
 }
 
-export async function openBackup(entropy: Bytes, roomId: string, envelope: Bytes): Promise<Backup> {
-  const data = JSON.parse(fromUtf8(await open(await wrapKey(entropy), backupCtx(roomId), envelope))) as {
+export async function openBackup(secret: Bytes, roomId: string, envelope: Bytes): Promise<Backup> {
+  const data = JSON.parse(fromUtf8(await open(await wrapKey(secret), backupCtx(roomId), envelope))) as {
     v?: number;
     room?: string;
     notes?: string;

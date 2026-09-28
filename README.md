@@ -24,7 +24,7 @@ mobile or laptop browser. Free, no ads, no tracking. Made with the Indian diaspo
 - End-to-end encrypted. The database holds scrambled data only, so even the developer cannot
   read names, answers, photos, voice notes or saved notes.
 - No email or phone number needed. No ads. No tracking. No third-party scripts.
-- You hold the key. Lose your phone and your 12-word recovery phrase and nobody can bring the
+- You hold the key. Lose your phone and forget your room phrase and nobody can bring the
   room back, including us.
 - Honest limits are in `docs/SECURITY.md`.
 

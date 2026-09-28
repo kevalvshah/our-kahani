@@ -9,7 +9,7 @@ export interface Room {
   /** The invite link, while the creator still has it (until the partner joins). */
   invite?: string;
   partnerJoined: boolean;
-  /** False until the recovery words have been written down and the backup saved. */
+  /** False until this person has picked their room phrase and the key backup is saved. */
   backedUp: boolean;
   startedAt: number;
   endsAt: number;

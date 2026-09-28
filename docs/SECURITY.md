@@ -13,10 +13,13 @@ backups or logs. Only the two people in a room can.
   in about 48 hours; the room closes to a third person once two have joined.
 - **Safety code**: six emoji derived from a hash of the key, shown on both phones. Compare on
   a call to detect a swapped link.
-- **Recovery**: 12-word BIP39 phrase, mandatory at setup, with a check of three words. HKDF
-  derives a lookup token and a wrap key from it; the room key and the notes key are sealed
-  under the wrap key and stored by `save_backup`. `recover_room` returns the backup and moves
-  the membership to the new browser's anonymous account.
+- **Recovery (hashtag + room phrase)**: once both lock the hashtag, each person picks their own
+  phrase (at least 4 words, not just names or the hashtag). PBKDF2-SHA256 with 600,000 rounds,
+  salted with the normalised hashtag, turns hashtag + phrase into a secret; HKDF derives a
+  lookup token and a wrap key from it. The room key and the notes key are sealed under the
+  wrap key and stored by `save_backup`. On another device, "Enter my room" asks for both;
+  `recover_room` returns the backup and moves the membership to that browser's anonymous
+  account. Until the hashtag locks, the key lives only on the device.
 - **Personal notes**: each person has their own key for Saved notes; the partner never has it.
 - **Key storage**: non-extractable CryptoKey in IndexedDB where possible. Safari can delete
   script-writable storage after 7 days of Safari use without interaction (Home Screen web apps
@@ -34,13 +37,13 @@ backups or logs. Only the two people in a room can.
 - Who has answered which card (to apply the reveal rule), never the answer.
 - "Keep this room" votes, a yes per person, never shown to the partner.
 - SHA-256 hashes of the join token and of the recovery lookup token, and the recovery backup
-  sealed under a key from the 12 words.
+  sealed under a key from hashtag + room phrase.
 - For photos and voice notes: the R2 object id, size and time, all ciphertext.
 - If a person switches notifications on: their device's push address (a random URL at Google,
   Mozilla, Apple or Microsoft) and when they last nudged their partner. Pushes carry no payload;
   the push service learns only that a push arrived.
 - IP addresses in host logs. Keep logs minimal and short-lived.
-It never sees a name, answer, note, hashtag, caption, photo, voice note, key or the 12 words.
+It never sees a name, answer, note, hashtag, caption, photo, voice note, key or room phrase.
 
 ## Honest limits (say these to users)
 - We serve the app's code. A changed version could steal keys. Mitigate: open source, strict
@@ -50,7 +53,11 @@ It never sees a name, answer, note, hashtag, caption, photo, voice note, key or 
   encrypted by default as far as we know; verify. Instagram's in-app browser has been reported
   to inject scripts; require Safari or Chrome.
 - Screenshots, unlocked phones, shoulder-surfing are out of scope.
-- If keys and recovery phrase are both lost, data is gone.
+- If keys and the room phrase are both lost, data is gone.
+- The room phrase is chosen by a person, so it is weaker than random words. Whoever holds the
+  database could try guesses offline against the stored backup; 600,000 PBKDF2 rounds make each
+  guess slow and the hashtag salt makes each guess work for one room only, but a phrase that is
+  easy to guess can still be found. The app says so when the phrase is chosen.
 
 ## Tests that must exist
 Where they are: crypto in `src/crypto/*.test.ts`; isolation, reveal and lifecycle in

@@ -22,7 +22,9 @@ export function problemText(e: unknown): string {
       case 'room-ended':
         return 'This room has ended.';
       case 'not-found':
-        return 'Those words do not match a room that is still open.';
+        return 'That hashtag and phrase do not match a room that is still open. Check both, including spaces between words.';
+      case 'phrase-taken':
+        return 'Please pick a different phrase.';
       case 'paused':
         return 'New rooms are paused for a little while. Please try again in a few days.';
       case 'read-only':

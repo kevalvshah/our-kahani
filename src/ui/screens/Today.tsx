@@ -78,7 +78,7 @@ export function Welcome() {
             <p class="caption">Your person joins with a link. No sign-up, no email, no phone number.</p>
           )}
           <Link class="btn btn-ghost" href={PATHS.recover}>
-            <Em>🔑</Em> I have my twelve words
+            <Em>🔑</Em> Enter my room (hashtag + phrase)
           </Link>
         </>
       )}
@@ -216,6 +216,7 @@ export function Today() {
         <Row emoji="🗄️" tint={left <= 7 ? 'pink' : 'plain'} title="Room data" sub="Download everything, keep it 4 more weeks, or erase" pill={`${left}d`} href={PATHS.room} />
         <Row emoji="🔐" tint="accent" title="Privacy" sub="Locked on your phone. Even the developer cannot read it" pill="E2E" href={PATHS.privacy} />
       </div>
+      <InstallHint />
       <InstallHint />
       <Note dashed>
         {isInstalled()
@@ -361,7 +362,7 @@ function Hashtag() {
       <div class="panel-title">{countering ? 'Suggest a different one' : '🎉 Name your room together'}</div>
       <p class="small">
         Choose the room's hashtag together. Suggest one, and it locks when {d.partner} agrees. <b>Once locked, it can't be changed.</b> It is
-        a nickname, not a password.
+        your room's name: with a phrase each of you picks next, it opens your room on any device.
       </p>
       <div class="chip-row" role="group" aria-label="Suggested names">
         {options.map((o) => (

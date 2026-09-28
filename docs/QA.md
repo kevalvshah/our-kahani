@@ -229,7 +229,7 @@ Automated tests use emulated devices. Before a release, a person checks on real 
 - [ ] Slow connection (Chrome DevTools "Slow 3G"): app loads and works
 - [ ] Voice note on a "Remember when" card, iPhone to Android and back
 - [ ] Photo from iPhone (HEIC) and Android on Right Now; both appear in the downloaded zip
-- [ ] Recovery: clear the site's data, then "I have my twelve words" brings the room back
+- [ ] Recovery: clear the site's data, then "Enter my room" with the hashtag and phrase brings the room back; a wrong phrase is refused
 - [ ] Install: Chrome shows "Add it"; the installed app opens offline to the last screen shell
 
 ### Exploratory ideas

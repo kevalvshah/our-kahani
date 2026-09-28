@@ -62,7 +62,7 @@ export function Invite() {
           {room.partnerJoined ? 'You’re both in' : 'Invite & safety code'}
         </ScreenTitle>
         <SafetyCode code={room.safetyCode} />
-        <TwelveWords />
+        <RoomPhraseNote />
       </section>
     );
   }
@@ -109,7 +109,7 @@ export function Invite() {
         </div>
       </div>
       <SafetyCode code={room.safetyCode} />
-      <TwelveWords />
+      <RoomPhraseNote />
     </section>
   );
 }
@@ -126,16 +126,16 @@ function SafetyCode({ code }: { code: string[] }) {
   );
 }
 
-function TwelveWords() {
+function RoomPhraseNote() {
   return (
     <div class="panel panel-gold">
       <div class="panel-title">
-        Your twelve words <Em>📝</Em>
+        Your way back in <Em>🔑</Em>
       </div>
       <p class="small">
-        You wrote down twelve words when you set up. They are the only way back if this browser forgets you, which
-        Safari does after a week of not opening the room. On iPhone, add Our Kahani to your Home Screen to make that far
-        less likely.
+        Once you both lock your hashtag, you each pick a phrase. Hashtag plus phrase opens the room on any device, and it is
+        the only way back if this browser forgets you, which Safari does after a week of not opening the room. On iPhone,
+        add Our Kahani to your Home Screen to make that far less likely.
       </p>
     </div>
   );

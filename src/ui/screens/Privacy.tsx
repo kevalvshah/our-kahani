@@ -94,7 +94,7 @@ export function Privacy() {
       <div class="panel">
         <div class="panel-title">What the server can see</div>
         <p class="small">
-          <b>Cannot:</b> names, answers, photos, saved notes, the room hashtag, your recovery words.
+          <b>Cannot:</b> names, answers, photos, saved notes, the room hashtag, your room phrase.
         </p>
         <p class="small">
           <b>Can:</b> that a room exists, roughly when things happen, how many things there are, and their size range.
@@ -103,8 +103,9 @@ export function Privacy() {
       <div class="safety">
         Honest limits: this protects your data if the database is read or leaked. It can't help if someone has your unlocked
         phone, or if the app's own code were swapped, which is why the code is open source. Whoever can read the chat you send
-        the invite link in could copy it, so use an end-to-end encrypted chat or read it out. If you lose your phone and your
-        twelve words, nobody can bring the room back.
+        the invite link in could copy it, so use an end-to-end encrypted chat or read it out. Your room phrase protects the backup
+        of your key, so pick one others could not guess: a weak phrase could be guessed by anyone holding the database. If
+        you lose your phone and forget your phrase, nobody can bring the room back.
       </div>
     </section>
   );

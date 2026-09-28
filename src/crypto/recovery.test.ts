@@ -1,89 +1,91 @@
 import { describe, expect, it } from 'vitest';
-import { toBase64Url, utf8 } from './bytes';
+import { randomBytes, toBase64Url, utf8 } from './bytes';
 import { EnvelopeError, seal } from './envelope';
 import {
-  entropyToWords,
+  hashtagSalt,
   lookupToken,
-  newPhrase,
+  MIN_WORDS,
+  normalisePhrase,
   openBackup,
+  PBKDF2_ROUNDS,
+  phraseProblem,
+  phraseSecret,
   PhraseError,
   sealBackup,
-  wordsToEntropy,
 } from './recovery';
 import { generateRoomKeyBytes } from './roomKey';
-import { WORDLIST } from './wordlist';
 
 const hex = (h: string) => Uint8Array.from(h.match(/../g)!.map((b) => parseInt(b, 16)));
+const newSecret = () => randomBytes(32);
 
-// Official BIP39 English test vectors (trezor/python-mnemonic vectors.json).
-const VECTORS: [string, string][] = [
-  ['00000000000000000000000000000000', 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'],
-  ['7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f', 'legal winner thank year wave sausage worth useful legal winner thank yellow'],
-  ['80808080808080808080808080808080', 'letter advice cage absurd amount doctor acoustic avoid letter advice cage above'],
-  ['ffffffffffffffffffffffffffffffff', 'zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong'],
-  ['9e885d952ad362caeb4efe34a8e91bd2', 'ozone drill grab fiber curtain grace pudding thank cruise elder eight picnic'],
-];
+describe('room phrase', () => {
+  it('reads the same whatever the spacing, case or Unicode form', () => {
+    expect(normalisePhrase('  Mango  LASSI	on Sundays ')).toBe('mango lassi on sundays');
+    expect(normalisePhrase('ｍａｎｇｏ')).toBe('mango');
+    expect(normalisePhrase('   ')).toBe('');
+    expect(hashtagSalt('#ChaiAur_Coffee!')).toBe('chaiaur_coffee');
+    expect(hashtagSalt('chaiaur_coffee')).toBe('chaiaur_coffee');
+  });
 
-describe('wordlist', () => {
-  it('is the 2048-word BIP39 English list', async () => {
-    expect(WORDLIST).toHaveLength(2048);
-    expect(new Set(WORDLIST).size).toBe(2048);
-    const file = new TextEncoder().encode(WORDLIST.join('\n') + '\n');
-    const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', file))].map((b) => b.toString(16).padStart(2, '0')).join('');
-    expect(digest).toBe('2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda');
+  it('asks for four or more real, different words that are not just names or the hashtag', () => {
+    expect(MIN_WORDS).toBe(4);
+    expect(phraseProblem('mango lassi')).toMatch(/at least 4 words/);
+    expect(phraseProblem('a b c d e')).toMatch(/longer/);
+    expect(phraseProblem('mango mango mango mango')).toMatch(/different words/);
+    expect(phraseProblem('asha ravi chaiaurcoffee asha', ['Asha', 'Ravi', '#ChaiAurCoffee'])).toMatch(/not just your names/);
+    expect(phraseProblem('mango lassi on sunday mornings', ['Asha', 'Ravi', '#ChaiAurCoffee'])).toBeNull();
+    expect(phraseProblem('asha loves rainy chai evenings', ['Asha'])).toBeNull();
+  });
+
+  it('uses 600,000 PBKDF2 rounds, salted with the hashtag', async () => {
+    expect(PBKDF2_ROUNDS).toBe(600_000);
+    // Reference: PBKDF2-HMAC-SHA256("mango lassi on sundays", "our-kahani/room-phrase/v1|chaiaurcoffee", 1, 32).
+    const ref = new Uint8Array(
+      await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', hash: 'SHA-256', salt: utf8('our-kahani/room-phrase/v1|chaiaurcoffee'), iterations: 1 },
+        await crypto.subtle.importKey('raw', utf8('mango lassi on sundays'), 'PBKDF2', false, ['deriveBits']),
+        256,
+      ),
+    );
+    expect(await phraseSecret('#ChaiAurCoffee', '  Mango Lassi  on SUNDAYS', 1)).toEqual(ref);
+  });
+
+  it('gives a different secret for another hashtag or phrase', async () => {
+    const a = await phraseSecret('#chaiaurcoffee', 'mango lassi on sundays', 10);
+    expect(await phraseSecret('#chaiaurcoffee', 'mango lassi on sundays', 10)).toEqual(a);
+    expect(await phraseSecret('#chaiaurcoffe', 'mango lassi on sundays', 10)).not.toEqual(a);
+    expect(await phraseSecret('#chaiaurcoffee', 'mango lassi on saturdays', 10)).not.toEqual(a);
+  });
+
+  it('explains a missing hashtag or phrase', async () => {
+    await expect(phraseSecret('#', 'mango lassi on sundays', 1)).rejects.toThrow('hashtag');
+    await expect(phraseSecret('#chai', '   ', 1)).rejects.toBeInstanceOf(PhraseError);
   });
 });
 
-describe('recovery phrase', () => {
-  it.each(VECTORS)('matches the BIP39 vector for %s', async (entropy, words) => {
-    expect((await entropyToWords(hex(entropy))).join(' ')).toBe(words);
-    expect(await wordsToEntropy(words)).toEqual(hex(entropy));
-  });
-
-  it('makes a new random 12-word phrase that reads back', async () => {
-    const a = await newPhrase();
-    const b = await newPhrase();
-    expect(a.words).toHaveLength(12);
-    expect(a.words.join(' ')).not.toBe(b.words.join(' '));
-    expect(await wordsToEntropy(a.words.join(' '))).toEqual(a.entropy);
-  });
-
-  it('forgives case, commas and spacing', async () => {
-    const [entropy, words] = VECTORS[1]!;
-    expect(await wordsToEntropy(`  ${words.toUpperCase().replace(/ /g, ', ')}\n`)).toEqual(hex(entropy));
-  });
-
-  it('explains what is wrong', async () => {
-    await expect(wordsToEntropy('abandon about')).rejects.toThrow('2 words');
-    await expect(wordsToEntropy(VECTORS[0]![1].replace('about', 'aboot'))).rejects.toThrow('“aboot”');
-    // Real words in the wrong order fail the checksum (it catches most, not all, mix-ups).
-    await expect(wordsToEntropy(Array(12).fill('abandon').join(' '))).rejects.toBeInstanceOf(PhraseError);
-    await expect(wordsToEntropy(Array(12).fill('zoo').join(' '))).rejects.toThrow('do not fit together');
-    await expect(entropyToWords(new Uint8Array(8))).rejects.toThrow('16 bytes');
-  });
-
-  it('derives a lookup token that is stable and reveals nothing of the words', async () => {
-    const e = hex(VECTORS[4]![0]);
+describe('recovery backup', () => {
+  it('derives a lookup token that is stable and reveals nothing of the phrase', async () => {
+    const e = hex('9e885d952ad362caeb4efe34a8e91bd2');
     const t = await lookupToken(e);
     expect(t).toHaveLength(32);
     expect(await lookupToken(e.slice())).toEqual(t);
-    expect(await lookupToken(hex(VECTORS[1]![0]))).not.toEqual(t);
+    expect(await lookupToken(hex('7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f'))).not.toEqual(t);
   });
 
-  it('seals a backup that only the same words and room can open, always the same size', async () => {
-    const { entropy } = await newPhrase();
+  it('seals a backup that only the same secret and room can open, always the same size', async () => {
+    const entropy = newSecret();
     const backup = { roomKey: generateRoomKeyBytes(), notesKey: generateRoomKeyBytes() };
     const env = await sealBackup(entropy, 'room-1', backup);
     expect(await openBackup(entropy, 'room-1', env)).toEqual(backup);
     expect(env.length).toBe((await sealBackup(entropy, 'room-1', backup)).length);
 
-    const other = await newPhrase();
-    await expect(openBackup(other.entropy, 'room-1', env)).rejects.toBeInstanceOf(EnvelopeError);
+    const other = newSecret();
+    await expect(openBackup(other, 'room-1', env)).rejects.toBeInstanceOf(EnvelopeError);
     await expect(openBackup(entropy, 'room-2', env)).rejects.toBeInstanceOf(EnvelopeError);
   });
 
   it('rejects a backup with the wrong shape', async () => {
-    const { entropy } = await newPhrase();
+    const entropy = newSecret();
     const env = await sealBackup(entropy, 'room-1', { roomKey: new Uint8Array(16), notesKey: generateRoomKeyBytes() });
     await expect(openBackup(entropy, 'room-1', env)).rejects.toThrow('could not be read');
   });
@@ -97,7 +99,7 @@ describe('recovery phrase', () => {
   }
 
   it('rejects backups with missing, unreadable or wrong-version keys', async () => {
-    const { entropy } = await newPhrase();
+    const entropy = newSecret();
     const good = toBase64Url(generateRoomKeyBytes());
     // Sanity check: the helper produces a backup that opens.
     expect((await openBackup(entropy, 'r', await sealRaw(entropy, 'r', { v: 1, room: good, notes: good }))).roomKey).toHaveLength(32);

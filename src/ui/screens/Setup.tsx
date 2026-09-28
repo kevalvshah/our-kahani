@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
-import type { Bytes } from '../../crypto/bytes';
-import { COUNTRIES, GREETINGS } from '../../content/extras';
+import { useState } from 'preact/hooks';
+import { normalisePhrase, phraseProblem } from '../../crypto/recovery';
+import { COUNTRIES, GREETINGS, normaliseHashtag } from '../../content/extras';
 import { K } from '../../data/kinds';
 import { useRoomData, type Profile } from '../../data/RoomData';
 import { controller } from '../../state/controller';
@@ -32,6 +32,7 @@ export function ProfileSetup() {
     try {
       const profile: Profile = { name: clean, country: country || undefined, greeting };
       await d.put(K.PROFILE, 'profile', profile);
+      navigate(d.room.role === 'creator' && !d.room.partnerJoined ? PATHS.invite : PATHS.today);
     } catch (e) {
       setProblem(problemText(e));
     } finally {
@@ -87,126 +88,28 @@ export function ProfileSetup() {
 }
 
 // ---------------------------------------------------------------------------
-// The twelve words: mandatory, written down, checked
+// The room phrase: once the hashtag is locked, each person picks their own phrase
 // ---------------------------------------------------------------------------
-export function RecoveryWords() {
+export function RoomPhrase() {
+  const d = useRoomData();
   const { room, setRoom } = useRoom();
-  const [phrase, setPhrase] = useState<{ words: string[]; entropy: Bytes } | null>(null);
-  const [step, setStep] = useState<'show' | 'check'>('show');
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag ?? '';
+  const [phrase, setPhrase] = useState('');
+  const [again, setAgain] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void controller().newPhrase().then(setPhrase);
-  }, []);
+  if (!room) return null;
 
-  // Three random positions to type back.
-  const checks = useMemo(() => {
-    const idx = new Set<number>();
-    const r = crypto.getRandomValues(new Uint8Array(12));
-    for (const b of r) {
-      idx.add(b % 12);
-      if (idx.size === 3) break;
-    }
-    return [...idx].sort((a, b) => a - b);
-  }, [phrase]);
-
-  if (!room || !phrase) return null;
-
-  async function confirm() {
-    if (!room || !phrase) return;
-    const wrong = checks.find((i) => (answers[i] ?? '').trim().toLowerCase() !== phrase.words[i]);
-    if (wrong !== undefined) {
-      setProblem(`Word ${wrong + 1} does not match. Check what you wrote down.`);
-      return;
-    }
+  async function save() {
+    if (!room) return;
+    const weak = phraseProblem(phrase, [d.me, d.partner, hashtag]);
+    if (weak) return setProblem(weak);
+    if (normalisePhrase(phrase) !== normalisePhrase(again)) return setProblem('The two phrases are not the same. Type it again.');
     setBusy(true);
     setProblem(null);
     try {
-      setRoom(await controller().saveBackup(room, phrase.entropy));
-      navigate(room.role === 'creator' && !room.partnerJoined ? PATHS.invite : PATHS.today);
-    } catch (e) {
-      setProblem(problemText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (step === 'show') {
-    return (
-      <section>
-        <ScreenTitle
-          emoji="📝"
-          lead="These twelve words are the only way back into your room if this phone or browser forgets it. Write them down on paper, in order. We never see them and cannot resend them."
-        >
-          Your twelve words
-        </ScreenTitle>
-        <ol class="words" aria-label="Your recovery words">
-          {phrase.words.map((w, i) => (
-            <li key={i}>
-              <span class="word-n">{i + 1}</span> {w}
-            </li>
-          ))}
-        </ol>
-        <div class="panel panel-gold">
-          <p class="small">
-            Safari deletes a site's data after a week of not opening it. On iPhone, add Our Kahani to your Home Screen (Share,
-            then Add to Home Screen) to make that far less likely. Do not screenshot these words into a shared album.
-          </p>
-        </div>
-        <button type="button" class="btn btn-primary btn-block seal" onClick={() => setStep('check')}>
-          I have written them down
-        </button>
-      </section>
-    );
-  }
-
-  return (
-    <section>
-      <ScreenTitle emoji="✅" lead="A quick check that the words are safely written down.">
-        Check your words
-      </ScreenTitle>
-      <div class="panel">
-        {checks.map((i) => (
-          <Field
-            key={i}
-            id={`w${i}`}
-            label={`Word ${i + 1}`}
-            value={answers[i] ?? ''}
-            onInput={(v) => setAnswers((prev) => ({ ...prev, [i]: v }))}
-            maxLength={12}
-          />
-        ))}
-        <Problem text={problem} />
-        <button type="button" class="btn btn-primary btn-block" disabled={busy} onClick={() => void confirm()}>
-          {busy ? 'Saving the locked backup…' : 'Done'}
-        </button>
-        <button type="button" class="btn btn-secondary btn-block seal" onClick={() => setStep('show')}>
-          Show the words again
-        </button>
-        <p class="small muted">
-          Your room key is locked with these words before it is stored, so the server keeps a backup it cannot open.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Coming back with the twelve words
-// ---------------------------------------------------------------------------
-export function Recover() {
-  const { setRoom } = useRoom();
-  const [words, setWords] = useState('');
-  const [problem, setProblem] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function recover() {
-    setBusy(true);
-    setProblem(null);
-    try {
-      setRoom(await controller().recover(words));
+      setRoom(await controller().saveBackup(room, hashtag, phrase));
       navigate(PATHS.today);
     } catch (e) {
       setProblem(problemText(e));
@@ -217,27 +120,82 @@ export function Recover() {
 
   return (
     <section>
-      <ScreenTitle emoji="🔑" lead="Type your twelve words in order. Everything is unlocked on this phone; the words never leave it.">
-        Back into your room
+      <ScreenTitle
+        emoji="🔑"
+        lead={`${hashtag} is your room now. Pick a phrase only you know: with the hashtag, it opens your room on any phone or laptop.`}
+      >
+        Your room phrase
       </ScreenTitle>
       <div class="panel">
-        <label class="field-label" for="words">
-          Your twelve words
-        </label>
-        <textarea
-          id="words"
-          class="field field-area"
-          rows={4}
-          value={words}
-          autocomplete="off"
-          autocapitalize="none"
-          spellcheck={false}
-          onInput={(e) => setWords((e.target as HTMLTextAreaElement).value)}
+        <p class="small">
+          <b>{hashtag}</b> + your phrase = your way back in. {d.partner} picks their own.
+        </p>
+        <Field
+          id="phrase"
+          label="Your phrase (four or more words)"
+          value={phrase}
+          onInput={setPhrase}
+          placeholder="e.g. mango lassi on sunday mornings"
+          maxLength={120}
         />
+        <Field id="phrase2" label="Type it again" value={again} onInput={setAgain} maxLength={120} />
         <Problem text={problem} />
-        <button type="button" class="btn btn-primary btn-block" disabled={busy || !words.trim()} onClick={() => void recover()}>
-          {busy ? 'Unlocking…' : 'Unlock my room'}
+        <button type="button" class="btn btn-primary btn-block" disabled={busy} onClick={() => void save()}>
+          {busy ? 'Locking your key…' : 'Save my phrase'}
         </button>
+        <p class="small muted">
+          Pick something you will remember but others would not guess: not your names, not a film line everyone knows. We
+          never see it and cannot reset it. Spaces between words matter; capitals do not.
+        </p>
+      </div>
+      <div class="panel panel-gold">
+        <p class="small">
+          Your room key is locked with the hashtag and this phrase before it is stored, so the server keeps a backup it cannot
+          open. Safari clears a site's data after a week without a visit: on iPhone, add Our Kahani to your Home Screen.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Coming back: hashtag + phrase
+// ---------------------------------------------------------------------------
+export function Recover() {
+  const { setRoom } = useRoom();
+  const [hashtag, setHashtag] = useState('');
+  const [phrase, setPhrase] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function recover() {
+    setBusy(true);
+    setProblem(null);
+    try {
+      setRoom(await controller().recover(hashtag, phrase));
+      navigate(PATHS.today);
+    } catch (e) {
+      setProblem(problemText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <ScreenTitle emoji="🔑" lead="Your room's hashtag and your own phrase. Everything is unlocked on this device; the phrase never leaves it.">
+        Enter your room
+      </ScreenTitle>
+      <div class="panel">
+        <Field id="rtag" label="Your room's hashtag" value={hashtag} onInput={(v) => setHashtag(normaliseHashtag(v))} placeholder="#ChaiAurCoffee" maxLength={25} />
+        <Field id="rphrase" label="Your phrase" value={phrase} onInput={setPhrase} maxLength={120} />
+        <Problem text={problem} />
+        <button type="button" class="btn btn-primary btn-block" disabled={busy || !hashtag || !phrase.trim()} onClick={() => void recover()}>
+          {busy ? 'Unlocking…' : 'Enter the room'}
+        </button>
+        <p class="small muted">
+          Opening it here moves your place in the room to this device. Your person's phone is not affected.
+        </p>
       </div>
     </section>
   );
