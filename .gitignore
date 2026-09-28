@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.wrangler/
+supabase/.temp/
+.DS_Store
+*.log
+CLAUDE.local.md

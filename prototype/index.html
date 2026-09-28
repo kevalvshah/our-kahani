@@ -1,0 +1,1940 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Our Kahani (demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3EDFB; --surface:#FFFFFF; --surface2:#F7F1FF; --ink:#241A52; --muted:#655C8F; --line:#E0D5F4;
+  --pink:#CE2A6C; --pink-soft:#FCE4EE; --gold:#B87800; --gold-soft:#FFF0CC; --teal:#0B8582; --teal-soft:#D6F3F0;
+  --on-pink:#FFFFFF; --dot:#241A52;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1A1340; --surface:#261C5C; --surface2:#30257A; --ink:#F6F0FF; --muted:#B9ADE3; --line:#43378C;
+    --pink:#FF5C9A; --pink-soft:#4C2156; --gold:#FFC65C; --gold-soft:#4A3A1A; --teal:#3FD1CC; --teal-soft:#123F4C;
+    --on-pink:#1A1340; --dot:#F6F0FF;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1A1340; --surface:#261C5C; --surface2:#30257A; --ink:#F6F0FF; --muted:#B9ADE3; --line:#43378C;
+  --pink:#FF5C9A; --pink-soft:#4C2156; --gold:#FFC65C; --gold-soft:#4A3A1A; --teal:#3FD1CC; --teal-soft:#123F4C;
+  --on-pink:#1A1340; --dot:#F6F0FF;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.08;
+  background-image:radial-gradient(circle,var(--dot) 1.6px,transparent 2.2px);background-size:15px 15px}
+.app{position:relative;max-width:440px;margin:0 auto;padding:0 16px 48px}
+button{font:inherit;color:inherit}
+button:focus-visible,.field:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* demo bar */
+.demobar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin:0 -16px 18px;padding:10px 16px;background:var(--surface2);border-bottom:1.5px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.demobar .lbl{font-size:12.5px;color:var(--muted);flex:1 1 100%}
+.seg{display:flex;flex:1;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 6px;font-weight:700;font-size:14px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"].kj{background:var(--pink);color:var(--on-pink)}
+.seg button[aria-pressed="true"].kv{background:var(--teal);color:var(--bg)}
+.seg button[aria-pressed="true"].kd{background:var(--ink);color:var(--bg)}
+.reset{border:1.5px solid var(--line);background:transparent;border-radius:12px;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted)}
+
+/* home */
+.hero{padding:6px 0 4px}
+.season{display:inline-block;font-weight:700;font-size:13px;background:var(--gold-soft);color:var(--ink);padding:4px 12px;border-radius:99px;border:1.5px solid var(--gold)}
+h1{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:56px;line-height:.95;margin:12px 0 8px;letter-spacing:-.5px}
+h1 .us{color:var(--pink)}
+.sub{color:var(--muted);margin:0 0 20px;max-width:36ch}
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:8px 0 6px}
+.dot{aspect-ratio:1;border-radius:50%;border:2px solid var(--line);background:var(--surface);font-weight:700;font-size:14px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.dot.off{border-style:dashed;color:var(--muted);background:transparent;cursor:default;opacity:.7}
+.dot.done{background:var(--teal);border-color:var(--teal);color:var(--bg)}
+.dot.today{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-soft)}
+.legend{font-size:13px;color:var(--muted);margin:8px 0 22px}
+.btn{display:block;width:100%;border:0;border-radius:16px;padding:15px 18px;background:var(--pink);color:var(--on-pink);font-weight:700;font-size:17px;cursor:pointer;text-align:center}
+.btn:active{transform:scale(.985)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.teal{background:var(--teal);color:var(--bg)}
+.note{margin-top:22px;padding:14px 16px;border-radius:16px;background:var(--surface);border:1.5px dashed var(--line);font-size:14px;color:var(--muted)}
+.sech{font-family:'Baloo 2',system-ui,sans-serif;font-size:22px;font-weight:800;margin:28px 0 4px}
+.sech-sub{color:var(--muted);font-size:14px;margin:0 0 12px}
+.brow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 14px;margin-top:8px;border-radius:16px;background:var(--surface);border:1.5px solid var(--line);cursor:pointer}
+.brow .bt{font-weight:700;line-height:1.25}
+.brow .bs{display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:2px}
+.pill{font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;background:var(--surface2);border:1.5px solid var(--line)}
+.pill.you{background:var(--gold-soft);border-color:var(--gold)}
+
+/* card screen */
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.back{border:0;background:transparent;font-weight:700;cursor:pointer;padding:6px 0;color:var(--muted);font-size:15px}
+.daytag{font-size:13px;color:var(--muted);font-weight:500}
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:26px;padding:20px 18px 22px}
+.tag{display:inline-block;font-size:13px;font-weight:700;padding:3px 11px;border-radius:99px;background:var(--pink-soft);color:var(--ink)}
+.tag.from{background:var(--teal-soft)}
+.q{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:28px;line-height:1.12;margin:12px 0 18px}
+.q small{display:block;font-size:15px;font-weight:600;color:var(--muted);margin-bottom:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2>.opt:last-child:nth-child(odd){grid-column:1/-1}
+.stack{display:grid;gap:10px}
+.opt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px 10px;border-radius:20px;background:var(--surface2);border:2px solid var(--line);cursor:pointer;text-align:center}
+.opt .em{font-size:38px;line-height:1.1}
+.opt .lb{font-family:'Baloo 2',system-ui,sans-serif;font-weight:600;font-size:18px;line-height:1.15}
+.opt .sb{font-size:13px;color:var(--muted)}
+.opt.row-h{flex-direction:row;justify-content:flex-start;gap:14px;padding:16px 16px;text-align:left}
+.opt.row-h .em{font-size:32px}
+.opt:active{transform:scale(.985)}
+.opt[disabled]{cursor:default}
+.opt.sel-k{border-color:var(--pink);background:var(--pink-soft)}
+.opt.sel-v{border-color:var(--teal);background:var(--teal-soft)}
+.opt.dashed{border-style:dashed;background:transparent;margin-top:12px;width:100%}
+.opt.dashed .lb{font-size:16px;color:var(--muted)}
+.hint{font-size:14px;color:var(--muted);margin:14px 0 0}
+.wait{margin-top:14px;padding:11px 14px;border-radius:14px;background:var(--teal-soft);font-size:14px;font-weight:500}
+.field{width:100%;font:inherit;font-size:17px;padding:14px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface2);color:var(--ink);margin-bottom:12px}
+.field:focus{outline:none;border-color:var(--pink)}
+.customrow{margin-top:12px;padding:14px;border-radius:18px;background:var(--gold-soft);border:2px solid var(--gold)}
+.customrow p{margin:0 0 10px;font-weight:700;font-size:14.5px}
+.customrow .field{margin-bottom:10px}
+
+/* reveal */
+.reveal{margin-top:20px;display:grid;gap:10px}
+.banner{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;line-height:1.15;margin:0 0 4px}
+.row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:var(--surface2);border-left:6px solid var(--line)}
+.row.k{border-left-color:var(--pink)}
+.row.v{border-left-color:var(--teal)}
+.nm{font-weight:700;min-width:52px;font-size:14px;color:var(--muted);padding-top:1px}
+.val{font-weight:700;flex:1}
+.why{font-weight:400;font-style:italic;color:var(--muted);margin-top:3px}
+.added{display:inline-block;margin-left:6px;font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--gold-soft);border:1.5px solid var(--gold);vertical-align:middle}
+.veilwrap{position:relative;border-radius:16px;overflow:hidden}
+.veilwrap .vc{transition:filter .9s ease}
+.veilwrap.veil-on .vc{filter:blur(9px)}
+.veil{position:absolute;inset:0;border-radius:16px;pointer-events:none;opacity:0;transition:opacity .9s ease;
+  background-color:var(--surface2);background-image:radial-gradient(circle,var(--pink) 2.4px,transparent 3px),radial-gradient(circle,var(--gold) 2px,transparent 2.6px);
+  background-size:16px 16px,16px 16px;background-position:0 0,8px 8px}
+.veilwrap.veil-on .veil{opacity:1}
+.next{margin-top:18px}
+
+/* noticed */
+.sticky{background:var(--gold-soft);border:2px solid var(--gold);border-radius:8px 8px 22px 8px;padding:18px 18px 20px;font-family:'Baloo 2',system-ui,sans-serif;font-weight:600;font-size:22px;line-height:1.25;transform:rotate(-1.2deg);margin:6px 0 18px}
+.sticky small{display:block;font-family:'Figtree',sans-serif;font-weight:500;font-size:13px;color:var(--muted);margin-top:8px}
+.reacts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.reacts .opt{padding:16px 6px}
+.reacts .opt .em{font-size:30px}
+
+/* bug */
+.ticket{border:2px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:16px}
+.ticket .th{background:var(--surface2);padding:10px 14px;font-weight:700;display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.ticket .tr{display:flex;gap:12px;padding:10px 14px;border-top:1.5px solid var(--line);font-size:15px}
+.ticket .tr b{min-width:76px;color:var(--muted);font-weight:500}
+.status{font-weight:700;color:var(--gold)}
+
+/* try list */
+.trylist{display:grid;gap:10px}
+.tr-item{padding:12px 14px;border-radius:16px;background:var(--surface2);border:1.5px solid var(--line)}
+.tr-item .t{font-weight:700;margin-bottom:8px}
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tri.two2{grid-template-columns:repeat(2,1fr)}
+.tri button{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 6px;font-weight:700;font-size:14px;cursor:pointer}
+.tri button.s-k{border-color:var(--pink);background:var(--pink-soft)}
+.tri button.s-v{border-color:var(--teal);background:var(--teal-soft)}
+.cmp{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--surface2);font-size:15px}
+.cmp.both{background:var(--gold-soft);outline:2px solid var(--gold)}
+.chip{font-size:13px;font-weight:700;padding:3px 10px;border-radius:99px;border:1.5px solid var(--line);background:var(--surface);white-space:nowrap}
+.chip.k{border-color:var(--pink)}
+.chip.v{border-color:var(--teal)}
+.chiphd{font-size:12px;color:var(--muted);font-weight:700;text-align:center}
+.half{margin-top:14px;padding:16px;border-radius:20px;background:var(--teal-soft);border:2px solid var(--teal)}
+.half h3{font-family:'Baloo 2',system-ui,sans-serif;font-size:22px;margin:0 0 6px;line-height:1.15}
+.half p{margin:0 0 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.done-msg{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--pink-soft);font-weight:700}
+.err{color:var(--pink);font-weight:700;font-size:14px;margin:0 0 10px}
+.lab{font-weight:700;margin:2px 0 8px;font-size:15px}
+.nhie-pre{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:20px;margin:0 0 6px}
+
+.pingbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:var(--gold-soft);border:2px solid var(--gold);font-weight:700;margin-bottom:12px}
+.photo{width:100%;border-radius:16px;display:block}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcard{background:var(--surface2);border-radius:16px;padding:8px}
+.pcard img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;display:block}
+.pcard small{display:block;padding:6px 4px 2px;color:var(--muted);font-size:13px}
+.sr{position:absolute;opacity:0;width:1px;height:1px;overflow:hidden}
+.filelabel{cursor:pointer}
+.filelabel:focus-within{outline:3px solid var(--gold);outline-offset:2px}
+.safety{margin-top:18px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1.5px dashed var(--line);font-size:13.5px;color:var(--muted)}
+.deckwrap{position:relative;height:330px;touch-action:pan-y}
+.swipecard{position:absolute;inset:0;background:var(--surface2);border:2px solid var(--line);border-radius:26px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;transition:transform .18s ease,border-color .18s ease}
+.swipecard.yes{border-color:var(--teal);background:var(--teal-soft)}
+.swipecard.no{border-color:var(--pink);background:var(--pink-soft)}
+.swipecard .poster{font-size:84px;line-height:1;margin-bottom:8px}
+.swipecard h3{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:24px;line-height:1.1;margin:0 0 10px}
+.swipebtns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.cipher{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;word-break:break-all;background:var(--surface);padding:10px 12px;border-radius:12px;border:1.5px dashed var(--line);margin-top:4px}
+.modal{position:fixed;inset:0;z-index:30;background:rgba(20,10,50,.55);display:grid;place-items:center;padding:16px}
+.mcard{background:var(--surface);color:var(--ink);border:2px solid var(--gold);border-radius:24px;padding:20px;max-width:400px;width:100%;max-height:90vh;overflow:auto}
+.mcard h3{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:24px;line-height:1.15;margin:0 0 8px}
+.timer{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:64px;line-height:1;text-align:center;margin:6px 0 0}
+.bar{height:10px;border-radius:99px;background:var(--surface2);overflow:hidden;margin:10px 0 14px}
+.bar i{display:block;height:100%;background:var(--pink);border-radius:99px}
+.tagline{font-weight:700;font-size:19px;margin:0 0 6px}
+.indic{font-size:21px;line-height:1.35;margin:0 0 10px;font-family:'Baloo 2','Noto Sans',system-ui,sans-serif}
+.langs{margin:0 0 14px}
+.langs button{padding:4px 11px;font-size:13.5px}
+.chks{display:grid;gap:10px}
+.chk{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:13px 14px;border-radius:16px;background:var(--surface2);border:2px solid var(--line);cursor:pointer;font-weight:600;width:100%}
+.chk .bx{font-size:20px;line-height:1.2}
+.chk small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.chk.on-k{border-color:var(--pink);background:var(--pink-soft)}
+.chk.on-v{border-color:var(--teal);background:var(--teal-soft)}
+.chk[disabled]{cursor:default}
+.row.both{border-left-color:var(--gold);background:var(--gold-soft)}
+.cheers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.cheers button{border:2px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px 0;font-size:24px;cursor:pointer}
+.big{font-size:56px;line-height:1;margin:6px 0}
+.chain{display:grid;gap:8px;margin:14px 0}
+.bubble{padding:10px 14px;border-radius:16px;background:var(--surface2);border-left:6px solid var(--line);font-weight:600}
+.bubble.k{border-left-color:var(--pink)}
+.bubble.v{border-left-color:var(--teal)}
+.bubble small{display:block;font-weight:500;color:var(--muted);font-size:12.5px}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip-row button{border:2px solid var(--line);background:var(--surface2);border-radius:99px;padding:9px 16px;font-weight:700;cursor:pointer}
+.story-start{font-family:'Baloo 2',system-ui,sans-serif;font-weight:600;font-size:20px;line-height:1.3;padding:14px 16px;border-radius:18px;background:var(--gold-soft);border:2px solid var(--gold)}
+details.chap{padding:10px 14px;border-radius:14px;background:var(--surface2);border:1.5px solid var(--line);margin-top:8px}
+details.chap summary{font-weight:700;cursor:pointer}
+.sealed{padding:16px;border-radius:18px;background:var(--surface2);border:2px dashed var(--line);text-align:center;font-weight:700;margin:12px 0}
+@media (prefers-reduced-motion:reduce){
+  .veilwrap .vc,.veil{transition:none}
+  .btn:active,.opt:active{transform:none}
+  .swipecard{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const $app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const DAYS = {
+  '1':{type:'choice',tag:'This or that',q:'Chai or coffee to start the day?',
+     opts:[{id:'chai',e:'☕',l:'Chai'},{id:'coffee',e:'🫘',l:'Coffee'}]},
+  '2':{type:'choice',tag:'This or that',q:'Saturday night: garba floor or sofa and snacks?',
+     opts:[{id:'garba',e:'💃',l:'Garba floor'},{id:'sofa',e:'🛋️',l:'Sofa + snacks'}]},
+  '3':{type:'line',tag:'One line',q:'Best thing you ate this week?',ph:'One line is plenty ✍️'},
+  '4':{type:'bet',tag:'I bet you would pick…',q:'City break or countryside cottage?',
+     opts:[{id:'city',e:'🏙️',l:'City break'},{id:'cottage',e:'🏡',l:'Countryside cottage'}]},
+  '5':{type:'noticed',tag:'Things I noticed',note:'You said you like less sugar in your chai. Noted ☕',
+     opts:[{id:'right',e:'🎯',l:'Spot on',msg:'{V} is glowing somewhere 🌟'},
+           {id:'sweet',e:'🥹',l:'Aww',msg:'Aww indeed. Message received 💛'},
+           {id:'wrong',e:'🙈',l:'Not quite',msg:'Ha. Noted for next time 📝'}]},
+  '6':{type:'pick',tag:'Sunday pick',q:'What are we watching this Sunday?',
+     opts:[{id:'in',e:'🇮🇳',l:'Indian series',sub:'Something warm and desi'},
+           {id:'west',e:'🌍',l:'Western series',sub:'Something bingeable'}]},
+  '7':{type:'bug',tag:'Bug report',id:'Bug #1',summary:'Goes quiet for the first 10 minutes of calls.',
+     opts:[{id:'adorable',e:'🥹',l:'Adorable'},{id:'minor',e:'🐛',l:'Minor'},{id:'critical',e:'🚨',l:'Critical'}]},
+  '9':{type:'nhie',tag:'Never have I ever',q:'burned the chai 🫖',
+     opts:[{id:'have',e:'🙋',l:'I have'},{id:'never',e:'🙅',l:'Never'}]},
+  '14':{type:'try',tag:'Halfway Date',q:'Which of these should we try first?',
+     items:[{id:'pottery',e:'🏺',l:'Pottery class'},{id:'iyengar',e:'🧘',l:'Iyengar workshop'},
+            {id:'garba',e:'💃',l:'Garba or dance class'},{id:'photo',e:'📷',l:'Photo walk'},
+            {id:'cook',e:'🍲',l:'Cook something together'},{id:'city',e:'🚆',l:'City break'}]}
+};
+const CORE = ['1','2','3','4','5','6','7','9','14'];
+
+const PACKS = {
+  college:{name:'College Days',e:'🎓',blurb:'Campus canteen, bunking, notes, cultural nights',cards:[
+    {t:'choice',q:'Campus canteen or the coffee and chai cart outside?',o:[['canteen','🍽️','Campus canteen'],['cart','☕','Coffee or chai cart']],v:'cart',why:'Chai from the cart. Zero regrets.'},
+    {t:'nhie',q:'bunked a lecture for a movie 🎬',v:'have',why:'Only once. Felt like a criminal.'},
+    {t:'choice',q:'Night before the exam: cram all night or sleep and pray?',o:[['cram','📚','Cram all night'],['pray','😴','Sleep and pray']],v:'cram',why:'Notes photocopied at 1am, obviously.'},
+    {t:'nhie',q:'borrowed a friend\'s notes and never returned them 📓',v:'have',why:'Sorry to whoever lent them.'},
+    {t:'choice',q:'Which row were you in?',o:[['back','🪑','Back row'],['front','🎯','Front row']],v:'back',why:'Back row. Quiet, but great view 😄'},
+    {t:'nhie',q:'danced at a uni cultural night or society event 💃',v:'never',why:'Watched from the side with a camera 📷'}
+  ]},
+  filmy:{name:'Filmy Fun',e:'🎬',blurb:'Dilwale, 90s romance, garba',cards:[
+    {t:'choice',q:'Best SRK–Kajol comfort watch?',o:[['ddlj','🚂','Dilwale Dulhania Le Jayenge'],['kkhh','🏀','Kuch Kuch Hota Hai'],['dilwale','🎢','Dilwale (2015)']],v:'ddlj',why:'The train scene. Every single time.'},
+    {t:'nhie',q:'cried during a Bollywood climax 😭',v:'have',why:'Yes. No further questions.'},
+    {t:'choice',q:'Which era wins?',o:[['nineties','🌹','90s romance'],['noughties','🕶️','2000s masala']],v:'nineties',why:'Sweaters, mountains and slow-motion hair.'},
+    {t:'choice',q:'Filmy proposal: mustard-field dance or quiet rooftop?',o:[['field','🌾','Mustard-field dance'],['roof','🌆','Quiet rooftop']],v:'roof',why:'Rooftop. But I would hum the song quietly 🎶'},
+    {t:'nhie',q:'danced to a Bollywood song alone in the kitchen 🍳',v:'have',why:'Only when the chai is boiling.'},
+    {t:'choice',q:'Garba playlist: Gujarati classics or Bollywood garba hits?',o:[['classic','🎶','Gujarati classics'],['bolly','🎬','Bollywood garba hits']],v:'classic',why:'Classics first, hits for the last round.'}
+  ]},
+  family:{name:'Family Tamasha',e:'👨‍👩‍👧',blurb:'Group chats, festivals, "eat more"',cards:[
+    {t:'choice',q:'Family WhatsApp group: mute it or reply to every Good Morning?',o:[['mute','🔕','Mute it'],['reply','🌞','Reply to all']],v:'mute',why:'Muted. But I still read every message 😅'},
+    {t:'nhie',q:'hidden in the kitchen to escape a long family group photo 📸',v:'have',why:'Third row, behind the tallest uncle.'},
+    {t:'choice',q:'Festival lunch: help cook or supervise from the sofa?',o:[['cook','🍳','Help cook'],['sofa','🛋️','Supervise']],v:'cook',why:'Taste-testing is a real job.'},
+    {t:'nhie',q:'been told "eat a little more" after a full plate 🍛',v:'have',why:'Every single visit.'},
+    {t:'choice',q:'Family road trip: window seat and playlist or snack-bag captain?',o:[['window','🪟','Window + playlist'],['snacks','🍿','Snack-bag captain']],v:'snacks',why:'Power comes with the snacks.'},
+    {t:'choice',q:'Who would you trust with a secret?',o:[['fun','🤫','The fun mama or masi'],['wise','🧓','Wise dada or dadi']],v:'wise',why:'Dadi. She already knows anyway.'}
+  ]},
+  fair:{name:'Fair Warning',e:'🚩',blurb:"What you're signing up for, kindly",cards:[
+    {t:'multi',q:'Fair warnings about me?',o:[['hum','🎶','I hum songs mid-conversation'],['photos','📸','I take 40 photos of one plate'],['quiet','🤫','I go quiet when I am tired'],['planner','🗂️','I plan trips in spreadsheets'],['late','⏰','I am always 5 minutes late'],['snack','🍿','I steal food off your plate'],['sports','🏏','I pause everything for a match']],v:['quiet','photos','sports'],why:'Fair warning: the camera comes everywhere.'},
+    {t:'choice',q:'How do you recharge after a long week?',o:[['alone','🛋️','Alone time'],['people','👯','People and plans'],['both','⚖️','A bit of both']],v:'alone',why:'Alone first, then people. It is never distance.'},
+    {t:'choice',q:'Messaging style?',o:[['quick','⚡','Quick replies'],['batch','🐢','Replies in batches'],['call','📞','I would rather call']],v:'batch',why:'In batches, but I always come back.'},
+    {t:'choice',q:'Planning style?',o:[['plan','🗓️','Plan everything'],['flow','🎲','Go with the flow'],['rough','🧭','A rough plan']],v:'rough',why:'A rough plan and room to wander.'},
+    {t:'multi',q:'On a trip, I am the one who…',o:[['nav','🧭','Navigates'],['snacks','🍿','Packs the snacks'],['food','🍜','Finds the best food'],['photos','📸','Takes the photos'],['book','🧾','Books everything'],['playlist','🎧','Makes the playlist']],v:['photos','food'],why:'Photos, and a very long food list.'},
+    {t:'line',q:'One thing you are working on about yourself?',ph:'Big or small, one line ✍️',v:'Speaking up sooner when something is on my mind.',banner:'Two works in progress 🌱'},
+    {t:'choice',q:'When we disagree: talk it out now, or cool off first?',o:[['now','💬','Talk it out now'],['cool','🌙','Cool off, then talk'],['write','✍️','Write it down first']],v:'cool',why:'Cool off first, but I always come back to talk.'}
+  ]},
+  screen:{name:'Screen Time',e:'📺',blurb:'Series, genres, K-drama and Netflix nights',cards:[
+    {t:'multi',q:'Genres you keep coming back to?',o:[['romcom','💕','Rom-com'],['thriller','🕵️','Thriller'],['comedy','😂','Comedy'],['crime','🔎','Crime and mystery'],['family','👨‍👩‍👧','Family drama'],['scifi','🚀','Sci-fi'],['docs','🎥','Documentaries'],['anime','🍥','Anime']],v:['comedy','crime','docs'],why:'Comedy for company, crime for the weekend.'},
+    {t:'multi',q:'Whose shows have you enjoyed?',o:[['in','🇮🇳','Hindi or regional'],['kr','🇰🇷','Korean dramas (K-drama)'],['uk','🇬🇧','British'],['us','🇺🇸','American'],['jp','🇯🇵','Anime and Japanese'],['es','🇪🇸','Spanish'],['tr','🇹🇷','Turkish']],v:['in','uk','us'],why:'British crime is my weakness.'},
+    {t:'choice',q:'K-drama night: yes please, one to try, or not my thing?',o:[['yes','🇰🇷','Yes please'],['try','🤔','One to try'],['no','🙅','Not my thing yet']],v:'try',why:'One to try, with subtitles and snacks.'},
+    {t:'choice',q:'Subtitles or dubbed?',o:[['subs','📝','Subtitles'],['dub','🎙️','Dubbed'],['any','🤷','Whichever']],v:'subs'},
+    {t:'choice',q:'Watching style?',o:[['binge','🍿','Binge in one go'],['night','🌙','One episode a night'],['depends','🎲','Depends on the show']],v:'night',why:'One a night. Makes it last.'},
+    {t:'choice',q:'Which platform feels like home?',o:[['netflix','🔴','Netflix'],['prime','📦','Prime Video'],['disney','⭐','Disney+ or Hotstar'],['yt','📺','YouTube']],v:'netflix'},
+    {t:'choice',q:'Movie night: comfort rewatch or something new?',o:[['comfort','🛋️','Comfort rewatch'],['new','🆕','Something brand new']],v:'comfort',why:'Rewatches. I know when to laugh.'}
+  ]},
+  culture:{name:'Desi Abroad',e:'🌍',blurb:'Growing up desi far from home, playfully',cards:[
+    {t:'choice',q:'Where do you call home right now?',o:[['uk','🇬🇧','UK'],['us','🇺🇸','USA'],['ca','🇨🇦','Canada'],['au','🇦🇺','Australia'],['za','🇿🇦','South Africa'],['ae','🇦🇪','Dubai or UAE']],v:'uk',why:'Here, with a permanent weather complaint.'},
+    {t:'multi',q:'Where is your family from in India?',o:[['gujarat','🌾','Gujarat'],['punjab','🥭','Punjab'],['maha','🏙️','Maharashtra'],['north','🏰','Delhi, UP or Rajasthan'],['east','🐟','Bengal or Odisha'],['tamil','🌴','Tamil Nadu'],['kerala','🥥','Kerala'],['south','🌶️','Andhra, Telangana or Karnataka']],v:['gujarat'],why:'Gujarat, and very proud of it.'},
+    {t:'multi',q:'Things you did as a desi kid abroad?',o:[['dabba','🍱','Carried a dabba to school and got curious looks'],['translate','🗣️','Translated for elders at the bank or doctor'],['sleepover','🛏️','Negotiated a sleepover like a lawyer'],['oil','💆','Got the Sunday head-oil treatment'],['suitcase','🧳','Flew with 23 kg of pickle and snacks'],['aunties','📼','Watched a Bollywood film with all the aunties'],['accent','🎭','Switched accents between home and school']],v:['dabba','translate','accent'],why:'Dabba squad. The accent switch was a survival skill.'},
+    {t:'choice',q:'When you are excited, which language comes out?',o:[['eng','🇬🇧','English'],['mother','🗣️','My mother tongue'],['mix','🔀','A full mix']],v:'mix',why:'A full mix. Nobody can follow.'},
+    {t:'choice',q:'Faith and rituals at home?',o:[['regular','🪔','Regular prayers or visits'],['festivals','🎉','Festivals only'],['cultural','🌿','More cultural than religious'],['chat','💬','Rather chat about it']],v:'festivals'},
+    {t:'choice',q:'Visiting India: your mode?',o:[['food','🥭','Food tour'],['family','👨‍👩‍👧','Family-time overload'],['shop','🛍️','Shopping haul'],['heat','🥵','Weather survival']],v:'food',why:'Food tour. Always.'},
+    {t:'choice',q:'Family functions abroad: love them or endure them?',o:[['love','🎉','Love them'],['endure','😅','Endure them'],['depends','🍲','Depends who is cooking']],v:'depends',why:'Depends who is cooking.'},
+    {t:'choice',q:'The aunty network: how fast does news travel?',o:[['fast','⚡','Faster than the internet'],['slow','🐢','Slowly, thankfully'],['avoid','🕵️','I avoid the group chat']],v:'fast',why:'Faster than the internet, across three continents.'},
+    {t:'multi',q:'Traditions worth keeping alive abroad?',o:[['recipes','🍲','Festival recipes'],['music','🎶','Folk music and dance'],['prayers','🙏','Prayers or visits'],['outfits','👗','Traditional outfits'],['language','🗣️','Speaking the mother tongue at home'],['lights','🪔','Festival lights and rituals']],v:['recipes','language','lights'],why:'Recipes first. Everything else follows the food.'},
+    {t:'line',q:'A family tradition you are proud of?',ph:'One line ✍️',v:'Everyone sitting down together for the first meal on festival days.',banner:'Two traditions 🪔'}
+  ]},
+  fest:{name:'Festival Season',e:'🎆',blurb:'Celebrating far from home, playfully',cards:[
+    {t:'multi',q:'Festivals your family celebrates?',o:[['diwali','🪔','Diwali'],['holi','🎨','Holi'],['navratri','💃','Navratri, Garba or Durga Puja'],['harvest','🌾','Pongal, Onam, Vishu or Ugadi'],['lohri','🔥','Lohri or Baisakhi'],['eid','🌙','Eid'],['xmas','🎄','Christmas'],['kites','🪁','Uttarayan or Makar Sankranti'],['jain','🧘','Paryushan or Mahavir Jayanti'],['ganesh','🐘','Ganesh Chaturthi'],['gurpurab','🙏','Gurpurab']],v:['diwali','kites','navratri','jain'],why:'The four I would never skip.'},
+    {t:'multi',q:'Diwali abroad: the best part?',o:[['lights','🪔','Lights and diyas'],['sweets','🍬','The mithai'],['fireworks','🎆','Fireworks (if the rules allow 😄)'],['clean','🧹','The big clean'],['family','👨‍👩‍👧','Family visits'],['calls','📱','Video calls with everyone'],['gifts','🎁','Gifts']],v:['sweets','calls'],why:'Sweets, then the marathon of calls.'},
+    {t:'line',q:'How does your family celebrate Diwali where you live?',ph:'One line ✍️',v:'Diyas at home, mithai, then video calls to everyone.',banner:'Two Diwalis 🪔'},
+    {t:'choice',q:'Where do festivals happen for you?',o:[['home','🏠','At home'],['hall','🛕','Community hall or temple'],['school','🏫','A rented school hall'],['park','🌳','A park or a car park'],['video','📱','On a video call']],v:'school',why:'Rented school hall, shiny floor, full garba.'},
+    {t:'choice',q:'Holi abroad: all in, layers and colour, or watch from the window?',o:[['all','🎨','All in'],['layers','🧣','Layers and colour'],['window','📸','Watch from the window']],v:'window',why:'Window seat, camera out.'},
+    {t:'choice',q:'Kites and sweets abroad: kites, snacks, or both?',o:[['kite','🪁','Kites'],['snacks','🍯','Snacks (chikki, jalebi)'],['both','🎉','Both']],v:'both',why:'Both. Obviously both.'},
+    {t:'choice',q:'How do festival sweets reach you?',o:[['home','🍬','Homemade by family'],['shop','📦','From the local sweet shop'],['suitcase','✈️','Carried in a suitcase'],['diy','🧑‍🍳','I make my own']],v:'shop',why:'The sweet shop knows me by name.'},
+    {t:'choice',q:'Different countries, different time zones: whose time do festival calls use?',o:[['mine','🕒','Mine'],['yours','🕓','Yours'],['middle','⚖️','Somewhere in the middle']],v:'middle',why:'The middle, with a countdown.'},
+    {t:'choice',q:'Celebrating together this year?',o:[['inperson','🪔','In person if we can'],['virtual','📱','Virtually, on a video call'],['see','🤔',"Let's see"]],v:'inperson',why:'In person if it works, video call if not.'}
+  ]},
+  garba:{name:'Garba Season',e:'💃',blurb:'Navratri, 11–19 Oct',cards:[
+    {t:'choice',q:'Garba floor or dandiya sticks?',o:[['garba','💃','Garba floor'],['dandiya','🥢','Dandiya sticks']],v:'dandiya',why:'Sticks. I need something to do with my hands 😄'},
+    {t:'choice',q:'Garba outfit vibe: bright and bold or soft and classic?',o:[['bold','🌈','Bright and bold'],['classic','🌸','Soft and classic']],v:'classic',why:'Classic, with one loud accessory.'},
+    {t:'nhie',q:'danced garba until my feet gave up 🦶',v:'have',why:'Next day: regret. Also worth it.'},
+    {t:'multi',q:'Best part of Navratri?',o:[['dance','💃','The dancing'],['food','🍲','The food'],['outfits','👗','The outfits'],['music','🎶','The live music'],['people','👯','The company']],v:['music','food'],why:'The live singer, then the food.'},
+    {t:'choice',q:'Garba night snack: chaat or dabeli?',o:[['chaat','🌶️','Chaat'],['dabeli','🥪','Dabeli']],v:'dabeli',why:'Dabeli. Non-negotiable.'},
+    {t:'choice',q:'At a garba night: straight into the circle or cheer from the side first?',o:[['circle','💃','Straight into the circle'],['side','📷','Cheer from the side first']],v:'side',why:'Camera first, circle after a few rounds.'},
+    {t:'choice',q:'Garba night together this Navratri (11–19 Oct)?',o:[['yes','🙌',"Yes, let's plan it"],['maybe','🤔','Maybe, tell me more'],['virtual','🎧','Virtual garba: same playlist, video call']],v:'yes',why:'Yes, and I will bring the camera 📷'}
+  ]},
+  recall:{name:'Remember When',e:'🧠',blurb:'Sixty seconds to remember something we talked about',cards:[
+    {t:'recall',q:'Tell me one random thing we talked about last week or the week before.',ph:'One line, or a 30-second voice note',v:'You told me about the pigeon that walked into your office 🐦'},
+    {t:'recall',q:'What is a small thing I said two weeks ago that stuck with you?',ph:'One line, or a 30-second voice note',v:'You like less sugar in your chai. I still think about it ☕'},
+    {t:'recall',q:'Something that made you laugh on a call recently, but not this week.',ph:'One line, or a 30-second voice note',v:'The story about the wrong song at the wedding 😄'},
+    {t:'recall',q:'What did we talk about the first time we spoke?',ph:'One line, or a 30-second voice note',v:'Chai, food, and whether pineapple belongs on anything.'},
+    {t:'recall',q:'A plan we mentioned once and never followed up on?',ph:'One line, or a 30-second voice note',v:'That pottery class. I have not forgotten.'},
+    {t:'recall',q:'Something I told you that you want to ask more about?',ph:'One line, or a 30-second voice note',v:'The mountain trip you mentioned. Where exactly?'}
+  ]},
+  warm:{name:'Warm Words',e:'💛',blurb:'Affection, compliments, small kindnesses',cards:[
+    {t:'multi',q:'How does affection land best for you?',o:[['hugs','🤗','Hugs'],['words','💬','Kind words'],['gifts','🎁','Little gifts'],['time','🕰️','Time together'],['help','🛠️','Someone helping out'],['calls','📞','A surprise call']],v:['words','time','help'],why:'Words and time. Actions if I forget.'},
+    {t:'choice',q:'A first hello in person: hug, handshake, or wave and a grin?',o:[['hug','🤗','A hug'],['shake','🤝','A handshake'],['wave','😄','A wave and a grin']],v:'wave',why:'Wave and a grin, then whatever feels comfortable for you.'},
+    {t:'line',q:'One thing you appreciated this week?',ph:'Big or small, one line ✍️',v:'Your reply that made a boring meeting much better.',banner:'Two small thank-yous 💛'},
+    {t:'choice',q:'A compliment you would love to get: your smile, your mind, or your humour?',o:[['smile','😊','My smile'],['mind','🧠','My mind'],['humour','😂','My humour']],v:'humour',why:'Making someone laugh is my favourite thing.'},
+    {t:'choice',q:'On a rough day: a call, a silly meme, or space and a text later?',o:[['call','📞','A call'],['meme','😂','A silly meme'],['space','🌙','Space, text me later']],v:'meme',why:'A meme first, then a call.'},
+    {t:'choice',q:'Nickname vibe?',o:[['sweet','🍯','Something sweet'],['silly','🤪','Something silly'],['name','🙂','Just my name, thanks']],v:'name',why:'Name first. Nicknames get earned 😄'},
+    {t:'choice',q:'Thinking-of-you style?',o:[['morning','🌅','A good-morning text'],['meme','🖼️','A random midday meme'],['night','🌙','A goodnight note']],v:'night',why:'A goodnight note. Simple and it lasts.'}
+  ]},
+  dream:{name:'Dream & Cherish',e:'🌷',blurb:'Flowers, escapes, goals, little cares',cards:[
+    {t:'multi',q:'Flowers that make you smile?',o:[['rose','🌹','Roses'],['sunflower','🌻','Sunflowers'],['marigold','🌼','Marigold (genda)'],['lotus','🪷','Lotus'],['mogra','🌸','Mogra / jasmine'],['mixed','💐','A mixed bouquet'],['food','🍫','No flowers, snacks please']],v:['sunflower','food'],why:'Sunflowers. Or chocolate, honestly.'},
+    {t:'multi',q:'Escape holiday: beach, skyline, mountain, or all of the above?',o:[['beach','🏖️','Beach'],['sky','🌆','Skyline city'],['mount','🏔️','Mountains'],['country','🌿','Countryside'],['road','🚗','A road trip'],['all','🎒','All of the above']],v:['mount','sky'],why:'Mountains for the quiet, skyline for the photos.'},
+    {t:'choice',q:'Bonus: who comes on the escape?',o:[['solo','🎧','Just me, a reset'],['someone','💞','Someone to cherish 😏'],['friends','👯','Friends'],['family','👨‍👩‍👧','Family']],v:'someone',why:'Obviously 😏'},
+    {t:'multi',q:'What would make the next 6 months feel like progress?',cheer:true,o:[['raise','📈','A promotion or raise'],['skill','🎓','A new skill or course'],['side','🧰','A side project'],['save','💰','A saving goal'],['switch','🔄','A career switch'],['balance','🧘','Better work-life balance']],v:['skill','save'],why:'Building from zero, one step at a time.'},
+    {t:'line',q:'One goal you are building from zero in the next 6 months?',ph:'One line is plenty ✍️',v:'A steady saving habit and one new skill.',banner:'Two goals, two cheerleaders 📣',cheer:true},
+    {t:'multi',q:'Little things that make you feel looked after?',o:[['gm','☀️','A good-morning message'],['cook','🍲','Cooking for me sometimes'],['surprise','🎁','Small surprises'],['help','🤝','Help when I am stressed'],['time','⏳','Undivided time'],['checkin','💬','Checking in when I go quiet'],['listen','🎧','Listening without fixing'],['hug','🫶','Hugs, in person']],v:['listen','checkin','time'],why:'Mostly: notice, and be around.'}
+  ]},
+  emoji:{name:'Emoji Filmy Guess',e:'🎬',blurb:'Guess the film from emojis',cards:[
+    {t:'guess',q:'🚂🌾💃',o:[['ddlj','🚂','Dilwale Dulhania Le Jayenge'],['kkhh','🏀','Kuch Kuch Hota Hai'],['jwm','🚆','Jab We Met'],['dtpd','🎭','Dil Toh Pagal Hai']],ans:'ddlj',v:'ddlj'},
+    {t:'guess',q:'3️⃣🤪🎓',o:[['3i','🎓','3 Idiots'],['mb','🩺','Munna Bhai M.B.B.S.'],['chh','🎒','Chhichhore'],['rdb','🎨','Rang De Basanti']],ans:'3i',v:'3i'},
+    {t:'guess',q:'🇪🇸🤿🐂',o:[['znmd','🏝️','Zindagi Na Milegi Dobara'],['dch','🚤','Dil Chahta Hai'],['yjhd','🏔️','Yeh Jawaani Hai Deewani'],['queen','👑','Queen']],ans:'znmd',v:'dch'},
+    {t:'guess',q:'🏏🌾🇮🇳',o:[['lagaan','🏏','Lagaan'],['cdi','🏑','Chak De! India'],['dangal','🤼','Dangal'],['swades','🛰️','Swades']],ans:'lagaan',v:'lagaan'},
+    {t:'guess',q:'🏀🎓💛',o:[['kkhh','🏀','Kuch Kuch Hota Hai'],['dilwale','🎢','Dilwale (2015)'],['soty','🎓','Student of the Year'],['khnh','🌇','Kal Ho Naa Ho']],ans:'kkhh',v:'kkhh'}
+  ]}
+};
+const PACK_ORDER = ['garba','warm','recall','fair','screen','culture','fest','college','filmy','family','dream','emoji'];
+const PACKCARDS = {};
+Object.keys(PACKS).forEach(p=>PACKS[p].cards.forEach((c,i)=>{
+  c.id = p+(i+1);
+  const b = {type:c.t,pack:p,idx:i,tag:PACKS[p].name,q:c.q};
+  if(c.t==='nhie') b.opts = [{id:'have',e:'🙋',l:'I have'},{id:'never',e:'🙅',l:'Never'}];
+  else if(c.t==='line' || c.t==='recall'){ b.ph=c.ph; b.banner=c.banner; }
+  else b.opts = c.o.map(x=>({id:x[0],e:x[1],l:x[2]}));
+  if(c.t==='guess') b.ans=c.ans;
+  if(c.cheer) b.cheer=true;
+  PACKCARDS[c.id]=b;
+}));
+const TRY = {keen:'Keen 🙌', maybe:'Maybe 🤔', no:'Not for me'};
+const NAME = {k:'', v:''};            // escaped display names: k = invited person, v = person who made the room
+const RAW = {k:'', v:'', gr:'Namaste'};
+const fill = h => h.replace(/\{K\}/g,()=>NAME.k).replace(/\{V\}/g,()=>NAME.v)
+  .replace(/\{wink\}/g,()=>'');
+
+const MICRO = [
+  {e:'🚶',t:'Walk-and-talk',d:'Each of you steps outside for a walk, on a call.'},
+  {e:'🍲',t:'Same dinner, same call',d:'Cook something simple and eat together on video.'},
+  {e:'✏️',t:'Sketch each other',d:'Two minutes each, then hold it up to the camera.'},
+  {e:'🎧',t:'Listening party',d:'Same playlist, same minute, react as it plays.'},
+  {e:'📷',t:'Photo swap',d:'Take 3 photos of what you can see. Trade them.'},
+  {e:'🧘',t:'Pose swap',d:"Show one favourite yoga pose. Try each other's."},
+  {e:'🍫',t:'Taste test',d:'Same snack, two kitchens. Rate it in emojis.'},
+  {e:'🎬',t:'Trailer reaction',d:'Watch one trailer at the same time and text your reactions.'},
+  {e:'🌇',t:'Sunset swap',d:'Send the sky from your window at the same time.'},
+  {e:'🎲',t:'Guess the song',d:'Hum 5 seconds. The other guesses.'}
+];
+const A_START = ['Tum Hi Ho','Kesariya','Chaiyya Chaiyya','Jai Ho'];
+const STARTERS = [
+  'One rainy Sunday, a very confident pigeon walked into a dhokla shop and asked for the manager.',
+  '{K} and {V} opened a tiny food truck that only sold chai and dance lessons.',
+  'The garba circle suddenly started spinning the wrong way, and everyone looked at the DJ.'
+];
+const TYPELBL = {recall:'60-second recall',choice:'This or that',pick:'This or that',nhie:'Never have I ever',multi:'Tick any',guess:'Guess the film',line:'One line'};
+
+const TITLES = [
+  {id:'ddlj',type:'movie',e:'🚂',t:'Dilwale Dulhania Le Jayenge',tag:'Hindi · Romance',hook:'The train, the mustard fields, the classic.',kv:true},
+  {id:'kkhh',type:'movie',e:'🏀',t:'Kuch Kuch Hota Hai',tag:'Hindi · Romance',hook:'Friendship, college and a lot of feelings.',kv:true},
+  {id:'3i',type:'movie',e:'🎓',t:'3 Idiots',tag:'Hindi · Comedy drama',hook:'College days and finding your own path.',kv:true},
+  {id:'znmd',type:'movie',e:'🏝️',t:'Zindagi Na Milegi Dobara',tag:'Hindi · Road trip',hook:'Three friends, Spain, one big trip.',kv:true},
+  {id:'lagaan',type:'movie',e:'🏏',t:'Lagaan',tag:'Hindi · Cricket drama',hook:'A village, a cricket match, everything on the line.',kv:true},
+  {id:'hellaro',type:'movie',e:'💃',t:'Hellaro',tag:'Gujarati · Drama',hook:'The women of Kutch, dhol and garba.',kv:true},
+  {id:'chhello',type:'movie',e:'🎒',t:'Chhello Divas',tag:'Gujarati · Comedy',hook:'A gang of college friends and their last days.',kv:false},
+  {id:'jwm',type:'movie',e:'🚆',t:'Jab We Met',tag:'Hindi · Rom-com',hook:'A chatty stranger and a very long train ride.',kv:false},
+  {id:'panchayat',type:'series',e:'🌾',t:'Panchayat',tag:'Hindi · Comedy drama',hook:'An engineer, a village office, gentle chaos.',kv:true},
+  {id:'gullak',type:'series',e:'🏠',t:'Gullak',tag:'Hindi · Family comedy',hook:'Small-town family life in short episodes.',kv:true},
+  {id:'scam92',type:'series',e:'📈',t:'Scam 1992',tag:'Hindi · Drama',hook:'The rise of a stock market star.',kv:false},
+  {id:'cloy',type:'series',e:'🪂',t:'Crash Landing on You',tag:'Korean · K-drama',hook:'A paraglider, a border and a big love story.',kv:true},
+  {id:'lasso',type:'series',e:'⚽',t:'Ted Lasso',tag:'English · Comedy',hook:'An optimistic coach in a new country.',kv:true},
+  {id:'b99',type:'series',e:'🚔',t:'Brooklyn Nine-Nine',tag:'English · Comedy',hook:'A goofy police squad and running jokes.',kv:false},
+  {id:'sherlock',type:'series',e:'🔎',t:'Sherlock',tag:'English · Crime',hook:'Modern-day mysteries and quick wits.',kv:true},
+  {id:'bakeoff',type:'series',e:'🍰',t:'The Great British Bake Off',tag:'English · Cosy',hook:'Baking, a big tent, very polite drama.',kv:false}
+];
+const SERVICES = [['netflix','🔴','Netflix'],['prime','📦','Prime Video'],['disney','⭐','Disney+ or Hotstar'],['appletv','🍎','Apple TV+'],['yt','📺','YouTube'],['other','🎞️','Somewhere else']];
+const fmtLabel = {movie:'🎬 One movie',series:'📺 A series episode',binge:'🍿 Binge weekend'};
+const LABELS = [['like','👍','Likes'],['dislike','👎','Dislikes'],['date','🗓️','Date ideas'],['important','🎂','Important dates'],['nhie','🙋','Never have I ever'],['watch','🍿','Watch list'],['food','🍲','Food'],['care','💛','Care notes'],['other','✨','Other']];
+const labOf = id => LABELS.find(x=>x[0]===id) || LABELS[8];
+const PACK_LABEL = {screen:'watch',filmy:'watch',emoji:'watch',warm:'care',fest:'important',garba:'date',dream:'date'};
+const plainLab = (list,id) => { const o=list.find(x=>x[0]===id); return o ? o[2] : id; };
+let DL = null;   // downloads capability, when the page runs inside Claude
+
+/* ---- minimal .xlsx writer (zip "store" + SpreadsheetML), no library needed ---- */
+const CRC_T = (()=>{ const t=[]; for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? (c>>>1)^0xEDB88320 : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c = CRC_T[(c^u8[i])&255] ^ (c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function makeZip(files){
+  const enc=new TextEncoder(), parts=[], central=[]; let offset=0;
+  const d=new Date(), dt=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dd=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  const u16=v=>[v&255,(v>>>8)&255], u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  for(const f of files){
+    const name=enc.encode(f.name), data=(typeof f.data==='string'?enc.encode(f.data):f.data), crc=crc32(data);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(dt),...u16(dd),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0)]);
+    parts.push(lh,name,data); central.push({name,crc,size:data.length,offset}); offset += lh.length+name.length+data.length;
+  }
+  const cdStart=offset;
+  for(const c of central){
+    const h=new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(dt),...u16(dd),...u32(c.crc),...u32(c.size),...u32(c.size),...u16(c.name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(c.offset)]);
+    parts.push(h,c.name); offset += h.length+c.name.length;
+  }
+  const end=new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(central.length),...u16(central.length),...u32(offset-cdStart),...u32(cdStart),...u16(0)]);
+  parts.push(end);
+  return new Blob(parts,{type:'application/octet-stream'});
+}
+const xesc = s => String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const colName = i => { let s='', n=i+1; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; };
+function makeXlsx(sheets){
+  const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main', RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships', H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const sheetXml = sh => `${H}<worksheet xmlns="${NS}"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${sh.widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${sh.rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>`<c r="${colName(ci)}${ri+1}" t="inlineStr" s="${ri===0?1:2}"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`).join('')}</row>`).join('')}</sheetData></worksheet>`;
+  const n=sheets.length;
+  const files=[
+    {name:'[Content_Types].xml',data:`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+    {name:'_rels/.rels',data:`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml',data:`${H}<workbook xmlns="${NS}" xmlns:r="${RNS}"><sheets>${sheets.map((sh,i)=>`<sheet name="${xesc(sh.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels',data:`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${n+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml',data:`${H}<styleSheet xmlns="${NS}"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFE7A3"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}
+  ];
+  sheets.forEach((sh,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(sh)}));
+  return makeZip(files);
+}
+const COUNTRIES = [['','Prefer not to say'],['uk','United Kingdom'],['us','United States'],['ca','Canada'],['au','Australia'],['za','South Africa'],['ae','Dubai or UAE'],['in','India'],['other','Somewhere else']];
+const GREETS = [['Namaste','Namaste 🙏'],['Kem cho','Kem cho (Gujarati)'],['Sat sri akal','Sat sri akal (Punjabi)'],['Vanakkam','Vanakkam (Tamil)'],['Namaskar','Namaskar (Marathi, Bengali)'],['Hey','Just hey 👋']];
+const COUNTRY = {k:'',v:''};
+const HELP = {
+  uk:'call 999. If you are struggling, Samaritans are free on 116 123, any time.',
+  us:'call 911. If you are struggling, call or text 988, the Suicide and Crisis Lifeline.',
+  ca:'call 911. If you are struggling, call or text 988.',
+  au:'call 000. If you are struggling, Lifeline is on 13 11 14.'
+};
+const helpText = c => HELP[c] || 'call your local emergency number. If you are struggling, findahelpline.com lists free helplines by country.';
+const VOW = 'aeiouAEIOU';
+const nameClean = n => (n||'').replace(/[^\p{L}\p{N}]/gu,'');
+const cap = n => n ? n[0].toUpperCase()+n.slice(1) : n;
+function nameHead(n){ let i=0; while(i<n.length && !VOW.includes(n[i])) i++; let j=i; while(j<n.length && VOW.includes(n[j])) j++; let k=j<n.length?j+1:j; return n.slice(0,Math.min(Math.max(k,2),Math.max(2,n.length-1))); }
+function nameTail(n){ let i=n.length-1; while(i>=0 && !VOW.includes(n[i])) i--; if(i<0) return n.slice(-2); let j=i; while(j>0 && VOW.includes(n[j-1])) j--; const k=j>0?j-1:j; return n.slice(Math.max(1,k)); }
+function hashOptions(a,b){
+  a=cap(nameClean(a)); b=cap(nameClean(b));
+  if(!a||!b) return ['#OurKahani'];
+  const out=['#'+a+b,'#'+b+a,'#'+nameHead(a)+nameTail(b).toLowerCase(),'#'+nameHead(b)+nameTail(a).toLowerCase()];
+  return out.filter((x,i)=>out.indexOf(x)===i);
+}
+const hashNorm = v => { const t=String(v||'').replace(/^#+/,'').replace(/[^\p{L}\p{N}_]/gu,'').slice(0,24); return t ? '#'+t : ''; };
+/* ---- end-to-end encryption demo (real WebCrypto AES-256-GCM) ---- */
+let ROOMKEY = null;
+const SAFETY = ['🌻','🪁','🍋','🐘','🌙','🍀','🎈','🦋','🍉','🐢','🌶️','🪔','🎧','🍫','🌈','🛶'];
+const AAD = () => new TextEncoder().encode('room:demo|type:note|v1');   // binds a ciphertext to its room and record type
+const toB64 = u8 => { let s=''; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]); return btoa(s); };
+const fromB64 = b => Uint8Array.from(atob(b), c=>c.charCodeAt(0));
+async function ensureKey(){ if(!ROOMKEY) ROOMKEY = await crypto.subtle.generateKey({name:'AES-GCM',length:256}, true, ['encrypt','decrypt']); return ROOMKEY; }
+async function lockText(text, aad){
+  const key=await ensureKey(), iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad||AAD()},key,new TextEncoder().encode(text)));
+  const env=new Uint8Array(12+ct.length); env.set(iv,0); env.set(ct,12); return env;
+}
+async function unlockBytes(env, key, aad){
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:env.slice(0,12),additionalData:aad||AAD()},key,env.slice(12));
+  return new TextDecoder().decode(pt);
+}
+async function safetyCode(){
+  const raw=await crypto.subtle.exportKey('raw',await ensureKey());
+  const h=new Uint8Array(await crypto.subtle.digest('SHA-256',raw));
+  return Array.from(h.slice(0,6)).map(b=>SAFETY[b%16]).join(' ');
+}
+async function privLock(){
+  const el=document.getElementById('privtext'), txt=(el&&el.value||'').trim(), P=S.priv;
+  if(!txt){ P.msg='Type something first.'; render(); return; }
+  try{ P.plain=txt; P.cipher=toB64(await lockText(txt)); P.msg=''; }
+  catch(_){ P.msg='Your browser could not lock that. Try a current browser.'; }
+  render();
+}
+async function privTest(kind){
+  const P=S.priv; if(!P.cipher) return;
+  try{
+    if(kind==='wrong'){ const other=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['decrypt']); await unlockBytes(fromB64(P.cipher),other); P.msg='Unexpected: it unlocked.'; }
+    else { const env=fromB64(P.cipher); env[env.length-1]^=1; await unlockBytes(env,await ensureKey()); P.msg='Unexpected: it unlocked.'; }
+  }catch(_){ P.msg = kind==='wrong' ? 'Wrong key: it will not unlock. That is what the server sees. ✋' : 'One character changed: it will not unlock. Tampering is caught. 🛡️'; }
+  render();
+}
+async function privCode(){ try{ S.priv.code=await safetyCode(); }catch(_){ S.priv.code=''; } if(S.screen==='privacy') render(); }
+
+/* ---- Remember When: 60-second timer and 30-second voice notes ---- */
+let TICK = null, MR = null;
+const REC_SECS = 30, REC_KBPS = 32000;   // Opus at 32 kbps is roughly 4 KB a second, so about 120 KB for 30 s
+function ensureTick(){ if(!TICK) TICK = setInterval(timerTick, 250); }
+function timerTick(){
+  const T=S.timer[me()]; if(!T || !T.start || T.expired || T.done) return;
+  const left=Math.max(0, T.len - Math.floor((Date.now()-T.start)/1000));
+  const el=document.getElementById('timer'); if(el) el.textContent=left;
+  const bar=document.getElementById('timerbar'); if(bar) bar.style.width=(left/T.len*100)+'%';
+  if(left<=0){ T.expired=true; if(S.rec.recording && MR && MR.state==='recording') MR.stop(); render(); }
+}
+async function startVoice(){
+  const P=S.rec; P.err='';
+  try{
+    if(window.__record){ P.pend = await window.__record(); render(); return; }
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const mime = ['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(m=>window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+    MR = new MediaRecorder(stream, Object.assign({audioBitsPerSecond:REC_KBPS}, mime?{mimeType:mime}:{}));
+    const chunks=[]; P.t0=Date.now();
+    MR.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    MR.onstop = () => {
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:MR.mimeType||mime||'audio/webm'});
+      P.pend={blob,url:URL.createObjectURL(blob),bytes:blob.size,secs:Math.max(1,Math.round((Date.now()-P.t0)/1000))}; P.recording=false; render();
+    };
+    P.recording=true; MR.start();
+    setTimeout(()=>{ if(MR && MR.state==='recording') MR.stop(); }, REC_SECS*1000);
+  }catch(_){ P.err='Voice notes need microphone access. You can type your reply instead.'; P.recording=false; }
+  render();
+}
+const voiceExt = t => /ogg/.test(t||'') ? 'ogg' : /mp4|m4a|aac/.test(t||'') ? 'm4a' : 'webm';
+
+const LANGS = [
+  ['hi','हिन्दी','हमारी कहानी','पहली बात से हमारी कहानी तक'],
+  ['gu','ગુજરાતી','આપણી વાર્તા','પહેલી વાતથી આપણી વાર્તા સુધી'],
+  ['pa','ਪੰਜਾਬੀ','ਸਾਡੀ ਕਹਾਣੀ','ਪਹਿਲੀ ਗੱਲ ਤੋਂ ਸਾਡੀ ਕਹਾਣੀ ਤੱਕ'],
+  ['mr','मराठी','आपली गोष्ट','पहिल्या गप्पांपासून आपल्या गोष्टीपर्यंत'],
+  ['bn','বাংলা','আমাদের গল্প','প্রথম কথা থেকে আমাদের গল্প পর্যন্ত'],
+  ['ta','தமிழ்','நம் கதை','முதல் பேச்சிலிருந்து நம் கதை வரை'],
+  ['te','తెలుగు','మన కథ','మొదటి మాట నుండి మన కథ వరకు'],
+  ['kn','ಕನ್ನಡ','ನಮ್ಮ ಕಥೆ','ಮೊದಲ ಮಾತಿನಿಂದ ನಮ್ಮ ಕಥೆಯವರೆಗೆ'],
+  ['ml','മലയാളം','നമ്മുടെ കഥ','ആദ്യ വാക്കിൽ നിന്ന് നമ്മുടെ കഥ വരെ'],
+  ['ur','اردو','ہماری کہانی','پہلی بات سے ہماری کہانی تک']
+];
+function brandHtml(){
+  const L = LANGS.find(x=>x[0]===S.lang) || LANGS[0];
+  return `<h1>Our <span class="us">Kahani</span></h1>
+    <p class="tagline">From <i>pehli baat</i> to our kahani.</p>
+    <p class="hint" style="margin:-2px 0 8px">Pehli baat means "first conversation".</p>
+    <p class="indic" lang="${L[0]}" dir="${L[0]==='ur'?'rtl':'ltr'}"><b>${L[2]}</b> · ${L[3]}</p>
+    <div class="chip-row langs" role="group" aria-label="See the name in another language">${LANGS.map(x=>`<button lang="${x[0]}" data-a="lang" data-r="${x[0]}" aria-pressed="${S.lang===x[0]}" style="${S.lang===x[0]?'border-color:var(--gold);background:var(--gold-soft)':''}">${x[1]}</button>`).join('')}</div>`;
+}
+const fmtB = n => n>=1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB';
+const makeSample = (e,c1,c2) => 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/><text x="200" y="190" font-size="120" text-anchor="middle">'+e+'</text></svg>');
+const G_TOPICS = [['loud','🔊','Loud or heated arguments'],['silent','🤐','Silent treatment or being ignored'],['rushed','⏱️','Being rushed or pressured'],['past','🧳','Talking about parts of my past'],['family','👨‍👩‍👧','Family pressure or expectations'],['health','🩺','Health worries'],['work','💼','Work or money stress'],['crowds','👥','Crowds or lots of noise'],['other','✨','Something else (I will say in a line)']];
+const G_HELPS = [['listen','🎧','Just listen, no fixing'],['ask','❓','Ask before giving advice'],['space','🌙','Give me a little space'],['checkin','💬','Check in later, gently'],['distract','🎬','Distract me with something light'],['reassure','🤗','Reassure me you are still here'],['call','📞','Call me, your voice helps']];
+const G_DEPTH = [['heads','🚩','Just the heads-up'],['bit','🌤️','A little context'],['talk','📞','I would like to talk it through on a call']];
+const G_PROM = [['patient','🕊️','I will go slowly and be patient'],['ask','❓','I will ask before I advise'],['checkin','💬','I will check in a day later'],['space','🌙','I will give space when you need it'],['call','📞','I will make time for a call']];
+const gLab = (list,id) => { const o=list.find(x=>x[0]===id); return o ? o[1]+' '+o[2] : esc(id); };
+
+function fresh(){
+  const packAns = {};
+  Object.keys(PACKS).forEach(p=>PACKS[p].cards.forEach(c=>{ packAns[c.id] = (c.t==='line' || c.t==='recall') ? {k:null,v:{text:c.v},extra:[]} : {k:null,v:{pick:Array.isArray(c.v)?c.v.slice():c.v,why:c.why},extra:[]}; }));
+  return {
+    ans:Object.assign(packAns,{
+      '1':{k:null,v:{pick:'chai',why:'Chai, adrak wali. Non-negotiable.'},extra:[]},
+      '2':{k:null,v:{pick:null},extra:[]},
+      '3':{k:null,v:{text:'Dhokla at brunch. Zero regrets.'}},
+      '4':{k:null,v:{pick:'city'}},
+      '5':{k:null,v:{}},
+      '6':{k:null,v:{pick:'west',why:'Leaning Western, but honestly your call.'},extra:[]},
+      '7':{k:null,v:{},reply:null},
+      '9':{k:null,v:{pick:'have',why:'Twice. The pan still remembers.'}},
+      '14':{k:{},v:{pottery:'keen',iyengar:'keen',garba:'maybe',photo:'keen',cook:'keen',city:'keen'},sub:false,season:null},
+      'b1':{k:null,v:{pick:'b',why:'Sunset. Camera in hand 📷'},extra:[]}
+    }),
+    bonus:{
+      'b1':{type:'choice',bonus:true,by:'v',tag:'This or that',q:'Sunrise walk or sunset walk?',
+            opts:[{id:'a',e:'🌅',l:'Sunrise'},{id:'b',e:'🌇',l:'Sunset'}]}
+    },
+    micro:{cur:null,k:null,v:'keen',when:null,done:0},
+    anta:{chain:[{by:'app',t:A_START[0]}],turn:'k',err:'',saved:[]},
+    story:{n:0,lines:[],turn:'k',chapters:[]},
+    capsule:{k:'',v:'',sealed:{k:false,v:false},opened:false,date:''},
+    ping:{k:false,v:false},
+    timer:{k:null,v:null},
+    rec:{recording:false,pend:null,err:'',t0:0,text:''},
+    ret:{end:Date.now()+28*86400000,shift:0,ext:{k:false,v:false},cycles:1,snooze:{k:false,v:false},erased:false,confirm:false,msg:''},
+    priv:{plain:'',cipher:'',code:'',msg:''},
+    room:{opts:[],tag:'',chosen:false,prop:null,counter:false,custom:'',err:''},
+    saved:{k:[],v:[]},
+    savedUI:{filter:'all',q:'',edit:null,draft:null,idea:null,newOpen:false,nd:{label:'other',text:'',date:''},msg:''},
+    movie:{mode:null,dev:null,fmt:null,started:false,idx:{k:0,v:999},votes:{k:{},v:Object.fromEntries(TITLES.map(t=>[t.id,t.kv]))},pick:null,when:null,svc:null,eps:null,hist:[]},
+    photo:{feed:[{id:'p0',by:'v',img:makeSample('🌇','#f6a04d','#e0357a'),caption:'Sunset from my window. Camera ready 📷',t:Date.now()-2*3600*1000,react:null}],seen:{k:[],v:['p0']},busy:false,err:'',pend:null},
+    gentle:{opt:{k:false,v:false},note:{k:null,v:null},resp:{k:null,v:null},draft:{k:{topics:[],helps:[],depth:'heads',line:'',canSave:false},v:{topics:[],helps:[],depth:'heads',line:'',canSave:false}},tmp:{k:[],v:[]},compose:false,err:''}
+  };
+}
+const S = Object.assign({lang:'hi',who:'invitee',screen:'home',anim:null,custom:null,toast:'',setup:true,form:{k:'',v:'',cv:'',ck:'',gr:'Namaste',err:''},
+  draft:{kind:'choice',q:'',a:'',b:'',mine:null,err:''}}, fresh());
+
+const getD = d => DAYS[d] || S.bonus[d] || PACKCARDS[d];
+const ORDER = () => CORE.concat(Object.keys(S.bonus));
+const isK = () => S.who==='invitee';
+const me = () => isK()?'k':'v';
+const FAMILY = t => t==='choice'||t==='pick'||t==='nhie';
+function has(v,id){ return Array.isArray(v) ? v.includes(id) : v===id; }
+const bothIn = d => S.ans[d].k!==null && S.ans[d].v.pick!==null && S.ans[d].v.pick!==undefined;
+
+function done(d){ const D=getD(d); return D.type==='try' ? S.ans[d].sub : S.ans[d].k!==null; }
+function needs(d){
+  const D=getD(d), A=S.ans[d];
+  if(isK()) return D.type==='try' ? !A.sub : A.k===null;
+  if(FAMILY(D.type)||D.type==='bet'||D.type==='multi'||D.type==='guess') return A.v.pick===null||A.v.pick===undefined;
+  if(D.type==='bug') return A.k!==null && A.reply===null;
+  return false;
+}
+const firstNeeding = () => ORDER().find(needs);
+const nextNeeding = d => { const o=ORDER(); return o.slice(o.indexOf(d)+1).find(needs); };
+
+function optsFor(d){
+  const D=getD(d), A=S.ans[d], m=me();
+  const base = D.opts.slice();
+  const ex = (A.extra||[]).filter(x=>{
+    if(x.by===m) return true;
+    if(D.type==='multi' && !isK()) return true;
+    return isK() ? (A.k===null || has(A.k,x.id)) : (A.v.pick===null || has(A.v.pick,x.id));
+  }).map(x=>({...x, sub: x.by===m ? 'Your idea ✨' : 'New option ✨'}));
+  return base.concat(ex);
+}
+const allOpt = (d,id) => getD(d).opts.concat(S.ans[d].extra||[]).find(o=>o.id===id);
+
+function veil(inner,d){
+  const on = S.anim===d && isK();
+  return `<div class="veilwrap${on?' veil-on':''}"><div class="vc">${inner}</div><div class="veil" aria-hidden="true"></div></div>`;
+}
+const rowK = h => `<div class="row k"><span class="nm">{K}</span><div class="val">${h}</div></div>`;
+const rowV = h => `<div class="row v"><span class="nm">{V}</span><div class="val">${h}</div></div>`;
+const waitBox = t => `<div class="wait">${t}</div>`;
+const optLabel = o => `${o.e} ${esc(o.l)}${o.by?`<span class="added">✨ added by ${NAME[o.by]}</span>`:''}`;
+
+function tile(d,o,cls,stack,locked,action='pick'){
+  return `<button class="opt${stack?' row-h':''}${cls?' '+cls:''}" data-a="${action}" data-d="${d}" data-id="${o.id}"${locked?' disabled':''}>
+    <span class="em">${o.e}</span><span><span class="lb">${esc(o.l)}</span>${o.sub?`<br><span class="sb">${o.sub}</span>`:''}</span></button>`;
+}
+function nextBtn(d){
+  const P = getD(d).pack;
+  if(P){
+    const ids = PACKS[P].cards.map(c=>c.id);
+    const n = ids.slice(ids.indexOf(d)+1).find(needs);
+    return n ? `<button class="btn next" data-a="open" data-d="${n}">Chalo, next card ✨</button>`
+             : `<button class="btn next ghost" data-a="pack" data-p="${P}">Back to ${PACKS[P].name}</button>`;
+  }
+  const n = nextNeeding(d);
+  return n ? `<button class="btn next" data-a="open" data-d="${n}">Chalo, next card ✨</button>`
+           : `<button class="btn next ghost" data-a="home">Back to Pehli Baat</button>`;
+}
+
+/* ---------- demo bar ---------- */
+function demoBar(){
+  return `<div class="demobar">
+    <div class="lbl">Demo controls (not part of the real app). Flip between the two phones:</div>
+    <div class="seg" role="group" aria-label="Switch phone">
+      <button class="kj" data-a="who" data-w="invitee" aria-pressed="${isK()}">{K}'s phone</button>
+      <button class="kv" data-a="who" data-w="creator" aria-pressed="${!isK()}">{V}'s phone</button>
+    </div>
+    <button class="reset" data-a="reset">Reset</button>
+  </div>`;
+}
+
+/* ---------- home ---------- */
+function home(){
+  const t = firstNeeding();
+  const coreDone = CORE.filter(d=>done(d)).length;
+  const dots = Array.from({length:14},(_,i)=>{
+    const d=String(i+1), on=CORE.includes(d);
+    if(!on) return `<div class="dot off" title="Not in this demo">${d}</div>`;
+    return `<button class="dot${done(d)?' done':''}${d===t?' today':''}" data-a="open" data-d="${d}" aria-label="Day ${d}">${done(d)?'✓':d}</button>`;
+  }).join('');
+  const hi = esc(RAW.gr||'Hey') + ', ' + (isK() ? '{K}' : '{V}') + ' 👋';
+  const subline = isK()
+    ? 'One small card a day. One tap or one line, and you are done.'
+    : 'Your cards are queued. {K} gets each link in your chat, no login.';
+  const bonusKeys = Object.keys(S.bonus);
+  const brows = bonusKeys.map(d=>{
+    const B=S.bonus[d], mine = B.by===me();
+    const st = needs(d) ? '<span class="pill you">Your turn</span>' : '<span class="pill">Waiting</span>';
+    const kind = B.type==='nhie' ? 'Never have I ever… '+esc(B.q) : esc(B.q);
+    return `<button class="brow" data-a="open" data-d="${d}"><span class="bt">${kind}<span class="bs">${mine?'You added this':'Added by '+NAME[B.by]}</span></span>${st}</button>`;
+  }).join('');
+  const openLabel = t ? (CORE.includes(t) ? `Open today's card (Day ${t})` : `Open the extra card waiting for you`) : '';
+  return `<div class="hero">
+    <span class="season">Season 1 · Pehli Baat</span>${S.room.chosen?` <span class="pill you" title="The room name is permanent">🔒 ${esc(S.room.tag)}</span>`:''}
+    ${brandHtml()}
+    <p class="sub"><b>${hi}</b><br>${subline}</p>
+  </div>
+  ${S.toast?`<div class="done-msg" style="margin:0 0 16px">${S.toast}</div>`:''}
+  ${(()=>{
+    const R=S.room; if(R.chosen) return '';
+    const m=me(), o=m==='k'?'v':'k';
+    if(R.prop && !R.counter && R.prop.by===m) return `<div class="half" style="margin:0 0 16px"><h3>You suggested ${esc(R.prop.tag)}</h3>
+      <p style="margin:0 0 10px">Waiting for ${NAME[o]} to agree 💭 The room name locks for good once you both say yes.</p>
+      <button class="btn ghost" data-a="roomchange">Change my suggestion</button></div>`;
+    if(R.prop && !R.counter) return `<div class="half" style="margin:0 0 16px"><h3>${NAME[o]} suggests ${esc(R.prop.tag)} 🎉</h3>
+      <p style="margin:0 0 10px">It would become your room's name. Once you both agree, <b>it is locked and can't be changed later</b>.</p>
+      <div class="two"><button class="btn" data-a="roomaccept">Agree and lock it in 🔒</button><button class="btn ghost" data-a="roomcounter">Suggest another</button></div></div>`;
+    return `<div class="half" style="margin:0 0 16px"><h3>${R.counter?'Suggest a different one':'🎉 Your room is ready'}</h3>
+      <p style="margin:0 0 10px">Choose the room's hashtag together. Suggest one, and it locks when ${NAME[o]} agrees. <b>Once locked, it can't be changed.</b> It is a nickname, not a password.</p>
+      <div class="chip-row" style="margin:0 0 10px">${R.opts.map((x,i)=>`<button data-a="roompick" data-r="${i}" aria-pressed="${R.tag===x&&!R.custom}" style="${R.tag===x&&!R.custom?'border-color:var(--gold);background:var(--gold-soft)':''}">${esc(x)}</button>`).join('')}</div>
+      <input class="field" data-g="rtag" maxlength="25" value="${esc(R.custom)}" placeholder="Or type your own" autocomplete="off">
+      ${R.err?`<p class="err">${R.err}</p>`:''}
+      <button class="btn" data-a="roompropose">Suggest this one</button>
+      ${R.counter?`<button class="btn ghost next" data-a="roomcancel">Never mind</button>`:''}
+      <p class="hint" style="margin:10px 0 0">Nobody can find your room with it. If you share it publicly, people can read your names, so share it only if you like.</p></div>`;
+  })()}
+  ${S.photo.feed.some(x=>x.by!==me() && !S.photo.seen[me()].includes(x.id))?`<div class="pingbar"><span>📷 ${NAME[isK()?'v':'k']} shared a photo</span><button class="reset" data-a="screen" data-s="photo">Look 👀</button></div>`:''}
+  ${S.ping[me()]?`<div class="pingbar"><span>${NAME[isK()?'v':'k']} is thinking of you 💛</span><button class="reset" data-a="pingclear">Aww</button></div>`:''}
+  ${(()=>{ const u=upcomingSaved(); return u ? `<div class="pingbar"><span>🎁 ${untilText(u.date)==='today'?'Today':'Coming up '+untilText(u.date)}: ${esc(u.note||u.q)}<br><small style="font-weight:500;color:var(--muted)">Only you see this</small></span><button class="reset" data-a="savedopen" data-id="${u.id}">Open</button></div>` : ''; })()}
+  <button class="btn ghost" style="margin-bottom:14px" data-a="ping">💛 Send a “thinking of you”</button>
+  <div class="strip">${dots}</div>
+  <p class="legend">${coreDone} of ${CORE.length} demo cards answered. No streaks. Skip any day, no guilt. Dashed days are not in this demo.</p>
+  ${t ? `<button class="btn" data-a="open" data-d="${t}">${openLabel}</button>`
+      : `<div class="done-msg">Nothing waiting on you 🎉 ${isK()?'Flip phones to see the other side, or add a card below.':'Add a card for {K} below.'}</div>`}
+  <h3 class="sech">Card packs</h3>
+  <p class="sech-sub">Play in any order, skip freely.</p>
+  ${PACK_ORDER.map(p=>{const P=PACKS[p], n=P.cards.filter(c=>done(c.id)).length;
+    return `<button class="brow" data-a="pack" data-p="${p}"><span class="bt">${P.e} ${P.name}<span class="bs">${P.blurb}</span></span><span class="pill${n===P.cards.length?'':' you'}">${n}/${P.cards.length}</span></button>`;}).join('')}
+  <h3 class="sech">More ways to play</h3>
+  <p class="sech-sub">Little rituals, one line at a time.</p>
+  <button class="brow" data-a="screen" data-s="micro"><span class="bt">🎲 Micro-Dates<span class="bs">Spin for a 15-minute date. ${S.micro.done?S.micro.done+' done':'Nothing to plan'}</span></span><span class="pill">Spin</span></button>
+  <button class="brow" data-a="screen" data-s="anta"><span class="bt">🎵 Antakshari Lite<span class="bs">Last letter, next song. ${S.anta.chain.filter(x=>!x.pass).length-1} songs in this chain</span></span><span class="pill">${S.anta.turn===me()?'Your turn':'Waiting'}</span></button>
+  <button class="brow" data-a="screen" data-s="story"><span class="bt">📖 Story Relay<span class="bs">One silly sentence each. ${S.story.chapters.length} chapters saved</span></span><span class="pill">${S.story.turn===me()?'Your turn':'Waiting'}</span></button>
+  <button class="brow" data-a="screen" data-s="capsule"><span class="bt">⏳ Time Capsule<span class="bs">Optional. A line for three months from now</span></span><span class="pill">${S.capsule.sealed[me()]?'Sealed':'Open'}</span></button>
+  <button class="brow" data-a="screen" data-s="roomdata"><span class="bt">🗄️ Room data<span class="bs">Download everything, keep it 4 more weeks, or erase</span></span><span class="pill${daysLeft()<=7?' you':''}">${daysLeft()}d</span></button>
+  <button class="brow" data-a="screen" data-s="privacy"><span class="bt">🔐 Privacy<span class="bs">Locked on your phone. Even the developer cannot read it</span></span><span class="pill">E2E</span></button>
+  <button class="brow" data-a="screen" data-s="saved"><span class="bt">🔖 Saved<span class="bs">Your private notes about ${NAME[isK()?'v':'k']}, with Excel export</span></span><span class="pill${S.saved[me()].length?' you':''}">${S.saved[me()].length}</span></button>
+  <button class="brow" data-a="screen" data-s="movie"><span class="bt">🍿 Movie Night<span class="bs">Home or apart. Swipe right or left to pick what to watch</span></span><span class="pill">Swipe</span></button>
+  <button class="brow" data-a="screen" data-s="photo"><span class="bt">📷 Right Now<span class="bs">Share a photo of what you are up to, whenever you like</span></span><span class="pill${S.photo.feed.some(x=>x.by!==me() && !S.photo.seen[me()].includes(x.id))?' you':''}">${S.photo.feed.some(x=>x.by!==me() && !S.photo.seen[me()].includes(x.id))?'New':'Share'}</span></button>
+  <button class="brow" data-a="screen" data-s="gentle"><span class="bt">💛 Gentle Corner<span class="bs">Opt-in for both. Share what is on your mind, at your pace</span></span><span class="pill">${S.gentle.opt[me()]?'On':'Off'}</span></button>
+  <h3 class="sech">Make it ours</h3>
+  <p class="sech-sub">Add your own this-or-that or a Never have I ever. It lands on ${isK()?'{V}':'{K}'}'s phone as a card.</p>
+  <button class="btn ghost" data-a="new">＋ Add a card</button>
+  ${brows}
+  <div class="note">In the real app this arrives as a link in your chat (Instagram or WhatsApp). One tap, no login, done in under 20 seconds.</div>`;
+}
+
+/* ---------- day views ---------- */
+function thread(d){
+  const A=S.ans[d]; A.ask=A.ask||{k:false,v:false}; A.cmt=A.cmt||{k:null,v:null}; A.skip=A.skip||{k:false,v:false};
+  const m=me(), o=m==='k'?'v':'k', on=NAME[o];
+  const say = (w,txt) => (w==='k'?rowK:rowV)(`<span style="font-weight:600">“${esc(txt)}”</span>`);
+  let h='';
+  ['k','v'].forEach(w=>{ if(A.cmt[w]) h+=say(w,A.cmt[w]); });
+  if(A.ask[o] && A.cmt[m]===null && !A.skip[m]){
+    h+=`<div class="customrow"><p>${on} wants the story 👀 One line is plenty.</p>
+      <input class="field" id="cmt" maxlength="100" placeholder="The short version…" autocomplete="off">
+      <div class="two"><button class="btn" data-a="cmtsend" data-d="${d}">Send</button><button class="btn ghost" data-a="cmtskip" data-d="${d}">Not today 🙂</button></div></div>`;
+  }
+  if(!A.ask[m]) h+=`<button class="btn ghost" data-a="ask" data-d="${d}">Tell me the story 👀</button>`;
+  else if(A.cmt[o]===null) h+= A.skip[o] ? waitBox(`${on} is saving that one for later 🙂`) : waitBox(`Asked ${on} for the story 💭`);
+  return h;
+}
+
+function familyBody(d){
+  const D=getD(d), A=S.ans[d], stack=D.type==='pick', custom=(D.type==='choice'||D.type==='pick');
+  const both = bothIn(d);
+  if(!both){
+    const sel = isK()? A.k : A.v.pick;
+    const locked = isK() && A.k!==null;
+    const list = optsFor(d);
+    const cls = stack?'stack':'grid2';
+    let html = `<div class="${cls}">${list.map(o=>tile(d,o,sel===o.id?(isK()?'sel-k':'sel-v'):'',stack,locked)).join('')}</div>`;
+    const canAnswer = isK() ? A.k===null : true;
+    if(custom && canAnswer){
+      html += `<button class="opt row-h dashed" data-a="opencustom" data-d="${d}"><span class="em">✨</span><span class="lb">Something else…</span></button>`;
+      if(S.custom===d){
+        html += `<div class="customrow"><p>Type your own option. ${isK()?'{V}':'{K}'} will see it as a choice too.</p>
+          <input class="field" id="custom" maxlength="40" placeholder="e.g. Rooftop chai" autocomplete="off">
+          <button class="btn" data-a="custom" data-d="${d}">Add my option</button></div>`;
+      }
+    }
+    if(isK()){
+      html += A.k===null ? `<p class="hint">One tap. That's it.</p>` : waitBox('Saved ✓ Waiting for {V} 💭');
+    } else {
+      html += A.v.pick===null||A.v.pick===undefined
+        ? waitBox(A.k!==null ? '{K} is in 💭 Your turn. Pick yours and both open up.' : 'Pick yours. It stays private until you both answer.')
+        : waitBox('Waiting for {K} 💭 Your pick is saved. Tap another to change it.');
+    }
+    return html;
+  }
+  const ko=allOpt(d,A.k), vo=allOpt(d,A.v.pick), same=A.k===A.v.pick;
+  let banner;
+  if(D.type==='nhie') banner = same ? (A.k==='have'?'Both guilty 😄':'Two angels 😇') : 'One of you has a story 👀';
+  else if(D.type==='pick') banner = `Sunday plan: ${ko.e} ${esc(ko.l)}`;
+  else banner = same ? `You both picked ${esc(vo.l.toLowerCase())} ${vo.e} 🎉` : 'Two different picks. Good to know 😄';
+  const extra = D.type==='pick' ? `<p class="hint" style="margin:0">${same?'Both of you said the same, easy. ':''}The watch-party link lands Sunday afternoon 📺</p>` : '';
+  return `<div class="reveal"><p class="banner">${banner}</p>
+    ${rowK(optLabel(ko))}
+    ${veil(rowV(`${optLabel(vo)}${A.v.why?`<div class="why">“${esc(A.v.why)}”</div>`:''}`),d)}
+    ${extra}${D.type==='nhie'?thread(d):''}${loveBlock(d)}${saveBlock(d)}</div>${nextBtn(d)}`;
+}
+
+function dayView(d){
+  const D=getD(d), A=S.ans[d];
+  let body='', tagText=D.tag, tagCls='tag';
+  if(D.bonus){ tagText = D.by===me() ? 'Your card' : 'From '+NAME[D.by]; tagCls='tag from'; }
+  if(D.pack){ tagText = PACKS[D.pack].e+' '+D.tag; tagCls='tag from'; }
+  let heading = D.q ? `<h2 class="q">${D.q}</h2>` : '';
+  if(D.type==='nhie') heading = `<h2 class="q"><small>Never have I ever…</small>${esc(D.q)}</h2>`;
+  if(D.type==='noticed') heading = '<div style="height:12px"></div>';
+  if(D.type==='bug') heading = '<h2 class="q">Bug report filed 🐞</h2>';
+  if(D.bonus && D.type==='choice') heading = `<h2 class="q">${esc(D.q)}</h2>`;
+  if(D.type==='guess') heading = `<h2 class="q" style="font-size:46px;letter-spacing:6px;margin-bottom:4px">${D.q}</h2><p class="hint" style="margin:0 0 16px">Which film is this?</p>`;
+
+  if(FAMILY(D.type)) body = familyBody(d);
+  if(D.type==='multi') body = multiBody(d);
+  if(D.type==='recall') body = recallBody(d);
+  if(D.type==='guess') body = guessBody(d);
+
+  if(D.type==='line'){
+    if(A.k===null){
+      body = isK()
+        ? `<input class="field" id="line" maxlength="80" placeholder="${D.ph}" autocomplete="off"><button class="btn" data-a="line" data-d="${d}">Send</button>`
+        : `<input class="field" id="line" maxlength="80" value="${esc(A.v.text)}" autocomplete="off"><button class="btn ghost" data-a="line" data-d="${d}">Save my line</button>${waitBox('Waiting for {K} 💭')}`;
+    } else {
+      body = `<div class="reveal"><p class="banner">${D.banner||'Two plates, two stories 🍽️'}</p>
+        ${rowK(esc(A.k))}${veil(rowV(esc(A.v.text)),d)}${D.cheer?cheerBlock(d):loveBlock(d)}${saveBlock(d)}</div>${nextBtn(d)}`;
+    }
+  }
+  if(D.type==='bet'){
+    if(A.k===null){
+      const sel = isK()?null:A.v.pick;
+      const intro = isK() ? '🎲 {V} placed a sealed bet on you. Now pick for real:' : '🎲 Bet on what {K} will pick:';
+      body = `<div class="wait" style="margin:0 0 14px;background:var(--gold-soft)">${intro}</div>
+        <div class="grid2">${D.opts.map(o=>tile(d,o,sel===o.id?'sel-v':'',false,false)).join('')}</div>`;
+    } else {
+      const ko=allOpt(d,A.k), vo=allOpt(d,A.v.pick), same=A.k===A.v.pick;
+      body = `<div class="reveal"><p class="banner">${same?'{V} called it 😏':'{V} was way off 🙈 They will live.'}</p>
+        ${rowK(`Picked ${ko.e} ${ko.l}`)}${veil(rowV(`Bet on ${vo.e} ${vo.l}`),d)}${loveBlock(d)}${saveBlock(d)}</div>${nextBtn(d)}`;
+    }
+  }
+  if(D.type==='noticed'){
+    const note = `<div class="sticky">${D.note}<small>from {V}, one small thing they noticed</small></div>`;
+    if(A.k===null){
+      body = note + (isK()
+        ? `<div class="reacts">${D.opts.map(o=>`<button class="opt" data-a="pick" data-d="${d}" data-id="${o.id}"><span class="em">${o.e}</span><span class="lb">${o.l}</span></button>`).join('')}</div><p class="hint">Tap how it landed.</p>`
+        : waitBox('Sent. Waiting for {K} 💭'));
+    } else {
+      const r=D.opts.find(o=>o.id===A.k);
+      body = note + `<div class="reveal">${rowK(`${r.e} ${r.l}`)}<p class="hint" style="margin:0">${r.msg}</p></div>${nextBtn(d)}`;
+    }
+  }
+  if(D.type==='bug'){
+    const sevRow = A.k===null ? 'loading…' : (()=>{const o=D.opts.find(x=>x.id===A.k);return `${o.e} ${o.l}`})();
+    const stat = A.reply==='fixed' ? 'Fixed ✅ (in progress)' : A.reply==='wontfix' ? "Won't fix 😌 (it's a feature)" : 'Open';
+    const ticket = `<div class="ticket"><div class="th"><span>${D.id}</span><span>Filed by {V}</span></div>
+      <div class="tr"><b>Summary</b><span>${D.summary}</span></div>
+      <div class="tr"><b>Severity</b><span>${sevRow}</span></div>
+      <div class="tr"><b>Status</b><span class="status">${stat}</span></div></div>`;
+    if(A.k===null){
+      body = ticket + (isK()
+        ? `<p class="lab">Tester, set the severity:</p><div class="stack">${D.opts.map(o=>`<button class="opt row-h" data-a="pick" data-d="${d}" data-id="${o.id}"><span class="em">${o.e}</span><span class="lb">${o.l}</span></button>`).join('')}</div>`
+        : waitBox('Bug filed. Waiting for {K} to set severity 💭'));
+    } else if(A.reply===null){
+      body = ticket + (isK()
+        ? waitBox('Severity sent. {V} will reply soon ✍️')
+        : `<p class="lab">Your reply, developer:</p><div class="two"><button class="btn teal" data-a="reply" data-r="fixed">Fixed ✅</button><button class="btn ghost" data-a="reply" data-r="wontfix">Won't fix 😌</button></div>`);
+    } else {
+      body = ticket + nextBtn(d);
+    }
+  }
+  if(D.type==='try'){
+    const vals = isK()? A.k : A.v;
+    if(!A.sub){
+      const cnt = Object.keys(A.k).length;
+      body = `<div class="trylist">${D.items.map(it=>`<div class="tr-item"><div class="t">${it.e} ${it.l}</div><div class="tri">
+        ${Object.keys(TRY).map(k=>`<button class="${vals[it.id]===k?(isK()?'s-k':'s-v'):''}" data-a="rate" data-i="${it.id}" data-r="${k}">${TRY[k]}</button>`).join('')}</div></div>`).join('')}</div>`
+        + (isK()
+          ? `<button class="btn next" data-a="showus" ${cnt<D.items.length?'disabled':''}>Show us ${cnt<D.items.length?`(${cnt}/${D.items.length})`:'🎉'}</button>`
+          : waitBox('Your answers are saved. Waiting for {K} 💭'));
+    } else {
+      const both = D.items.filter(it=>A.k[it.id]==='keen' && A.v[it.id]==='keen');
+      const list = D.items.map(it=>{
+        const b = A.k[it.id]==='keen' && A.v[it.id]==='keen';
+        return `<div class="cmp${b?' both':''}"><span>${it.e} ${it.l}${b?' 🎯':''}</span>
+          <span class="chip k">${TRY[A.k[it.id]]}</span><span class="chip v">${TRY[A.v[it.id]]}</span></div>`;}).join('');
+      const first = both[0];
+      body = `<div class="reveal"><p class="banner">${both.length?`Both keen on ${both.length} ${both.length>1?'things':'thing'} 🎉`:'No double-keens yet. Try a Maybe!'}</p>
+        <div class="cmp" style="background:transparent;padding:0 12px"><span></span><span class="chiphd">{K}</span><span class="chiphd">{V}</span></div>
+        ${veil(`<div class="reveal" style="margin:0">${list}</div>`,d)}</div>
+        <div class="half"><h3>Halfway Date idea 🚆</h3>
+        <p>${first?`${first.e} ${first.l}`:'Pick any Maybe you both share'}, somewhere roughly halfway between you. No pressure on dates.</p>
+        ${A.season===null?`<p class="lab">Season 2?</p><div class="two"><button class="btn" data-a="season" data-r="yes">Yes please 🎉</button><button class="btn ghost" data-a="season" data-r="later">Later 🙂</button></div>`
+          : `<div class="done-msg">${A.season==='yes'?'Season 2 is on. {V} is already writing cards ✍️':'Totally fine. Season 2 waits for you 🙂'}</div>`}
+        </div>`;
+    }
+  }
+  const dayTag = D.pack ? `Card ${D.idx+1} of ${PACKS[D.pack].cards.length}` : D.bonus ? 'Extra card' : `Day ${d} of 14`;
+  return `<div class="top"><button class="back" data-a="${D.pack?'pack':'home'}"${D.pack?` data-p="${D.pack}"`:''}>‹ Back</button><span class="daytag">${dayTag}</span></div>
+    <section class="card"><span class="${tagCls}">${tagText}</span>${heading}${body}</section>`;
+}
+
+/* ---------- multi / guess / cheer ---------- */
+function customUI(d,canAdd){
+  const D=getD(d); if(!canAdd) return '';
+  let h = `<button class="opt row-h dashed" data-a="opencustom" data-d="${d}"><span class="em">✨</span><span class="lb">Something else…</span></button>`;
+  if(S.custom===d){
+    h += `<div class="customrow"><p>Type your own option. ${isK()?'{V}':'{K}'} will see it as a choice too.</p>
+      <input class="field" id="custom" maxlength="40" placeholder="e.g. Rooftop chai" autocomplete="off">
+      <button class="btn" data-a="custom" data-d="${d}">Add my option</button></div>`;
+  }
+  return h;
+}
+function loveBlock(d){
+  const A=S.ans[d], m=me(), o=m==='k'?'v':'k';
+  A.love = A.love || {k:null,v:null};
+  let h='';
+  if(A.love[o]) h += `<div class="done-msg" style="margin:0">${NAME[o]} sent you ${A.love[o]}</div>`;
+  if(A.love[m]===null) h += `<p class="lab" style="margin:8px 0 0">Send a little love:</p><div class="cheers">${['🤗','💛','🫶','😊'].map(c=>`<button data-a="love" data-d="${d}" data-c="${c}" aria-label="Send ${c}">${c}</button>`).join('')}</div>`;
+  else h += `<p class="hint" style="margin:0">You sent ${A.love[m]}</p>`;
+  return h;
+}
+function cheerBlock(d){
+  const A=S.ans[d], m=me(), o=m==='k'?'v':'k';
+  A.cheer = A.cheer || {k:null,v:null};
+  let h='';
+  if(A.cheer[o]) h += `<div class="done-msg" style="margin:0">${NAME[o]} sent you ${A.cheer[o]}</div>`;
+  if(A.cheer[m]===null) h += `<p class="lab" style="margin:8px 0 0">Send ${NAME[o]} a cheer:</p><div class="cheers">${['👏','🔥','💪','🌟'].map(c=>`<button data-a="cheer" data-d="${d}" data-c="${c}" aria-label="Cheer ${c}">${c}</button>`).join('')}</div>`;
+  else h += `<p class="hint" style="margin:0">You sent ${A.cheer[m]}</p>`;
+  return h;
+}
+function multiBody(d){
+  const D=getD(d), A=S.ans[d];
+  A.tmp = A.tmp || {k:[]};
+  if(!bothIn(d)){
+    const cur = isK() ? (A.k!==null ? A.k : A.tmp.k) : (A.v.pick||[]);
+    const locked = isK() && A.k!==null;
+    const chips = optsFor(d).map(o=>{ const on=cur.includes(o.id);
+      return `<button class="chk${on?(isK()?' on-k':' on-v'):''}" data-a="tog" data-d="${d}" data-id="${o.id}" aria-pressed="${on}"${locked?' disabled':''}><span class="bx" aria-hidden="true">${on?'☑':'☐'}</span><span>${o.e} ${esc(o.l)}${o.sub?`<small>${o.sub}</small>`:''}</span></button>`; }).join('');
+    let h = `<p class="hint" style="margin:-6px 0 12px">Tick as many as you like.</p><div class="chks">${chips}</div>`;
+    h += customUI(d, isK() ? A.k===null : true);
+    if(isK()) h += A.k===null ? `<button class="btn next" data-a="mdone" data-d="${d}"${cur.length?'':' disabled'}>Done ✓${cur.length?` (${cur.length})`:''}</button>` : waitBox('Saved ✓ Waiting for {V} 💭');
+    else h += A.v.pick ? waitBox('Waiting for {K} 💭 Your ticks are saved. Tick or untick to change them.') : waitBox(A.k!==null ? '{K} is in 💭 Your turn. Tick yours and both open up.' : 'Tick yours. It stays private until you both answer.');
+    return h;
+  }
+  const kp=A.k, vp=A.v.pick, common=kp.filter(x=>vp.includes(x));
+  const lab = arr => arr.map(id=>optLabel(allOpt(d,id))).join('<br>');
+  const banner = common.length ? `${common.length} in common 🎉` : 'No overlap yet. Plenty new to try 😄';
+  return `<div class="reveal"><p class="banner">${banner}</p>
+    ${common.length?`<div class="row both"><span class="nm">Both</span><div class="val">${lab(common)}</div></div>`:''}
+    ${rowK(lab(kp))}
+    ${veil(rowV(`${lab(vp)}${A.v.why?`<div class="why">“${esc(A.v.why)}”</div>`:''}`),d)}
+    ${D.cheer?cheerBlock(d):loveBlock(d)}${saveBlock(d)}</div>${nextBtn(d)}`;
+}
+function guessBody(d){
+  const D=getD(d), A=S.ans[d];
+  if(!bothIn(d)){
+    const sel = isK()?A.k:A.v.pick, locked = isK() && A.k!==null;
+    let h = `<div class="stack">${D.opts.map(o=>tile(d,o,sel===o.id?(isK()?'sel-k':'sel-v'):'',true,locked)).join('')}</div>`;
+    h += isK() ? (A.k===null ? '<p class="hint">One tap. No score, just fun.</p>' : waitBox('Saved ✓ Waiting for {V} 💭'))
+               : waitBox(A.v.pick ? 'Waiting for {K} 💭 Your guess is saved. Tap another to change it.' : 'Take a guess. It stays private until you both answer.');
+    return h;
+  }
+  const kOk=A.k===D.ans, vOk=A.v.pick===D.ans, title=allOpt(d,D.ans).l;
+  const banner = kOk&&vOk ? 'Both got it 🎉' : (kOk||vOk) ? `${NAME[kOk?'k':'v']} got it 😄` : 'Tough one! Nobody got it 😅';
+  const ko=allOpt(d,A.k), vo=allOpt(d,A.v.pick);
+  return `<div class="reveal"><p class="banner">${banner}</p>
+    ${rowK(`${esc(ko.l)} ${kOk?'✅':''}`)}${veil(rowV(`${esc(vo.l)} ${vOk?'✅':''}`),d)}
+    <p class="hint" style="margin:0">It was ${esc(title)} 🎬</p>${loveBlock(d)}${saveBlock(d)}</div>${nextBtn(d)}`;
+}
+
+/* ---------- more ways to play ---------- */
+const backTop = label => `<div class="top"><button class="back" data-a="home">‹ Back</button><span class="daytag">${label}</span></div>`;
+
+function microView(){
+  const M=S.micro, c = M.cur===null ? null : MICRO[M.cur];
+  let body='';
+  if(!c){
+    body = `<h2 class="q">Spin for a 15-minute date 🎲</h2>
+      <p class="hint" style="margin:0 0 16px">Small enough for a weekday. Nothing to plan.${M.done?` <b>${M.done} done so far.</b>`:''}</p>
+      <button class="btn" data-a="spin">Spin 🎲</button>`;
+  } else {
+    const both = M.k!==null && M.v!==null, mine = isK()?M.k:M.v;
+    const btn = (r,l) => `<button class="opt${mine===r?(isK()?' sel-k':' sel-v'):''}" data-a="mresp" data-r="${r}"><span class="lb">${l}</span></button>`;
+    body = `<div class="big">${c.e}</div><h2 class="q" style="margin-top:4px">${c.t}</h2>
+      <p style="margin:0 0 14px">${c.d} <b>About 15 minutes.</b></p>`;
+    if(!both){
+      body += `<div class="grid2">${btn('keen','Keen 🙌')}${btn('swap','Swap 🔄')}</div>`
+        + (isK() ? '<p class="hint">One tap.</p>' : waitBox('Waiting for {K} 💭 Your answer is saved. Tap to change it.'));
+    } else if(M.k==='keen' && M.v==='keen'){
+      body += `<p class="banner">Both keen 🎉</p>`;
+      body += M.when===null
+        ? `<p class="lab">When?</p><div class="chip-row">${['Tonight','Tomorrow','This weekend'].map(w=>`<button data-a="mwhen" data-w="${w}">${w}</button>`).join('')}</div>`
+        : `<div class="done-msg" style="margin:0 0 12px">Planned: ${M.when} ✅</div><button class="btn" data-a="mfin">We did it 🎉</button>`;
+    } else {
+      body += `<p class="banner">Different mood, no stress 🙂</p><button class="btn" data-a="spin">Spin again 🎲</button>`;
+    }
+    if(!(both && M.k==='keen' && M.v==='keen' && M.when!==null)) body += `<button class="btn ghost next" data-a="spin">Not this one, spin again</button>`;
+  }
+  return backTop('Micro-Dates') + `<section class="card"><span class="tag from">🎲 Micro-Dates</span>${body}</section>`;
+}
+
+function lastLetter(t){ const x=(t||'').replace(/[^A-Za-z]/g,''); return x ? x.slice(-1).toUpperCase() : ''; }
+function firstLetter(t){ const x=(t||'').match(/[A-Za-z]/); return x ? x[0].toUpperCase() : ''; }
+function antaView(){
+  const A=S.anta, songs=A.chain.filter(x=>!x.pass), last=songs[songs.length-1], L=lastLetter(last.t), m=me();
+  const rows = A.chain.map(x => x.by==='app' ? `<div class="bubble">🎵 ${esc(x.t)}<small>Starter</small></div>`
+    : x.pass ? `<div class="bubble ${x.by}">⏭️ passed<small>${NAME[x.by]}</small></div>`
+    : `<div class="bubble ${x.by}">🎵 ${esc(x.t)}<small>${NAME[x.by]}</small></div>`).join('');
+  const turn = A.turn===m
+    ? `<p class="lab">Your song starts with <b style="color:var(--pink)">${L}</b></p>
+       <input class="field" id="anta" maxlength="60" placeholder="Hindi, Gujarati or English" autocomplete="off">
+       ${A.err?`<p class="err">${A.err}</p>`:''}
+       <div class="two"><button class="btn" data-a="anext">Add song 🎵</button><button class="btn ghost" data-a="apass">Pass</button></div>`
+    : waitBox(`Waiting for ${NAME[A.turn]} 🎵 They need a song starting with ${L}`);
+  const save = songs.length>=7 ? `<button class="btn ghost next" data-a="asave">Save this chain to Our Soundtrack 🎶</button>` : '';
+  const saved = A.saved.length ? `<h3 class="sech" style="font-size:18px">Our Soundtrack</h3>${A.saved.map((c,i)=>`<details class="chap"><summary>Chain ${i+1} · ${c.length} songs</summary>${c.map(t=>`<div>🎵 ${esc(t)}</div>`).join('')}</details>`).join('')}` : '';
+  return backTop('Antakshari Lite') + `<section class="card"><span class="tag from">🎵 Antakshari Lite</span>
+    <h2 class="q">Last letter, next song</h2>
+    <p class="hint" style="margin:-8px 0 0">Start your song with the last letter of the previous one. Take turns.</p>
+    <div class="chain">${rows}</div>${turn}${save}${saved}</section>`;
+}
+
+function finishStory(){
+  const T=S.story;
+  T.chapters.push({start:STARTERS[T.n%STARTERS.length],lines:T.lines.slice()});
+  T.lines=[]; T.n++; T.turn='k';
+}
+function storyView(){
+  const T=S.story, m=me(), start=STARTERS[T.n%STARTERS.length];
+  const rows = T.lines.map(x=>`<div class="bubble ${x.by}">${esc(x.t)}<small>${NAME[x.by]}</small></div>`).join('');
+  const turn = T.turn===m
+    ? `<p class="lab">Your sentence (${T.lines.length} so far)</p>
+       <input class="field" id="story" maxlength="140" placeholder="One sentence. Keep it silly." autocomplete="off">
+       <div class="two"><button class="btn" data-a="sadd">Add ✍️</button><button class="btn ghost" data-a="sfinish"${T.lines.length>=4?'':' disabled'}>Finish 🎬</button></div>`
+    : waitBox(`Waiting for ${NAME[T.turn]} ✍️`);
+  const chaps = T.chapters.length ? `<h3 class="sech" style="font-size:18px">Chapters so far</h3>${T.chapters.map((c,i)=>`<details class="chap"><summary>Chapter ${i+1} · ${c.lines.length} sentences</summary><div style="margin:8px 0;font-style:italic">${esc(c.start)}</div>${c.lines.map(l=>`<div>${esc(l.t)} <small style="color:var(--muted)">${NAME[l.by]}</small></div>`).join('')}</details>`).join('')}` : '';
+  return backTop('Story Relay') + `<section class="card"><span class="tag from">📖 Story Relay</span>
+    <h2 class="q">One sentence each</h2>
+    <div class="story-start">${esc(start)}</div>
+    <div class="chain">${rows}</div>${turn}${chaps}</section>`;
+}
+
+function capsuleView(){
+  const C=S.capsule, m=me();
+  if(!C.date){ const d=new Date(); d.setMonth(d.getMonth()+3); C.date=d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}); }
+  const status = k => C.sealed[k] ? `${NAME[k]} sealed ✓` : `${NAME[k]} not yet`;
+  let body = `<p style="margin:0 0 12px">Optional, and best kept for when things feel right. Write one line to your future selves. It stays sealed until <b>${C.date}</b>.</p>`;
+  if(!C.sealed[m]){
+    body += `<input class="field" id="cap" maxlength="140" placeholder="One line for future us…" autocomplete="off"><button class="btn" data-a="capseal">Seal it 🔒</button>`;
+  } else {
+    body += `<div class="sealed">🔒 Your line is sealed</div>`;
+  }
+  body += `<p class="hint">${status('k')} · ${status('v')}</p>`;
+  if(C.opened){
+    body += `<div class="reveal"><p class="banner">Three months later 💌</p>${C.k?rowK(esc(C.k)):''}${C.v?rowV(esc(C.v)):''}${!C.k&&!C.v?'<p class="hint">Nothing written yet.</p>':''}</div>`;
+  }
+  body += `<button class="btn ghost next" data-a="capopen">${C.opened?'Seal it again (demo)':'Demo only: fast-forward 3 months'}</button>`;
+  return backTop('Time Capsule') + `<section class="card"><span class="tag from">⏳ Time Capsule</span><h2 class="q">A note to future us</h2>${body}</section>`;
+}
+
+/* ---------- photo postcards ---------- */
+async function compressImage(file, maxDim=1280, quality=0.72, targetKB=300){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    const scale = Math.min(1, maxDim/Math.max(img.naturalWidth,img.naturalHeight));
+    const w = Math.max(1,Math.round(img.naturalWidth*scale)), h = Math.max(1,Math.round(img.naturalHeight*scale));
+    const c = document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);          // re-drawing strips EXIF, including location
+    let q=quality, blob=null;
+    for(let i=0;i<5;i++){
+      blob = await new Promise(r=>c.toBlob(r,'image/jpeg',q));
+      if(!blob) throw new Error('encode');
+      if(blob.size<=targetKB*1024) break;
+      q = Math.max(0.35, q-0.12);
+    }
+    const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(blob); });
+    return {dataUrl, bytes:blob.size, w, h};
+  } finally { URL.revokeObjectURL(url); }
+}
+const ago = t => { const m=Math.max(0,Math.round((Date.now()-t)/60000)); return m<1 ? 'just now' : m<60 ? m+' min ago' : Math.round(m/60)+' h ago'; };
+function photoView(){
+  const P=S.photo, m=me(), o=m==='k'?'v':'k';
+  P.seen[m] = P.feed.map(x=>x.id);   // opening the screen marks everything as seen
+  let post='';
+  if(P.busy) post = waitBox('Compressing your photo…');
+  else if(P.pend){
+    post = `<img class="photo" src="${P.pend.dataUrl}" alt="Preview of your photo">
+      <p class="hint" style="margin:8px 0">${P.pend.sample?'Sample photo.':fmtB(P.pend.orig)+' → '+fmtB(P.pend.bytes)+'.'} Location and camera details are removed.</p>
+      <input class="field" id="pcap" maxlength="80" placeholder="What are you up to? (optional)" autocomplete="off">
+      <div class="two"><button class="btn" data-a="photosend">Send 📷</button><button class="btn ghost" data-a="photoclear">Choose another</button></div>`;
+  } else {
+    post = `<label class="btn filelabel">📷 Share what you are up to<input class="sr" type="file" id="photofile" accept="image/*"></label>
+      <p class="hint">Whenever you feel like it. No schedule, no streaks. Photos are shrunk on your phone and location details are removed.</p>
+      ${P.err?`<p class="err">${P.err}</p>`:''}
+      <button class="btn ghost next" data-a="photosample">Demo only: use a sample photo</button>`;
+  }
+  const item = x => {
+    const mine = x.by===m;
+    const react = mine
+      ? `${x.react?`<small>${NAME[o]} sent ${x.react}</small>`:''}<button class="reset" style="margin:4px 4px 2px" data-a="photodel" data-id="${x.id}">Delete</button>`
+      : (x.react ? `<small>You sent ${x.react}</small>`
+        : `<div class="cheers">${['🤗','💛','😂','🔥'].map(c=>`<button data-a="photoreact" data-id="${x.id}" data-c="${c}" aria-label="React ${c}">${c}</button>`).join('')}</div>`)
+        + `<div style="padding:6px 4px 2px">${saveBar('photo:'+x.id,'savephoto',`data-id="${x.id}"`,'Save this photo')}</div>`;
+    return `<div class="pcard" style="margin-top:12px"><img src="${x.img}" alt="Photo from ${NAME[x.by]}"><small><b>${NAME[x.by]}</b> · ${ago(x.t)}${x.caption?' · '+esc(x.caption):''}</small>${react}</div>`;
+  };
+  const feed = P.feed.length ? P.feed.slice().reverse().map(item).join('') : `<p class="hint">Nothing yet. Share the first one 📷</p>`;
+  return backTop('Right Now') + `<section class="card"><span class="tag from">📷 Right Now</span><h2 class="q">What are you up to?</h2>${post}<h3 class="sech" style="font-size:18px">Shared so far</h3>${feed}</section>`;
+}
+
+/* ---------- gentle corner ---------- */
+function gChips(list,arr,action){
+  return `<div class="chks">${list.map(x=>{ const on=arr.includes(x[0]);
+    return `<button class="chk${on?(isK()?' on-k':' on-v'):''}" data-a="${action}" data-id="${x[0]}" aria-pressed="${on}"><span class="bx" aria-hidden="true">${on?'☑':'☐'}</span><span>${x[1]} ${x[2]}</span></button>`; }).join('')}</div>`;
+}
+const noteSummary = n => `${n.topics.map(x=>gLab(G_TOPICS,x)).join('<br>')}<br><b>What helps:</b><br>${n.helps.map(x=>gLab(G_HELPS,x)).join('<br>')}<br><i>${gLab(G_DEPTH,n.depth)}</i>${n.line?`<br>“${esc(n.line)}”`:''}`;
+function gentleView(){
+  const G=S.gentle, m=me(), o=m==='k'?'v':'k', open=G.opt.k && G.opt.v;
+  const safety = `<div class="safety">Gentle Corner is a place to share, not therapy or an emergency service. If you or someone else is in danger, ${helpText(COUNTRY[m])}</div>`;
+  let body = `<p style="margin:0 0 12px">A private space to share what is on your mind, at your own pace. Nothing here is scored, you never have to share details, and you can take back anything you share.</p>`;
+  if(!open){
+    body += `<p class="hint" style="margin:0 0 14px">It only opens when you both switch it on. Either of you can switch it off again, no explanation needed.</p>
+      <button class="btn${G.opt[m]?' ghost':''}" data-a="gopt">${G.opt[m]?'I need a break from this':'I am open to this 💛'}</button>
+      ${G.opt[m]?waitBox('You are on 💛 It opens when you both are.'):''}`;
+  } else {
+    const mine=G.note[m], theirs=G.note[o];
+    if(theirs){
+      const R=G.resp[o];
+      let steps='';
+      if(R.guess===null){
+        steps = `<p class="lab" style="margin-top:12px">Care card 1: what do you think helps ${NAME[o]}?</p>${gChips(G_HELPS,G.tmp[m],'gguess')}<button class="btn next" data-a="gguessdone"${G.tmp[m].length?'':' disabled'}>Done ✓</button>`;
+      } else {
+        const overlap = R.guess.filter(x=>theirs.helps.includes(x));
+        steps = `<div class="reveal"><p class="banner">${overlap.length?'You already knew some of this 💛':'Now you know 💛'}</p>
+          <div class="row ${m}"><span class="nm">You</span><div class="val">${R.guess.map(x=>gLab(G_HELPS,x)).join('<br>')}</div></div>
+          <div class="row ${o}"><span class="nm">${NAME[o]}</span><div class="val">${theirs.helps.map(x=>gLab(G_HELPS,x)).join('<br>')}</div></div></div>`;
+        if(R.promise===null){
+          steps += `<p class="lab" style="margin-top:14px">Care card 2: pick one tiny promise</p><div class="stack">${G_PROM.map(x=>`<button class="opt row-h" data-a="gprom" data-id="${x[0]}"><span class="em">${x[1]}</span><span class="lb">${x[2]}</span></button>`).join('')}</div>`;
+        } else {
+          steps += `<div class="done-msg">Promise sent 💛 ${gLab(G_PROM,R.promise)}</div>`;
+        }
+      }
+      body += `<h3 class="sech" style="font-size:18px">From ${NAME[o]}</h3><div class="bubble ${o}">${noteSummary(theirs)}</div>${theirs.canSave?saveBar('gentle:'+o,'savenote','', 'Save this in my notes'):''}${steps}`;
+    }
+    body += `<h3 class="sech" style="font-size:18px">Yours</h3>`;
+    if(mine){
+      const R=G.resp[m];
+      const status = R.guess===null ? `Shared ✓ ${NAME[o]} can read it whenever they are ready.` : R.promise===null ? `${NAME[o]} is thinking about it 💛` : `${NAME[o]} promised: ${gLab(G_PROM,R.promise)}`;
+      let react='';
+      if(R.promise!==null){
+        react = R.react ? `<div class="done-msg" style="margin:8px 0 0">You said: ${R.react==='heart'?'That helps 💛':'Let us talk on a call 📞'}</div>`
+          : `<div class="two" style="margin-top:8px"><button class="btn" data-a="greact" data-r="heart">That helps 💛</button><button class="btn ghost" data-a="greact" data-r="call">Let us talk 📞</button></div>`;
+      }
+      body += `<div class="bubble ${m}">${noteSummary(mine)}<small>${status}</small></div>${react}<button class="btn ghost next" data-a="gdel">Take it back</button>`;
+    } else if(G.compose){
+      const D=G.draft[m];
+      body += `<p class="hint" style="margin:0 0 10px">You never have to share details. Just pick what feels true.</p>
+        <p class="lab">What would you like ${NAME[o]} to know?</p>${gChips(G_TOPICS,D.topics,'gtogt')}
+        <p class="lab" style="margin-top:14px">When it comes up, what helps?</p>${gChips(G_HELPS,D.helps,'gtogh')}
+        <p class="lab" style="margin-top:14px">How much would you like to share?</p>
+        <div class="stack">${G_DEPTH.map(x=>`<button class="opt row-h${D.depth===x[0]?(isK()?' sel-k':' sel-v'):''}" data-a="gdepth" data-id="${x[0]}"><span class="em">${x[1]}</span><span class="lb">${x[2]}</span></button>`).join('')}</div>
+        <p class="lab" style="margin-top:14px">Anything else? (optional)</p>
+        <input class="field" data-g="line" maxlength="140" value="${esc(D.line)}" placeholder="One line, only if you want" autocomplete="off">
+        <button class="chk${D.canSave?(isK()?' on-k':' on-v'):''}" data-a="gcansave" aria-pressed="${!!D.canSave}"><span class="bx" aria-hidden="true">${D.canSave?'☑':'☐'}</span><span>OK for ${NAME[o]} to save this in their notes<small>Optional. You can take it back any time, and their saved copy goes too.</small></span></button>
+        ${G.err?`<p class="err">${G.err}</p>`:''}
+        <div class="two"><button class="btn" data-a="gsend">Share gently 💛</button><button class="btn ghost" data-a="gcompose">Not now</button></div>`;
+    } else {
+      body += `<button class="btn ghost" data-a="gcompose">＋ Share a heads-up${theirs&&G.resp[o].promise!==null?' of your own':''}</button>`;
+    }
+    body += `<button class="btn ghost next" data-a="gopt">I need a break from this</button>`;
+  }
+  return backTop('Gentle Corner') + `<section class="card"><span class="tag from">💛 Gentle Corner</span><h2 class="q">Only if you both want it</h2>${body}${safety}</section>`;
+}
+
+/* ---------- movie night ---------- */
+const deckOf = () => TITLES.filter(t => S.movie.fmt==='movie' ? t.type==='movie' : t.type==='series');
+const swipeDone = w => S.movie.idx[w] >= deckOf().length;
+function doSwipe(dir){
+  const M=S.movie, m=me(), deck=deckOf(), item=deck[M.idx[m]];
+  if(!M.started || !item) return;
+  M.votes[m][item.id] = (dir==='keen');
+  M.idx[m]++;
+}
+function howTo(M){
+  if(M.mode==='home') return ['Pick a snack and your spot on the sofa 🍿','Phones on silent, lights low','For a series, agree how many episodes before you press play'];
+  const apple = M.dev==='ios', tips=[];
+  if(M.svc==='netflix' || M.svc==='prime'){
+    tips.push('Screen sharing usually shows a black screen for Netflix and Prime Video because of copy protection, and SharePlay does not cover them.');
+    tips.push('Best bet: Teleparty on a laptop with Chrome or Edge. You each need your own subscription.');
+    tips.push('Or use the Rave app on both phones, or stay on a video call on speaker and count 3-2-1 to press play together.');
+  } else if(M.svc==='disney' || M.svc==='appletv'){
+    if(apple){
+      tips.push('Start a FaceTime call, open the app and choose the title, then tap Play and choose SharePlay.');
+      tips.push('You both need the subscription. If SharePlay does not appear, use the 3-2-1 countdown on a video call.');
+    } else {
+      tips.push('SharePlay needs Apple devices on both sides. With Android or a mix, use Teleparty on a laptop or the Rave app.');
+      tips.push('Or stay on a video call on speaker and count 3-2-1 to press play together.');
+    }
+  } else if(M.svc==='yt'){
+    tips.push('Screen sharing usually works for YouTube: '+(apple?'FaceTime, then Share Content':'a video call app with screen share')+'.');
+    tips.push('Or send the link and count 3-2-1 to press play together.');
+  } else {
+    tips.push('Start a video call on speaker, open the same title, and count 3-2-1 to press play together.');
+  }
+  tips.push('Apps change what they support, so check yours a day before movie night.');
+  return tips;
+}
+function movieView(){
+  const M=S.movie, m=me(), o=m==='k'?'v':'k', deck=deckOf();
+  let body='';
+  const chips = (list,cur,action) => `<div class="chip-row">${list.map(x=>`<button class="${cur===x[0]?'on':''}" data-a="${action}" data-r="${x[0]}" aria-pressed="${cur===x[0]}" style="${cur===x[0]?'border-color:var(--gold);background:var(--gold-soft)':''}">${x[1]} ${x[2]}</button>`).join('')}</div>`;
+  if(!M.started){
+    const ready = M.mode && M.fmt && (M.mode==='home' || M.dev);
+    body = `<h2 class="q">Movie night, your way 🍿</h2>
+      <p class="lab">Where are you watching?</p>${chips([['home','🏠','Together at home'],['apart','📱','Apart, same time']],M.mode,'mvmode')}
+      ${M.mode==='apart'?`<p class="lab" style="margin-top:14px">Which phones?</p>${chips([['ios','🍎','Both iPhones'],['android','🤖','Both Android'],['mixed','🔀','One of each']],M.dev,'mvdev')}`:''}
+      <p class="lab" style="margin-top:14px">What are you in the mood for?</p>${chips([['movie','🎬','One movie'],['series','📺','A series episode'],['binge','🍿','Binge weekend']],M.fmt,'mvfmt')}
+      <button class="btn next" data-a="mvstart"${ready?'':' disabled'}>Start swiping</button>
+      ${M.hist.length?`<h3 class="sech" style="font-size:18px">Watched together</h3>${M.hist.map(h=>`<div class="bubble">🎞️ ${esc(h.t)}<small>${esc(h.when)}</small></div>`).join('')}`:''}`;
+  } else {
+    const summary = `<div class="chip-row" style="margin:0 0 12px"><span class="pill">${M.mode==='home'?'🏠 Home':'📱 Apart'}</span>${M.mode==='apart'?`<span class="pill">${{ios:'🍎 iPhones',android:'🤖 Android',mixed:'🔀 Mixed'}[M.dev]}</span>`:''}<span class="pill">${fmtLabel[M.fmt]}</span><button class="reset" data-a="mvchange">Change</button></div>`;
+    if(!swipeDone(m)){
+      const item=deck[M.idx[m]];
+      body = summary + `<p class="hint" style="margin:0 0 10px">${M.idx[m]+1} of ${deck.length}. Swipe right for keen, left for pass.</p>
+        <div class="deckwrap"><div class="swipecard" role="group" aria-label="${esc(item.t)}"><div class="poster" aria-hidden="true">${item.e}</div><h3>${esc(item.t)}</h3><span class="tag">${item.tag}</span><p style="margin:10px 0 0">${item.hook}</p></div></div>
+        <div class="swipebtns"><button class="btn ghost" data-a="swipe" data-r="pass">✖ Pass</button><button class="btn" data-a="swipe" data-r="keen">💚 Keen</button></div>
+        ${M.idx[m]>0?`<button class="btn ghost next" data-a="swipeundo">↩ Undo last</button>`:''}`;
+    } else if(!swipeDone(o)){
+      body = summary + waitBox(`Your swipes are saved ✓ Waiting for ${NAME[o]} 🍿`) + (!isK()?`<button class="btn ghost next" data-a="mvredo">Redo my swipes</button>`:'');
+    } else {
+      const matches = deck.filter(t=>M.votes.k[t.id] && M.votes.v[t.id]);
+      if(!matches.length){
+        body = summary + `<p class="banner">No match this time 🙂</p><p class="hint">Try a different mood and swipe again.</p><button class="btn" data-a="mvchange">Try another mood</button>`;
+      } else {
+        const pick = matches.find(t=>t.id===M.pick);
+        body = summary + `<p class="banner">It is a match 🎉</p>
+          <div class="stack">${matches.map(t=>`<button class="opt row-h${M.pick===t.id?' sel-k':''}" data-a="mvpick" data-r="${t.id}"><span class="em">${t.e}</span><span><span class="lb">${esc(t.t)}</span><br><span class="sb">${t.tag}</span></span></button>`).join('')}</div>`;
+        if(pick){
+          body += `<p class="lab" style="margin-top:16px">When?</p>${chips([['Tonight','','Tonight'],['Tomorrow','','Tomorrow'],['This weekend','','This weekend']].map(x=>[x[0],'🗓️',x[2]]),M.when,'mvwhen')}`;
+          if(M.mode==='apart') body += `<p class="lab" style="margin-top:14px">Where is it streaming?</p>${chips(SERVICES,M.svc,'mvsvc')}`;
+          if(M.fmt!=='movie') body += `<p class="lab" style="margin-top:14px">How many episodes?</p>${chips([['1','▶️','Just one'],['2','⏩','Two'],['3','🍿','Three or more']],M.eps,'mveps')}`;
+          const ok = M.when && (M.mode==='home' || M.svc) && (M.fmt==='movie' || M.eps);
+          if(ok){
+            body += `<div class="half"><h3>${pick.e} ${esc(pick.t)}</h3><p style="margin:0 0 8px"><b>${M.when}</b>${M.fmt!=='movie'?' · '+(M.eps==='3'?'3+ episodes':M.eps==='2'?'2 episodes':'1 episode'):''}</p>
+              ${howTo(M).map(x=>`<p style="margin:0 0 6px">• ${x}</p>`).join('')}
+              <button class="btn next" data-a="mvwatched">We watched it 🎉</button></div>`;
+          }
+        }
+      }
+    }
+  }
+  return backTop('Movie Night') + `<section class="card"><span class="tag from">🍿 Movie Night</span>${body}</section>`;
+}
+
+/* ---------- remember when (timed recall) ---------- */
+function voiceHtml(x){ return x && x.voice ? `<div style="margin-top:6px"><audio controls preload="metadata" src="${x.voice.url}" style="max-width:100%"></audio><br><small style="color:var(--muted)">Voice note · ${x.voice.secs}s · ${fmtB(x.voice.bytes)}</small></div>` : ''; }
+function recallBody(d){
+  const D=getD(d), A=S.ans[d], m=me(), o=m==='k'?'v':'k', T=S.timer[m], P=S.rec;
+  const mineDone = m==='k' ? A.k!==null : (A.v.text!=null);
+  const bothDone = A.k!==null && A.v.text!=null;
+  if(bothDone){
+    const kRow = A.k.skip ? 'Skipped this one 🙂' : `${A.k.text?esc(A.k.text):''}${voiceHtml(A.k)}`;
+    return `<div class="reveal"><p class="banner">Two memories 🧠</p>
+      ${rowK(kRow)}${veil(rowV(esc(A.v.text)),d)}
+      ${loveBlock(d)}${saveBlock(d)}</div>${nextBtn(d)}`;
+  }
+  if(mineDone) return waitBox(`Sent ✓ Waiting for ${NAME[o]} 💭`);
+  if(!isK()) return waitBox(`Waiting for ${NAME[o]} 💭`);
+  if(!T || T.d!==d || T.done){
+    return `<p class="hint" style="margin:-6px 0 14px">Sixty seconds on the clock. Type one line, or send a 30-second voice note. Skipping is always fine.</p>
+      <button class="btn" data-a="recstart" data-d="${d}">Start the 60-second timer ⏱️</button>
+      <button class="btn ghost next" data-a="recskip" data-d="${d}">Skip this one</button>`;
+  }
+  if(T.expired){
+    return `<div class="timer" aria-live="polite">⏱️</div><p class="banner" style="text-align:center">Time's up</p><p class="hint" style="text-align:center;margin:0 0 14px">No worries. Try again, or skip it.</p>
+      <div class="two"><button class="btn" data-a="recstart" data-d="${d}">Try again</button><button class="btn ghost" data-a="recskip" data-d="${d}">Skip</button></div>`;
+  }
+  const left=Math.max(0, T.len - Math.floor((Date.now()-T.start)/1000));
+  const voice = P.pend
+    ? `<div class="bubble k"><audio controls preload="metadata" src="${P.pend.url}" style="max-width:100%"></audio><small>${P.pend.secs}s · ${fmtB(P.pend.bytes)} · locked on your phone before it is sent</small></div><button class="btn ghost" data-a="recdiscard">Re-record</button>`
+    : P.recording ? `<button class="btn" style="background:var(--teal);color:var(--bg)" data-a="recvoice">⏹ Stop recording</button><p class="hint">Recording… it stops by itself at ${REC_SECS} seconds.</p>`
+    : `<button class="btn ghost" data-a="recvoice">🎙️ Record a ${REC_SECS}-second voice note</button>`;
+  return `<div class="timer" id="timer" role="timer">${left}</div><div class="bar" aria-hidden="true"><i id="timerbar" style="width:${left/T.len*100}%"></i></div>
+    <input class="field" data-g="rectext" maxlength="140" value="${esc(P.text)}" placeholder="${esc(D.ph||'One line')}" autocomplete="off">
+    ${voice}${P.err?`<p class="err" style="margin-top:10px">${P.err}</p>`:''}
+    <button class="btn next" data-a="recsend" data-d="${d}">Send</button>`;
+}
+
+/* ---------- room data: download, keep for 4 more weeks, or erase ---------- */
+const DAY_MS = 86400000;
+const nowMs = () => Date.now() + S.ret.shift;
+const daysLeft = () => Math.ceil((S.ret.end - nowMs()) / DAY_MS);
+const fmtDate = ms => new Date(ms).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+const slugName = n => (n||'x').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'x';
+function checkExpiry(){ if(!S.ret.erased && nowMs() >= S.ret.end) eraseRoom(); }
+function eraseRoom(){
+  const keep=S.ret; Object.assign(S,fresh()); S.ret=keep; S.ret.erased=true; S.ret.confirm=false; S.screen='home'; S.custom=null; ROOMKEY=null;
+}
+function dataUrlToFile(url, base){
+  const m=/^data:([^;,]+)((?:;[^;,]+)*),([\s\S]*)$/.exec(url||''); if(!m) return null;   // allows ;base64 and ;utf8 style parameters
+  const ext = m[1]==='image/jpeg'?'jpg':m[1]==='image/png'?'png':m[1]==='image/svg+xml'?'svg':(m[1].split('/')[1]||'bin');
+  const bytes = /;base64/.test(m[2]) ? Uint8Array.from(atob(m[3]),c=>c.charCodeAt(0)) : new TextEncoder().encode(decodeURIComponent(m[3]));
+  return {name:`${base}.${ext}`, bytes};
+}
+function revealed(d){
+  const D=getD(d), A=S.ans[d]; if(!D||!A) return false;
+  if(D.type==='try') return !!A.sub;
+  if(D.type==='line' || D.type==='recall') return A.k!==null && A.v.text!=null;
+  if(D.type==='noticed'||D.type==='bug') return A.k!==null;
+  if(['choice','pick','nhie','multi','guess','bet'].includes(D.type)) return A.k!==null && A.v.pick!=null;
+  return false;
+}
+function savedSheets(m){
+  const o=m==='k'?'v':'k', items=S.saved[m], other=RAW[o], you=RAW[m], today=new Date().toISOString().slice(0,10);
+  const rows=[['Saved on','Category','Source','Question or topic',other+' said','You said','Your note','Date']];
+  items.slice().reverse().forEach(x=>rows.push([new Date(x.t).toISOString().slice(0,10), labOf(x.label)[2], x.src, x.q, x.theirs, x.mine, x.note, x.date]));
+  const dated = items.filter(x=>x.date).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0).map(x=>[x.date, x.note||x.q, labOf(x.label)[2], x.theirs]);
+  return [
+    {name:'Saved',rows,widths:[12,16,20,40,36,30,36,12]},
+    {name:'Important dates',rows:[['Date','What','Category',other+' said']].concat(dated),widths:[12,40,16,36]},
+    {name:'About',rows:[['Item','Details'],['Exported by',you],['About',other],['Exported on',today],['Items saved',String(items.length)],['Privacy','This file has things your partner shared with you. Keep it somewhere private.']],widths:[16,70]}
+  ];
+}
+async function buildArchive(m){
+  const o=m==='k'?'v':'k', me_=RAW[m], other=RAW[o], today=new Date().toISOString().slice(0,10), enc=new TextEncoder();
+  const sheets=[];
+  const ans=[['Source','Question or topic',me_+' (you)',other]];
+  Object.keys(DAYS).concat(Object.keys(PACKCARDS),Object.keys(S.bonus)).forEach(d=>{ if(revealed(d)) ans.push([sourceText(d), questionText(d), ansText(d,m), ansText(d,o)]); });
+  sheets.push({name:'Answers',rows:ans,widths:[20,44,34,34]});
+  const files=[];
+  const vrows=[['Card','From','Length (s)','File']];
+  for(const d of Object.keys(PACKCARDS)){
+    const D=getD(d), A=S.ans[d]; if(D.type!=='recall' || !revealed(d)) continue;
+    if(A.k && A.k.voice){ const f=`voice/${d}-${slugName(RAW.k)}.${voiceExt(A.k.voice.blob&&A.k.voice.blob.type)}`; files.push({name:f,data:new Uint8Array(await A.k.voice.blob.arrayBuffer())}); vrows.push([D.q,RAW.k,String(A.k.voice.secs),f]); }
+  }
+  if(vrows.length>1) sheets.push({name:'Voice notes',rows:vrows,widths:[50,14,12,40]});
+  const feed=S.photo.feed;
+  if(feed.length){
+    const prow=[['When','From','Caption','File']];
+    feed.forEach((x,i)=>{ const f=dataUrlToFile(x.img, `${String(i+1).padStart(2,'0')}-${slugName(RAW[x.by])}-${new Date(x.t).toISOString().slice(0,10)}`); if(f){ files.push({name:'photos/'+f.name,data:f.bytes}); prow.push([new Date(x.t).toISOString().slice(0,10), RAW[x.by], x.caption||'', 'photos/'+f.name]); } });
+    sheets.push({name:'Photos',rows:prow,widths:[12,16,36,34]});
+  }
+  if(S.movie.hist.length) sheets.push({name:'Watched together',rows:[['Title','When']].concat(S.movie.hist.map(h=>[h.t,h.when])),widths:[40,16]});
+  if(S.story.chapters.length) sheets.push({name:'Stories',rows:[['Chapter','Opening line','Sentences']].concat(S.story.chapters.map((c,i)=>['Chapter '+(i+1),c.start.replace(/\{K\}/g,NAME.k).replace(/\{V\}/g,NAME.v),c.lines.map(l=>RAW[l.by]+': '+l.t).join(' / ')])),widths:[12,44,80]});
+  if(S.anta.saved.length) sheets.push({name:'Our Soundtrack',rows:[['Chain','Songs']].concat(S.anta.saved.map((c,i)=>['Chain '+(i+1),c.join(' > ')])),widths:[12,80]});
+  const g=[['From','Shared','What helps','How much','Line']];
+  [m,o].forEach(w=>{ const n=S.gentle.note[w]; if(n && (w===m || n.canSave)) g.push([RAW[w], n.topics.map(x=>plainLab(G_TOPICS,x)).join('; '), n.helps.map(x=>plainLab(G_HELPS,x)).join('; '), plainLab(G_DEPTH,n.depth), n.line||'']); });
+  if(g.length>1) sheets.push({name:'Gentle Corner',rows:g,widths:[14,44,44,28,40]});
+  const C=S.capsule, cap=[['From','Line','Opens']];
+  if(C.sealed[m]) cap.push([me_, C[m], C.date]);
+  if(C.sealed[o] && C.opened) cap.push([other, C[o], C.date]);
+  if(cap.length>1) sheets.push({name:'Time capsule',rows:cap,widths:[14,60,20]});
+  sheets.push({name:'About',rows:[['Item','Details'],['Exported by',me_],['Room',S.room.chosen?S.room.tag:'(not named yet)'],['Exported on',today],['Room ends',fmtDate(S.ret.end)],['Note','Only answers you have both opened are included. A partner\'s Gentle Corner note is included only if they allowed saving.']],widths:[16,80]});
+  const xl = new Uint8Array(await makeXlsx(sheets).arrayBuffer());
+  const out=[{name:'our-answers.xlsx',data:xl}];
+  if(S.saved[m].length){ out.push({name:`notes-about-${slugName(other)}.xlsx`,data:new Uint8Array(await makeXlsx(savedSheets(m)).arrayBuffer())}); }
+  const readme = `Your room data, ${today}\n\nThis file was put together on your phone. The server cannot read your data, so it cannot make this for you.\n\nInside:\n- our-answers.xlsx: the answers you both opened, plus photos, watched-together, stories, songs and more\n${S.saved[m].length?`- notes-about-${slugName(other)}.xlsx: your private saved notes. Only you have these\n`:''}${files.some(f=>f.name.startsWith('photos/'))?'- photos/: every photo shared in the room\n':''}${files.some(f=>f.name.startsWith('voice/'))?'- voice/: the voice notes you both opened\n':''}\nYour room ends on ${fmtDate(S.ret.end)} unless you both choose to keep it for 4 more weeks.\nKeep this file somewhere private.\n`;
+  return {blob:makeZip([{name:'README.txt',data:readme}].concat(out,files)), photos:files.length, sheets:sheets.length};
+}
+async function rdDownload(){
+  const m=me(), UI=S.ret;
+  if(!DL){ UI.msg='Downloads work when this page is opened in Claude.'; render(); return; }
+  try{
+    const arc=await buildArchive(m);
+    await DL.save({filename:`room-data-${new Date().toISOString().slice(0,10)}.zip`, data:arc.blob});
+    UI.msg='Saved to your device 📥';
+  }catch(err){
+    const c=err&&err.code;
+    UI.msg = c==='declined' ? 'No problem, nothing was saved.' : (c==='extension_not_enabled'||c==='rejected_extension') ? 'Zip downloads are not available in this view.' : 'Could not put the download together. Try again in a moment.';
+  }
+  render();
+}
+function retentionModal(){
+  const R=S.ret, m=me(), o=m==='k'?'v':'k', d=daysLeft();
+  if(R.erased || d>7 || R.snooze[m] || R.ext[m]) return '';
+  return `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle"><div class="mcard">
+    <h3 id="mtitle">${d<=0?'Your room ends today':'Your room ends in '+d+(d===1?' day':' days')} ⏳</h3>
+    <p style="margin:0 0 8px">Welcome back. Everything is locked with your key. Before ${fmtDate(R.end)} you can:</p>
+    <p style="margin:0 0 12px" class="hint">Both of you need to keep it, or it is erased on that day. The server can't read your data, so the download is made on your phone.</p>
+    <div class="stack"><button class="btn" data-a="rddown">📥 Download everything</button>
+    <button class="btn ghost" data-a="rdextend">➕ Keep it 4 more weeks</button>
+    <button class="btn ghost" data-a="rdlater">Remind me later</button></div>
+    ${R.msg?`<div class="done-msg" style="margin-top:12px">${esc(R.msg)}</div>`:''}</div></div>`;
+}
+function roomDataView(){
+  const R=S.ret, m=me(), o=m==='k'?'v':'k', d=daysLeft();
+  const both = R.ext.k && R.ext.v;
+  let status = R.ext[m] ? waitBox(`You chose to keep it 💛 It extends when ${NAME[o]} agrees too. If not, it is erased on ${fmtDate(R.end)}.`) : '';
+  return backTop('Room data') + `<section class="card"><span class="tag from">🗄️ Room data</span><h2 class="q">${d<=0?'Ends today':d+(d===1?' day':' days')} left</h2>
+    <p style="margin:0 0 6px">Your room is erased on <b>${fmtDate(R.end)}</b> unless you both keep it for 4 more weeks. That is round ${R.cycles}. Everything stays locked with your key the whole time.</p>
+    <p class="hint" style="margin:0 0 14px">Downloads are put together on your phone, because the server can't read your data. Each of you can download at any time.</p>
+    ${R.msg?`<div class="done-msg" style="margin:0 0 12px">${esc(R.msg)}</div>`:''}
+    ${DL?`<button class="btn" data-a="rddown">📥 Download everything (zip)</button>`:`<p class="hint">Downloads work when this page is opened in Claude.</p>`}
+    ${R.ext[m] ? `<button class="btn ghost next" data-a="rdunext">Change my mind</button>` : `<button class="btn ghost next" data-a="rdextend">➕ Keep it 4 more weeks</button>`}
+    ${status}
+    ${R.confirm ? `<div class="half"><h3>Erase this room now?</h3><p style="margin:0 0 10px">This deletes every answer, photo and note for both of you, right away. It can't be undone.</p>
+      <div class="stack"><button class="btn ghost" data-a="rddown">📥 Download first</button><button class="btn" data-a="rderasenow">Erase for good</button><button class="btn ghost" data-a="rdcancel">Cancel</button></div></div>`
+      : `<button class="btn ghost next" data-a="rderase">🗑️ Erase this room now</button>`}
+    <div class="safety" style="margin-top:18px"><b>Demo only:</b> jump ahead to see the reminder and the erase.<div class="two" style="margin-top:8px"><button class="btn ghost" data-a="rdjump" data-r="21">Jump 3 weeks</button><button class="btn ghost" data-a="rdjump" data-r="end">Jump to the end</button></div></div></section>`;
+}
+function erasedView(){
+  return `<section class="card" style="margin-top:8px"><span class="tag from">🗑️ Erased</span><h2 class="q">This room's data has been erased</h2>
+    <p style="margin:0 0 12px">Every answer, photo and note was deleted, and the key with it, so nobody can bring it back. That includes us.</p>
+    <button class="btn" data-a="reset">Start a new room</button></section>`;
+}
+
+/* ---------- privacy ---------- */
+function privacyView(){
+  const P=S.priv, m=me(), o=m==='k'?'v':'k';
+  const demo = P.cipher
+    ? `<div class="reveal"><div class="row ${m}"><span class="nm">You and ${NAME[o]} see</span><div class="val">${esc(P.plain)}</div></div>
+        <div class="row"><span class="nm">Server and developer see</span><div class="val"><div class="cipher">${esc(P.cipher)}</div></div></div>
+        <div class="two"><button class="btn ghost" data-a="privwrong">Try a wrong key</button><button class="btn ghost" data-a="privtamper">Change one character</button></div>
+        ${P.msg?`<div class="done-msg" style="margin:0">${esc(P.msg)}</div>`:''}</div>`
+    : (P.msg?`<p class="err">${esc(P.msg)}</p>`:'');
+  return backTop('Privacy') + `<section class="card"><span class="tag from">🔐 Locked on your phone</span><h2 class="q">Even the developer can't read it</h2>
+    <p style="margin:0 0 12px">Everything you type is locked on your phone before it leaves. The server only keeps scrambled text and does not have the key, so the developer sees the same scrambled text. Only the two of you can open it.</p>
+    <p class="lab">Your safety code</p>
+    <div class="sealed" style="margin:0 0 6px;font-size:26px;letter-spacing:4px">${P.code||'…'}</div>
+    <p class="hint" style="margin:0 0 16px">Compare this on a call. If it matches on both phones, nobody swapped your invite link on the way.</p>
+    <p class="lab">Try it: type something private</p>
+    <input class="field" id="privtext" maxlength="120" placeholder="e.g. My favourite flower is a sunflower" autocomplete="off">
+    <button class="btn" data-a="privlock">Lock it 🔒</button>
+    ${demo}
+    <h3 class="sech" style="font-size:18px">What the server can see</h3>
+    <p style="margin:0 0 6px"><b>Cannot:</b> names, answers, photos, saved notes, the room hashtag.</p>
+    <p style="margin:0 0 6px"><b>Can:</b> that a room exists, roughly when things happen, and file sizes.</p>
+    <div class="safety">Honest limits: this protects your data if the database is read or leaked. It can't help if someone has your unlocked phone, or if the app's own code were swapped, which is why the code is open source. If you lose your phone and your recovery phrase, nobody can bring the room back.</div>
+    <div class="safety" style="margin-top:10px">This demo does not encrypt the rest of its screens, because it has no server. This screen shows the real lock (AES-256) that every answer, photo and note would use.</div></section>`;
+}
+
+/* ---------- saved (private notes about your partner) ---------- */
+function ansText(d,w){
+  const D=getD(d), A=S.ans[d];
+  const lab = id => { const o=allOpt(d,id); return o ? o.l : String(id); };
+  const clean = x => String(x||'').replace(/[^\p{L}\p{N}\s'!?.,-]/gu,'').trim();
+  if(D.type==='line') return w==='k' ? A.k : A.v.text;
+  if(D.type==='multi'){ const arr = w==='k' ? A.k : A.v.pick; return (arr||[]).map(lab).join(', '); }
+  if(D.type==='recall'){ const x = w==='k' ? A.k : {text:A.v.text}; if(!x) return ''; return x.skip ? 'Skipped' : (x.text || (x.voice ? '(voice note)' : '')); }
+  if(D.type==='try'){ const obj = w==='k' ? A.k : A.v; return D.items.map(it=>`${it.l}: ${clean(TRY[obj[it.id]])}`).join('; '); }
+  if(D.type==='noticed') return w==='k' ? (A.k ? lab(A.k) : '') : 'Sent this note';
+  if(D.type==='bug') return w==='k' ? (A.k ? lab(A.k) : '') : (A.reply==='fixed' ? 'Fixed' : A.reply==='wontfix' ? "Won't fix" : '');
+  const id = w==='k' ? A.k : A.v.pick;
+  return id==null ? '' : lab(id);
+}
+function questionText(d){ const D=getD(d); return D.type==='nhie' ? 'Never have I ever '+D.q : D.type==='guess' ? 'Guess the film: '+D.q : D.type==='noticed' ? D.note : D.type==='bug' ? D.id+': '+D.summary : D.q; }
+function sourceText(d){ const D=getD(d); return D.pack ? PACKS[D.pack].name : D.bonus ? 'Our own card' : D.tag; }
+function labelFor(d){ const D=getD(d); if(D.type==='nhie') return 'nhie'; return (D.pack && PACK_LABEL[D.pack]) || 'other'; }
+const notePlain = n => `Shared: ${n.topics.map(x=>plainLab(G_TOPICS,x)).join('; ')}. What helps: ${n.helps.map(x=>plainLab(G_HELPS,x)).join('; ')}. ${plainLab(G_DEPTH,n.depth)}.${n.line?' “'+n.line+'”':''}`;
+const newSid = () => 's'+Date.now()+Math.floor(Math.random()*1000);
+const IDEAS = {
+  like:'Do something small with this today.',
+  dislike:'Steer clear of this. They will notice you remembered.',
+  date:'Turn this into a plan. Pick a day?',
+  important:'Mark it now and plan something ahead.',
+  nhie:'Bring it up with a smile next time you talk.',
+  watch:'Suggest it for your next movie night.',
+  food:'Order it, cook it, or bring it along.',
+  care:'Keep it in mind next time they have a rough day.',
+  other:'Slip it into a chat and watch them smile.'
+};
+const upcomingSaved = () => S.saved[me()].filter(x=>x.date && daysUntil(x.date)!==null && daysUntil(x.date)>=0 && daysUntil(x.date)<=14).sort((a,b)=>daysUntil(a.date)-daysUntil(b.date))[0];
+const daysUntil = ds => { if(!ds) return null; const t=new Date(ds+'T00:00:00'), n=new Date(); n.setHours(0,0,0,0); return Math.round((t-n)/86400000); };
+const untilText = ds => { const d=daysUntil(ds); if(d===null || isNaN(d)) return ''; return d===0?'today':d===1?'tomorrow':d>1?'in '+d+' days':''; };
+function saveBar(ref, action, extra, labelText){
+  const m=me(), o=m==='k'?'v':'k', have=S.saved[m].some(x=>x.ref===ref);
+  return have
+    ? `<div class="pingbar" style="margin:0"><span>🔖 Saved to your notes about ${NAME[o]}</span><button class="reset" data-a="saveundo" data-ref="${ref}">Undo</button></div>`
+    : `<button class="btn ghost" data-a="${action}" ${extra}>🔖 ${labelText}</button>`;
+}
+const saveBlock = d => saveBar('card:'+d, 'savecard', `data-d="${d}"`, `Save ${NAME[me()==='k'?'v':'k']}'s answer`);
+
+function savedItem(x,m,o){
+  const UI=S.savedUI, L=labOf(x.label), editing=UI.edit===x.id, until=untilText(x.date);
+  let h = `<div class="sitem"><div class="meta"><span class="pill">${L[1]} ${L[2]}</span><small style="color:var(--muted)">${ago(x.t)}</small></div>`;
+  if(x.kind==='photo') h += `<img class="photo" src="${x.img}" alt="Saved photo from ${NAME[o]}" style="margin-bottom:8px">`;
+  if(x.kind!=='note'){
+    h += `<p style="margin:0 0 6px;font-weight:700">${esc(x.q)}</p><p style="margin:0 0 4px"><b>${NAME[o]}:</b> ${esc(x.theirs)}</p>`
+       + (x.mine ? `<p style="margin:0 0 4px;color:var(--muted)"><b>You:</b> ${esc(x.mine)}</p>` : '')
+       + `<small style="color:var(--muted)">${esc(x.src)}</small>`;
+  }
+  if(x.note) h += `<p style="margin:8px 0 0"><i>📝 ${esc(x.note)}</i></p>`;
+  if(x.date) h += `<p style="margin:6px 0 0"><span class="pill you">🗓️ ${esc(x.date)}${until?' · '+until:''}</span></p>`;
+  if(editing){
+    const D=UI.draft;
+    h += `<p class="lab" style="margin-top:10px">Label</p><div class="chip-row">${LABELS.map(l=>`<button data-a="slabel" data-r="${l[0]}" style="${D.label===l[0]?'border-color:var(--gold);background:var(--gold-soft)':''}">${l[1]} ${l[2]}</button>`).join('')}</div>
+      <input class="field" style="margin-top:10px" data-g="snote" maxlength="160" value="${esc(D.note)}" placeholder="Your note (optional)" autocomplete="off">
+      <label class="lab" for="sdate">Date (optional)</label><input class="field" id="sdate" type="date" data-g="sdate" value="${esc(D.date)}">
+      <div class="two"><button class="btn" data-a="ssave" data-id="${x.id}">Save changes</button><button class="btn ghost" data-a="scancel">Cancel</button></div>`;
+  } else {
+    h += `<div class="two" style="margin-top:10px"><button class="btn ghost" data-a="sedit" data-id="${x.id}">Edit</button><button class="btn ghost" data-a="sdel" data-id="${x.id}">Delete</button></div>`;
+  }
+  return h + '</div>';
+}
+function savedListHtml(){
+  const m=me(), o=m==='k'?'v':'k', UI=S.savedUI, q=(UI.q||'').trim().toLowerCase();
+  let items=S.saved[m];
+  if(UI.filter!=='all') items=items.filter(x=>x.label===UI.filter);
+  if(q) items=items.filter(x=>[x.q,x.theirs,x.mine,x.note,x.src,labOf(x.label)[2]].join(' ').toLowerCase().includes(q));
+  if(!items.length) return `<p class="hint">${S.saved[m].length?'Nothing matches that.':'Nothing saved yet. Tap 🔖 Save on an answer you want to remember.'}</p>`;
+  return items.map(x=>savedItem(x,m,o)).join('');
+}
+function savedView(){
+  const m=me(), o=m==='k'?'v':'k', UI=S.savedUI, all=S.saved[m];
+  const chip = (id,text) => `<button data-a="sfilter" data-r="${id}" style="${UI.filter===id?'border-color:var(--gold);background:var(--gold-soft)':''}">${text}</button>`;
+  const chips = `<div class="chip-row" style="margin:10px 0 4px">${chip('all','All ('+all.length+')')}${LABELS.filter(l=>all.some(x=>x.label===l[0])).map(l=>chip(l[0],`${l[1]} ${l[2]} (${all.filter(x=>x.label===l[0]).length})`)).join('')}</div>`;
+  const nd=UI.nd;
+  const newForm = UI.newOpen
+    ? `<div class="customrow"><p>A note about ${NAME[o]}</p>
+        <input class="field" data-g="ntext" maxlength="160" value="${esc(nd.text)}" placeholder="e.g. Loves sunflowers. Birthday idea." autocomplete="off">
+        <div class="chip-row" style="margin-bottom:10px">${LABELS.map(l=>`<button data-a="snewlabel" data-r="${l[0]}" style="${nd.label===l[0]?'border-color:var(--gold);background:var(--gold-soft)':''}">${l[1]} ${l[2]}</button>`).join('')}</div>
+        <label class="lab" for="ndate">Date (optional, like a birthday)</label><input class="field" id="ndate" type="date" data-g="ndate" value="${esc(nd.date)}">
+        <div class="two"><button class="btn" data-a="snewsave">Save note</button><button class="btn ghost" data-a="snew">Cancel</button></div></div>`
+    : `<button class="btn ghost next" data-a="snew">＋ Add a note about ${NAME[o]}</button>`;
+  const exp = DL
+    ? `<button class="btn next" data-a="sexport"${all.length?'':' disabled'}>📥 Export to Excel</button><p class="hint">The file leaves the app, so keep it somewhere private.</p>`
+    : `<p class="hint">Excel export works when this page is opened in Claude.</p>`;
+  return backTop('Saved') + `<section class="card"><span class="tag from">🔖 Saved</span><h2 class="q">About ${NAME[o]}</h2>
+    <p style="margin:0 0 6px">Your secret notebook. Only you can see it, and ${NAME[o]} never gets a notice when you save something, so you can surprise them.</p>
+    <p class="hint" style="margin:0 0 12px">If ${NAME[o]} deletes something they shared, your saved copy goes too.</p>
+    ${UI.msg?`<div class="done-msg" style="margin:0 0 12px">${UI.msg}</div>`:''}
+    ${(()=>{ const it=all.find(x=>x.id===UI.idea); return it ? `<div class="half"><h3>🎁 Surprise idea</h3><p style="margin:0 0 6px"><b>Remember:</b> ${esc(it.note || (it.theirs ? NAME[o]+': '+it.theirs : it.q))}</p><p style="margin:0 0 10px">${IDEAS[it.label]||IDEAS.other}</p><div class="two"><button class="btn" data-a="sidea">Another idea</button><button class="btn ghost" data-a="sideaclear">Done</button></div></div>` : (all.length ? `<button class="btn" style="margin-bottom:12px" data-a="sidea">🎁 Surprise idea</button>` : ''); })()}
+    ${all.length?`<input class="field" data-g="sq" placeholder="Search your notes" value="${esc(UI.q)}" autocomplete="off">${chips}`:''}
+    <div id="savedlist">${savedListHtml()}</div>${newForm}${exp}</section>`;
+}
+async function exportSaved(){
+  const m=me(), o=m==='k'?'v':'k', items=S.saved[m], UI=S.savedUI;
+  if(!items.length){ UI.msg='Nothing to export yet.'; render(); return; }
+  if(!DL){ UI.msg='Excel export is not available in this view.'; render(); return; }
+  const other=RAW[o], today=new Date().toISOString().slice(0,10);
+  const sheets=savedSheets(m);
+  const slug = (other||'partner').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'partner';
+  try{
+    await DL.save({filename:`notes-about-${slug}-${today}.xlsx`, data:makeXlsx(sheets)});
+    UI.msg='Saved to your device 📥';
+  } catch(err){
+    const c = err && err.code;
+    UI.msg = c==='declined' ? 'No problem, nothing was saved.' : (c==='extension_not_enabled'||c==='rejected_extension') ? 'Excel export is not available in this view.' : 'Could not save the file. Try again in a moment.';
+  }
+  render();
+}
+
+/* ---------- packs ---------- */
+function packView(p){
+  const P=PACKS[p];
+  const rows = P.cards.map(c=>{
+    const A=S.ans[c.id], D=getD(c.id);
+    const st = A.k!==null ? '<span class="pill">Done ✓</span>' : (isK() ? '<span class="pill you">Your turn</span>' : '<span class="pill">Waiting for {K}</span>');
+    const q = D.type==='nhie' ? 'Never have I ever… '+esc(D.q) : D.type==='guess' ? 'Guess: '+D.q : esc(D.q);
+    return `<button class="brow" data-a="open" data-d="${c.id}"><span class="bt">${q}<span class="bs">${TYPELBL[D.type]}</span></span>${st}</button>`;
+  }).join('');
+  const nxt = P.cards.find(c=>needs(c.id));
+  return `<div class="top"><button class="back" data-a="home">‹ Back</button><span class="daytag">Desi fun pack</span></div>
+    <section class="card"><span class="tag from">${P.e} ${P.name}</span>
+    <h2 class="q">${P.blurb}</h2>
+    ${nxt?`<button class="btn" data-a="open" data-d="${nxt.id}">Play the next card</button>`:`<div class="done-msg">Pack finished 🎉 Flip phones or try another pack.</div>`}
+    ${rows}</section>`;
+}
+
+/* ---------- add a card ---------- */
+function newView(){
+  const dr=S.draft, other=isK()?'{V}':'{K}';
+  const kindBtn = (k,l)=>`<button data-a="kind" data-k="${k}" aria-pressed="${dr.kind===k}" class="kd">${l}</button>`;
+  const mineBtns = dr.kind==='choice'
+    ? `<div class="tri two2"><button data-a="mine" data-m="a" data-mine="a" class="${dr.mine==='a'?(isK()?'s-k':'s-v'):''}">${esc(dr.a)||'Option 1'}</button><button data-a="mine" data-m="b" data-mine="b" class="${dr.mine==='b'?(isK()?'s-k':'s-v'):''}">${esc(dr.b)||'Option 2'}</button></div>`
+    : `<div class="tri two2"><button data-a="mine" data-m="have" class="${dr.mine==='have'?(isK()?'s-k':'s-v'):''}">I have 🙋</button><button data-a="mine" data-m="never" class="${dr.mine==='never'?(isK()?'s-k':'s-v'):''}">Never 🙅</button></div>`;
+  const fields = dr.kind==='choice'
+    ? `<p class="lab">Your question</p><input class="field" data-f="q" maxlength="70" value="${esc(dr.q)}" placeholder="e.g. Rooftop dinner or picnic in the park?" autocomplete="off">
+       <p class="lab">The two options</p><input class="field" data-f="a" maxlength="30" value="${esc(dr.a)}" placeholder="Option 1" autocomplete="off">
+       <input class="field" data-f="b" maxlength="30" value="${esc(dr.b)}" placeholder="Option 2" autocomplete="off">`
+    : `<p class="nhie-pre">Never have I ever…</p><input class="field" data-f="q" maxlength="70" value="${esc(dr.q)}" placeholder="e.g. sung in the car so loud the windows shook" autocomplete="off">`;
+  return `<div class="top"><button class="back" data-a="home">‹ Back</button><span class="daytag">New card</span></div>
+    <section class="card"><span class="tag">Add our own</span>
+    <h2 class="q">Make a card for ${other} ✍️</h2>
+    <div class="seg" style="margin-bottom:16px" role="group" aria-label="Card type">${kindBtn('choice','This or that')}${kindBtn('nhie','Never have I ever')}</div>
+    ${fields}
+    <p class="lab">Your own answer <span style="font-weight:400;color:var(--muted)">(${other} sees it once you both answer)</span></p>
+    ${mineBtns}
+    ${dr.err?`<p class="err" style="margin-top:12px">${dr.err}</p>`:''}
+    <button class="btn next" data-a="save">Send it over 💌</button></section>`;
+}
+
+/* ---------- name setup ---------- */
+function setupView(){
+  const f=S.form;
+  return `<div class="hero" style="padding-top:18px">
+    <span class="season">Season 1 · Pehli Baat</span>
+    ${brandHtml()}
+    <p class="sub">A few small cards, just for the two of you. First names only, all inside a private room.</p></div>
+    <section class="card">
+      <p class="lab">Your first name</p>
+      <input class="field" data-n="v" maxlength="20" value="${esc(f.v)}" placeholder="Type your name" autocomplete="off">
+      <p class="lab">Their first name</p>
+      <input class="field" data-n="k" maxlength="20" value="${esc(f.k)}" placeholder="Type their name" autocomplete="off">
+      <p class="lab">Where are you based? <span style="font-weight:400;color:var(--muted)">(optional)</span></p>
+      <div class="two"><select class="field" data-n="cv" aria-label="Where you are based">${COUNTRIES.map(c=>`<option value="${c[0]}"${f.cv===c[0]?' selected':''}>${c[0]===''?'You: '+c[1]:c[1]}</option>`).join('')}</select>
+      <select class="field" data-n="ck" aria-label="Where they are based">${COUNTRIES.map(c=>`<option value="${c[0]}"${f.ck===c[0]?' selected':''}>${c[0]===''?'Them: '+c[1]:c[1]}</option>`).join('')}</select></div>
+      <p class="lab">How should we say hello?</p>
+      <select class="field" data-n="gr" aria-label="Greeting">${GREETS.map(g=>`<option value="${g[0]}"${f.gr===g[0]?' selected':''}>${g[1]}</option>`).join('')}</select>
+      ${f.err?`<p class="err">${f.err}</p>`:''}
+      <button class="btn" data-a="start">Start Pehli Baat</button>
+      <p class="hint">You can each save things you learn about each other. Saved notes stay private and never send a notice, so surprises stay surprises.</p>
+      <p class="hint">In the real app you each type your own name on your own phone. This demo asks for both so you can flip between the two.</p>
+    </section>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const a = S.anim;
+  if(S.setup){ $app.innerHTML = setupView(); S.anim=null; S.toast=''; return; }
+  checkExpiry();
+  if(S.ret.erased){ $app.innerHTML = fill(demoBar()+erasedView()); S.anim=null; S.toast=''; return; }
+  const view = S.screen==='home' ? home() : S.screen==='new' ? newView() : String(S.screen).startsWith('pack:') ? packView(S.screen.slice(5)) : S.screen==='micro' ? microView() : S.screen==='anta' ? antaView() : S.screen==='story' ? storyView() : S.screen==='capsule' ? capsuleView() : S.screen==='roomdata' ? roomDataView() : S.screen==='privacy' ? privacyView() : S.screen==='saved' ? savedView() : S.screen==='movie' ? movieView() : S.screen==='photo' ? photoView() : S.screen==='gentle' ? gentleView() : dayView(S.screen);
+  $app.innerHTML = fill(demoBar() + view + (S.screen==='home' ? retentionModal() : ''));
+  S.anim = null; S.toast = ''; S.savedUI.msg = '';
+  if(a!==null) setTimeout(()=>document.querySelectorAll('.veil-on').forEach(n=>n.classList.remove('veil-on')), 500);
+  if(S.custom && S.screen===S.custom){ const c=document.getElementById('custom'); if(c) c.focus(); }
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('input', e=>{
+  const n = e.target.dataset && e.target.dataset.n;
+  if(n){ S.form[n]=e.target.value; return; }
+  const g = e.target.dataset && e.target.dataset.g;
+  if(g==='line'){ S.gentle.draft[me()].line=e.target.value; return; }
+  if(g==='rectext'){ S.rec.text=e.target.value; return; }
+  if(g==='rtag'){ S.room.custom=e.target.value; return; }
+  if(g==='sq'){ S.savedUI.q=e.target.value; const el=document.getElementById('savedlist'); if(el) el.innerHTML=fill(savedListHtml()); return; }
+  if(g==='snote'){ if(S.savedUI.draft) S.savedUI.draft.note=e.target.value; return; }
+  if(g==='sdate'){ if(S.savedUI.draft) S.savedUI.draft.date=e.target.value; return; }
+  if(g==='ntext'){ S.savedUI.nd.text=e.target.value; return; }
+  if(g==='ndate'){ S.savedUI.nd.date=e.target.value; return; }
+  const f = e.target.dataset && e.target.dataset.f; if(!f) return;
+  S.draft[f]=e.target.value;
+  if(f==='a'||f==='b'){ const b=document.querySelector(`[data-mine="${f}"]`); if(b) b.textContent = e.target.value || (f==='a'?'Option 1':'Option 2'); }
+});
+
+let drag = null;
+document.addEventListener('pointerdown', e=>{
+  const c = e.target.closest && e.target.closest('.swipecard'); if(!c) return;
+  drag = {el:c, x:e.clientX, dx:0}; c.style.transition='none';
+  if(c.setPointerCapture) try{ c.setPointerCapture(e.pointerId); }catch(_){}
+});
+document.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  drag.dx = e.clientX - drag.x;
+  drag.el.style.transform = `translateX(${drag.dx}px) rotate(${drag.dx/18}deg)`;
+  drag.el.classList.toggle('yes', drag.dx>40); drag.el.classList.toggle('no', drag.dx<-40);
+});
+const endDrag = () => {
+  if(!drag) return;
+  const {dx,el}=drag; drag=null;
+  if(Math.abs(dx)>90){ doSwipe(dx>0?'keen':'pass'); render(); }
+  else { el.style.transition=''; el.style.transform=''; el.classList.remove('yes','no'); }
+};
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && !S.setup && S.screen==='home' && retentionModal()){ S.ret.snooze[me()]=true; render(); return; }
+  if(S.screen!=='movie' || S.setup) return;
+  const tag=(e.target && e.target.tagName)||''; if(tag==='INPUT') return;
+  if(e.key==='ArrowRight'){ doSwipe('keen'); render(); } else if(e.key==='ArrowLeft'){ doSwipe('pass'); render(); }
+});
+
+document.addEventListener('change', async e=>{
+  const el=e.target; if(!el || el.id!=='photofile') return;
+  const f = el.files && el.files[0]; if(!f) return;
+  const P=S.photo;
+  if(f.size>25*1024*1024){ P.err='That photo is over 25 MB. Try a smaller one.'; render(); return; }
+  P.busy=true; P.err=''; render();
+  try{ const r = await ((typeof window!=='undefined' && window.__compress) || compressImage)(f); P.pend={dataUrl:r.dataUrl,bytes:r.bytes,orig:f.size}; }
+  catch(_){ P.err='Could not read that photo. Try a JPEG or PNG.'; }
+  P.busy=false; render();
+});
+
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-a]'); if(!t || t.disabled) return;
+  const a=t.dataset.a, d=t.dataset.d, A=d?S.ans[d]:null, D=d?getD(d):null;
+  if(a==='who'){ if(MR && MR.state==='recording'){ try{MR.stop();}catch(_){} } S.rec.recording=false; S.who=t.dataset.w; S.custom=null; S.ret.snooze[t.dataset.w==='invitee'?'k':'v']=false; }
+  else if(a==='start'){
+    const kk=(S.form.k||'').trim(), vv=(S.form.v||'').trim();
+    if(!vv||!kk){ S.form.err='Add both first names to begin.'; }
+    else { RAW.k=kk; RAW.v=vv; RAW.gr=S.form.gr||'Namaste'; COUNTRY.k=S.form.ck||''; COUNTRY.v=S.form.cv||''; NAME.k=esc(kk); NAME.v=esc(vv); S.form.err=''; S.room.opts=hashOptions(vv,kk); S.room.tag=S.room.opts[0]; S.room.chosen=false; S.room.prop=null; S.room.counter=false; S.room.err=''; S.room.custom=''; S.setup=false; S.screen='home'; window.scrollTo(0,0); }
+  }
+  else if(a==='reset'){ ROOMKEY=null; Object.assign(S,fresh()); S.screen='home'; S.custom=null; S.setup=true; S.form={k:RAW.k,v:RAW.v,cv:COUNTRY.v,ck:COUNTRY.k,gr:RAW.gr,err:''}; S.draft={kind:'choice',q:'',a:'',b:'',mine:null,err:''}; }
+  else if(a==='open'){ S.screen=d; S.custom=null; window.scrollTo(0,0); }
+  else if(a==='pack'){ S.screen='pack:'+t.dataset.p; S.custom=null; window.scrollTo(0,0); }
+  else if(a==='home'){ S.screen='home'; S.custom=null; window.scrollTo(0,0); }
+  else if(a==='pick'){
+    const id=t.dataset.id;
+    if(isK()){ if(A.k===null){ A.k=id; S.anim=bothIn(d)?d:null; } }
+    else if(D.type==='choice'||D.type==='pick'||D.type==='nhie'||D.type==='bet'||D.type==='guess'){
+      if(!bothIn(d)){ A.v.pick=id; if(A.extra) A.extra=A.extra.filter(x=>x.by!=='v'||x.id===id); }
+    }
+  }
+  else if(a==='opencustom'){ S.custom = (S.custom===d ? null : d); }
+  else if(a==='custom'){
+    const val=(document.getElementById('custom').value||'').trim();
+    if(!val) return;
+    const id='x'+Date.now();
+    if(D.type==='multi'){
+      if(isK() && A.k===null){ A.extra.push({id,e:'✨',l:val,by:'k'}); A.tmp=A.tmp||{k:[]}; A.tmp.k.push(id); S.custom=null; }
+      else if(!isK() && !bothIn(d)){ A.extra.push({id,e:'✨',l:val,by:'v'}); A.v.pick=(A.v.pick||[]).concat(id); S.custom=null; }
+    }
+    else if(isK() && A.k===null){ A.extra.push({id,e:'✨',l:val,by:'k'}); A.k=id; S.anim=bothIn(d)?d:null; S.custom=null; }
+    else if(!isK() && !bothIn(d)){ A.extra=A.extra.filter(x=>x.by!=='v'); A.extra.push({id,e:'✨',l:val,by:'v'}); A.v.pick=id; S.custom=null; }
+  }
+  else if(a==='line'){
+    const val=(document.getElementById('line').value||'').trim();
+    if(!val) return;
+    if(isK() && A.k===null){ A.k=val; S.anim=d; } else if(!isK() && A.k===null){ A.v.text=val; }
+  }
+  else if(a==='rate'){
+    const A14=S.ans['14']; if(A14.sub) return;
+    if(isK()) A14.k[t.dataset.i]=t.dataset.r; else A14.v[t.dataset.i]=t.dataset.r;
+  }
+  else if(a==='showus'){
+    const A14=S.ans['14'];
+    if(isK() && Object.keys(A14.k).length===getD('14').items.length){ A14.sub=true; S.anim='14'; }
+  }
+  else if(a==='rddown'){ rdDownload(); return; }
+  else if(a==='rdlater'){ S.ret.snooze[me()]=true; }
+  else if(a==='rdextend'){
+    const R=S.ret; R.ext[me()]=true;
+    if(R.ext.k && R.ext.v){ R.end += 28*86400000; R.ext={k:false,v:false}; R.cycles++; R.snooze={k:false,v:false}; S.toast='Extended to '+fmtDate(R.end)+' 🎉'; }
+    else S.toast='Saved 💛 It extends when you both agree.';
+  }
+  else if(a==='rdunext'){ S.ret.ext[me()]=false; }
+  else if(a==='rderase'){ S.ret.confirm=true; }
+  else if(a==='rdcancel'){ S.ret.confirm=false; }
+  else if(a==='rderasenow'){ eraseRoom(); }
+  else if(a==='rdjump'){ const R=S.ret; R.shift = t.dataset.r==='end' ? (R.end-Date.now()) : R.shift+21*86400000; R.snooze={k:false,v:false}; }
+  else if(a==='screen'){ S.screen=t.dataset.s; S.custom=null; window.scrollTo(0,0); if(S.screen==='privacy') privCode(); }
+  else if(a==='privlock'){ privLock(); return; }
+  else if(a==='privwrong'){ privTest('wrong'); return; }
+  else if(a==='privtamper'){ privTest('tamper'); return; }
+  else if(a==='tog'){
+    const id=t.dataset.id;
+    if(isK()){ if(A.k===null){ A.tmp=A.tmp||{k:[]}; const i=A.tmp.k.indexOf(id); if(i<0) A.tmp.k.push(id); else A.tmp.k.splice(i,1); } }
+    else if(!bothIn(d)){ const cur=(A.v.pick||[]).slice(); const i=cur.indexOf(id); if(i<0) cur.push(id); else cur.splice(i,1); A.v.pick=cur.length?cur:null; }
+  }
+  else if(a==='mdone'){ if(isK() && A.k===null && A.tmp && A.tmp.k.length){ A.k=A.tmp.k.slice(); S.anim=bothIn(d)?d:null; } }
+  else if(a==='mvmode'){ S.movie.mode=t.dataset.r; if(t.dataset.r==='home') S.movie.dev=null; }
+  else if(a==='mvdev'){ S.movie.dev=t.dataset.r; }
+  else if(a==='mvfmt'){ const M=S.movie; if(M.fmt!==t.dataset.r){ M.fmt=t.dataset.r; M.idx.k=0; M.votes.k={}; M.pick=null; M.when=null; M.eps=null; if(M.idx.v<999){ M.idx.v=0; M.votes.v={}; } } }
+  else if(a==='mvstart'){ const M=S.movie; if(M.mode && M.fmt && (M.mode==='home'||M.dev)) M.started=true; }
+  else if(a==='mvchange'){ const M=S.movie; M.started=false; M.idx.k=0; M.votes.k={}; M.pick=null; M.when=null; M.svc=null; M.eps=null; }
+  else if(a==='swipe'){ doSwipe(t.dataset.r); }
+  else if(a==='swipeundo'){ const M=S.movie, m=me(), deck=deckOf(); if(M.idx[m]>0 && M.idx[m]<=deck.length){ M.idx[m]--; delete M.votes[m][deck[M.idx[m]].id]; } }
+  else if(a==='mvredo'){ const M=S.movie; M.idx.v=0; M.votes.v={}; }
+  else if(a==='mvpick'){ S.movie.pick=t.dataset.r; }
+  else if(a==='mvwhen'){ S.movie.when=t.dataset.r; }
+  else if(a==='mvsvc'){ S.movie.svc=t.dataset.r; }
+  else if(a==='mveps'){ S.movie.eps=t.dataset.r; }
+  else if(a==='mvwatched'){ const M=S.movie, pick=TITLES.find(x=>x.id===M.pick); if(pick){ M.hist.push({t:pick.t,when:M.when}); } M.pick=null; M.when=null; M.svc=null; M.eps=null; M.started=false; M.idx.k=0; M.votes.k={}; }
+  else if(a==='savecard'){
+    const m=me(), o=m==='k'?'v':'k', dd=t.dataset.d, AA=S.ans[dd];
+    if(!S.saved[m].some(x=>x.ref==='card:'+dd)){
+      let theirs=ansText(dd,o);
+      if(getD(dd).type==='nhie' && AA.cmt && AA.cmt[o]) theirs += ' — “'+AA.cmt[o]+'”';
+      S.saved[m].unshift({id:newSid(),kind:'card',ref:'card:'+dd,src:sourceText(dd),q:questionText(dd),theirs,mine:ansText(dd,m),label:labelFor(dd),note:'',date:'',t:Date.now()});
+    }
+  }
+  else if(a==='savephoto'){
+    const m=me(), x=S.photo.feed.find(y=>y.id===t.dataset.id);
+    if(x && x.by!==m && !S.saved[m].some(y=>y.ref==='photo:'+x.id)) S.saved[m].unshift({id:newSid(),kind:'photo',ref:'photo:'+x.id,src:'Right Now photo',q:'Photo',theirs:x.caption||'(photo, no caption)',mine:'',img:x.img,label:'other',note:'',date:'',t:Date.now()});
+  }
+  else if(a==='savenote'){
+    const m=me(), o=m==='k'?'v':'k', n=S.gentle.note[o];
+    if(n && n.canSave && !S.saved[m].some(x=>x.ref==='gentle:'+o)) S.saved[m].unshift({id:newSid(),kind:'card',ref:'gentle:'+o,src:'Gentle Corner',q:'A heads-up '+NAME[o]+' shared',theirs:notePlain(n),mine:'',label:'care',note:'',date:'',t:Date.now()});
+  }
+  else if(a==='saveundo'){ const m=me(); S.saved[m]=S.saved[m].filter(x=>x.ref!==t.dataset.ref); }
+  else if(a==='savedopen'){ S.screen='saved'; S.savedUI.filter='all'; S.savedUI.q=''; window.scrollTo(0,0); }
+  else if(a==='roompick'){ const R=S.room; if(R.chosen) return; R.tag=R.opts[+t.dataset.r]||R.tag; R.custom=''; R.err=''; }
+  else if(a==='roompropose'){
+    const R=S.room; if(R.chosen) return;
+    const c=hashNorm(R.custom);
+    if(R.custom.trim() && !c){ R.err='Use letters or numbers for the name.'; }
+    else {
+      const tag = c || R.tag;
+      if(tag){ R.prop={tag,by:me()}; R.custom=''; R.err=''; R.counter=false; S.toast='Suggested '+tag+'. Waiting for '+NAME[me()==='k'?'v':'k']+' 💭'; }
+    }
+  }
+  else if(a==='roomaccept'){ const R=S.room; if(!R.chosen && R.prop && R.prop.by!==me()){ R.tag=R.prop.tag; R.chosen=true; R.prop=null; R.counter=false; S.toast='Your room is '+R.tag+' 🔒'; } }
+  else if(a==='roomcounter'){ const R=S.room; if(!R.chosen && R.prop && R.prop.by!==me()) R.counter=true; }
+  else if(a==='roomcancel'){ S.room.counter=false; S.room.err=''; S.room.custom=''; }
+  else if(a==='roomchange'){ const R=S.room; if(!R.chosen && R.prop && R.prop.by===me()) R.prop=null; }
+  else if(a==='lang'){ if(LANGS.some(x=>x[0]===t.dataset.r)) S.lang=t.dataset.r; }
+  else if(a==='sidea'){ const all=S.saved[me()]; if(all.length){ const pool=all.length>1?all.filter(x=>x.id!==S.savedUI.idea):all; S.savedUI.idea=pool[Math.floor(Math.random()*pool.length)].id; } }
+  else if(a==='sideaclear'){ S.savedUI.idea=null; }
+  else if(a==='sfilter'){ S.savedUI.filter=t.dataset.r; }
+  else if(a==='sedit'){ const x=S.saved[me()].find(y=>y.id===t.dataset.id); if(x){ S.savedUI.edit=x.id; S.savedUI.draft={label:x.label,note:x.note||'',date:x.date||''}; } }
+  else if(a==='slabel'){ if(S.savedUI.draft) S.savedUI.draft.label=t.dataset.r; }
+  else if(a==='ssave'){ const UI=S.savedUI, x=S.saved[me()].find(y=>y.id===t.dataset.id); if(x && UI.draft){ x.label=UI.draft.label; x.note=(UI.draft.note||'').trim(); x.date=UI.draft.date||''; } UI.edit=null; UI.draft=null; }
+  else if(a==='scancel'){ S.savedUI.edit=null; S.savedUI.draft=null; }
+  else if(a==='sdel'){ S.saved[me()]=S.saved[me()].filter(x=>x.id!==t.dataset.id); }
+  else if(a==='snew'){ S.savedUI.newOpen=!S.savedUI.newOpen; }
+  else if(a==='snewlabel'){ S.savedUI.nd.label=t.dataset.r; }
+  else if(a==='snewsave'){
+    const nd=S.savedUI.nd;
+    if((nd.text||'').trim()){ S.saved[me()].unshift({id:newSid(),kind:'note',ref:'note:'+Date.now(),src:'My note',q:'Note about '+NAME[me()==='k'?'v':'k'],theirs:'',mine:'',label:nd.label,note:nd.text.trim(),date:nd.date||'',t:Date.now()}); S.savedUI.nd={label:'other',text:'',date:''}; S.savedUI.newOpen=false; }
+  }
+  else if(a==='sexport'){ exportSaved(); return; }
+  else if(a==='photosend'){
+    const P=S.photo; if(!P.pend) return;
+    const cap=(document.getElementById('pcap').value||'').trim();
+    P.feed.push({id:'p'+Date.now()+Math.floor(Math.random()*1000),by:me(),img:P.pend.dataUrl,caption:cap,t:Date.now(),react:null});
+    if(P.feed.length>20) P.feed.shift();
+    P.pend=null;
+  }
+  else if(a==='photoclear'){ S.photo.pend=null; S.photo.err=''; }
+  else if(a==='photosample'){ S.photo.pend={dataUrl:isK()?makeSample('🌿','#3fd1cc','#5a4fcf'):makeSample('🌇','#f6a04d','#e0357a'),sample:true}; }
+  else if(a==='photodel'){ const P=S.photo, id=t.dataset.id; const mineItem=P.feed.some(x=>x.id===id && x.by===me()); P.feed=P.feed.filter(x=>!(x.id===id && x.by===me())); if(mineItem){ S.saved.k=S.saved.k.filter(x=>x.ref!=='photo:'+id); S.saved.v=S.saved.v.filter(x=>x.ref!=='photo:'+id); } }
+  else if(a==='photoreact'){ const x=S.photo.feed.find(y=>y.id===t.dataset.id); if(x && x.by!==me() && !x.react) x.react=t.dataset.c; }
+  else if(a==='gopt'){ S.gentle.opt[me()]=!S.gentle.opt[me()]; S.gentle.compose=false; }
+  else if(a==='gcompose'){ S.gentle.compose=!S.gentle.compose; S.gentle.err=''; }
+  else if(a==='gtogt'||a==='gtogh'){
+    const D=S.gentle.draft[me()], k=a==='gtogt'?'topics':'helps', i=D[k].indexOf(t.dataset.id);
+    if(i<0) D[k].push(t.dataset.id); else D[k].splice(i,1);
+  }
+  else if(a==='gdepth'){ S.gentle.draft[me()].depth=t.dataset.id; }
+  else if(a==='gsend'){
+    const G=S.gentle, D=G.draft[me()];
+    if(!D.topics.length || !D.helps.length){ G.err='Pick at least one thing to share and one thing that helps.'; }
+    else {
+      G.note[me()]={topics:D.topics.slice(),helps:D.helps.slice(),depth:D.depth,line:(D.line||'').trim().slice(0,140),canSave:!!D.canSave};
+      G.resp[me()]={guess:null,promise:null,react:null};
+      G.draft[me()]={topics:[],helps:[],depth:'heads',line:'',canSave:false}; G.compose=false; G.err='';
+    }
+  }
+  else if(a==='gguess'){ const T=S.gentle.tmp[me()], i=T.indexOf(t.dataset.id); if(i<0) T.push(t.dataset.id); else T.splice(i,1); }
+  else if(a==='gguessdone'){ const G=S.gentle, o=isK()?'v':'k'; if(G.note[o] && G.resp[o].guess===null && G.tmp[me()].length){ G.resp[o].guess=G.tmp[me()].slice(); } }
+  else if(a==='gprom'){ const G=S.gentle, o=isK()?'v':'k'; if(G.note[o] && G.resp[o].guess!==null && G.resp[o].promise===null) G.resp[o].promise=t.dataset.id; }
+  else if(a==='greact'){ const G=S.gentle; if(G.resp[me()] && G.resp[me()].promise!==null) G.resp[me()].react=t.dataset.r; }
+  else if(a==='gdel'){ const G=S.gentle, o=isK()?'v':'k'; G.note[me()]=null; G.resp[me()]=null; G.tmp[o]=[]; S.saved[o]=S.saved[o].filter(x=>x.ref!=='gentle:'+me()); }
+  else if(a==='gcansave'){ const D=S.gentle.draft[me()]; D.canSave=!D.canSave; }
+  else if(a==='recstart'){ S.timer[me()]={d:t.dataset.d,start:Date.now(),len:60,expired:false,done:false}; S.rec.pend=null; S.rec.err=''; S.rec.text=''; ensureTick(); }
+  else if(a==='recvoice'){ if(S.rec.recording){ if(MR && MR.state==='recording') MR.stop(); } else { startVoice(); return; } }
+  else if(a==='recdiscard'){ S.rec.pend=null; }
+  else if(a==='recskip'){ const dd=t.dataset.d; if(isK() && S.ans[dd].k===null){ S.ans[dd].k={skip:true}; S.timer.k=null; S.anim=dd; } }
+  else if(a==='recsend'){
+    const dd=t.dataset.d, AA=S.ans[dd], T=S.timer[me()], P=S.rec, text=(P.text||'').trim();
+    if(!isK() || AA.k!==null || !T || T.d!==dd || T.expired || (!text && !P.pend)) return;
+    AA.k={text, voice:P.pend?{blob:P.pend.blob,url:P.pend.url,bytes:P.pend.bytes,secs:P.pend.secs}:null};
+    T.done=true; P.pend=null; P.text=''; S.anim=dd;
+  }
+  else if(a==='love'){ A.love=A.love||{k:null,v:null}; A.love[me()]=t.dataset.c; }
+  else if(a==='ping'){ S.ping[isK()?'v':'k']=true; S.toast='Sent 💛 '+NAME[isK()?'v':'k']+' will see it next time they open the app.'; }
+  else if(a==='pingclear'){ S.ping[me()]=false; }
+  else if(a==='cheer'){ A.cheer=A.cheer||{k:null,v:null}; A.cheer[me()]=t.dataset.c; }
+  else if(a==='spin'){ const M=S.micro; let i; do{ i=Math.floor(Math.random()*MICRO.length); }while(i===M.cur && MICRO.length>1); M.cur=i; M.k=null; M.v='keen'; M.when=null; }
+  else if(a==='mresp'){ if(isK()) S.micro.k=t.dataset.r; else S.micro.v=t.dataset.r; }
+  else if(a==='mwhen'){ S.micro.when=t.dataset.w; }
+  else if(a==='mfin'){ const M=S.micro; M.done++; M.cur=null; M.k=null; M.v='keen'; M.when=null; }
+  else if(a==='anext'){
+    const An=S.anta, val=(document.getElementById('anta').value||'').trim();
+    if(!val || An.turn!==me()) return;
+    const songs=An.chain.filter(x=>!x.pass), L=lastLetter(songs[songs.length-1].t);
+    if(firstLetter(val)!==L){ An.err='It needs to start with "'+L+'". Try another 🎵'; }
+    else { An.chain.push({by:me(),t:val}); An.turn=me()==='k'?'v':'k'; An.err=''; }
+  }
+  else if(a==='apass'){ const An=S.anta; if(An.turn!==me()) return; An.chain.push({by:me(),pass:true}); An.turn=me()==='k'?'v':'k'; An.err=''; }
+  else if(a==='asave'){ const An=S.anta; An.saved.push(An.chain.filter(x=>!x.pass).map(x=>x.t)); An.chain=[{by:'app',t:A_START[An.saved.length%A_START.length]}]; An.turn='k'; An.err=''; }
+  else if(a==='sadd'){
+    const T=S.story, val=(document.getElementById('story').value||'').trim();
+    if(!val || T.turn!==me()) return;
+    T.lines.push({by:me(),t:val}); T.turn=me()==='k'?'v':'k';
+    if(T.lines.length>=8) finishStory();
+  }
+  else if(a==='sfinish'){ if(S.story.lines.length>=4 && S.story.turn===me()) finishStory(); }
+  else if(a==='capseal'){
+    const C=S.capsule, val=(document.getElementById('cap').value||'').trim();
+    if(!val || C.sealed[me()]) return;
+    C[me()]=val; C.sealed[me()]=true;
+  }
+  else if(a==='capopen'){ S.capsule.opened=!S.capsule.opened; }
+  else if(a==='ask'){ A.ask=A.ask||{k:false,v:false}; A.ask[me()]=true; }
+  else if(a==='cmtsend'){
+    const val=(document.getElementById('cmt').value||'').trim(); if(!val) return;
+    A.cmt=A.cmt||{k:null,v:null}; A.cmt[me()]=val;
+  }
+  else if(a==='cmtskip'){ A.skip=A.skip||{k:false,v:false}; A.skip[me()]=true; }
+  else if(a==='reply'){ if(!isK()) S.ans['7'].reply=t.dataset.r; }
+  else if(a==='season'){ S.ans['14'].season=t.dataset.r; }
+  else if(a==='new'){ S.screen='new'; S.draft={kind:'choice',q:'',a:'',b:'',mine:null,err:''}; window.scrollTo(0,0); }
+  else if(a==='kind'){ S.draft.kind=t.dataset.k; S.draft.mine=null; S.draft.err=''; }
+  else if(a==='mine'){ S.draft.mine=t.dataset.m; }
+  else if(a==='save'){
+    const dr=S.draft;
+    const q=dr.q.trim(), o1=dr.a.trim(), o2=dr.b.trim();
+    if(!q){ dr.err = dr.kind==='choice' ? 'Add a question first.' : 'Finish the sentence first.'; }
+    else if(dr.kind==='choice' && (!o1||!o2)){ dr.err='Add both options.'; }
+    else if(!dr.mine){ dr.err='Pick your own answer, so it is ready when they reply.'; }
+    else {
+      const id='b'+Date.now(), m=me();
+      const card = dr.kind==='choice'
+        ? {type:'choice',bonus:true,by:m,tag:'This or that',q,opts:[{id:'a',e:'👈',l:o1},{id:'b',e:'👉',l:o2}]}
+        : {type:'nhie',bonus:true,by:m,tag:'Never have I ever',q,opts:[{id:'have',e:'🙋',l:'I have'},{id:'never',e:'🙅',l:'Never'}]};
+      S.bonus[id]=card;
+      S.ans[id] = m==='k' ? {k:dr.mine,v:{pick:null},extra:[]} : {k:null,v:{pick:dr.mine},extra:[]};
+      S.screen='home'; S.toast=`Card sent to ${isK()?'{V}':'{K}'} 💌 Flip phones to answer it.`;
+      S.draft={kind:'choice',q:'',a:'',b:'',mine:null,err:''}; window.scrollTo(0,0);
+    }
+    if(S.screen==='new') dr.err = dr.err;
+  }
+  render();
+});
+render();
+// Light up the Excel export when the page runs inside Claude (design for absence)
+try{
+  if(window.claude && typeof window.claude.use==='function'){
+    window.claude.use('downloads').then(d=>{ DL=d; if(S.screen==='saved') render(); }).catch(()=>{});
+  }
+}catch(_){}
+</script>
+</body>
+</html>
