@@ -7,7 +7,8 @@ mobile or laptop browser. Free, no ads, no tracking. Made with the Indian diaspo
 (UK, US, Canada, Australia, South Africa, UAE and beyond), open to everyone.
 
 > Status: design and prototype. `prototype/index.html` is a clickable demo of every screen.
-> The real app is not built yet. See `docs/BUILD-PLAN.md`.
+> The real app is in Stage 1 (see `docs/BUILD-PLAN.md`). Run it with `npm ci && npm run dev`;
+> test it with `npm run qa` (see `docs/QA.md`).
 
 ## What it is
 - One small card at a time: this-or-that, tick-any, one-line, Never Have I Ever, emoji film
@@ -36,6 +37,7 @@ Browser only: no app store, no native apps.
 - `CLAUDE.md` rules for Claude Code and contributors
 - `docs/` architecture, security, storage budget, web-only notes, product, packs, plan
 - `prototype/` throwaway demo (single HTML file)
+- `src/` the app (Preact + TypeScript); `e2e/` browser tests; `docs/QA.md` how it is all tested
 
 ## Languages
 The name and tagline appear in Hindi, Gujarati, Punjabi, Marathi, Bengali, Tamil, Telugu,

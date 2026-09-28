@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { newId } from '../crypto/ids';
 import { buildInviteUrl, parseJoinPath, takeInviteKeyFromLocation } from '../crypto/invite';
 import { generateRoomKeyBytes, importRoomKey } from '../crypto/roomKey';
@@ -38,6 +38,13 @@ function OpenInBrowser() {
 function Create() {
   const [room, setRoom] = useState<{ invite: string; code: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  // The button that was pressed is gone; move focus to the result for keyboard and
+  // screen reader users.
+  useEffect(() => {
+    if (room) heading.current?.focus();
+  }, [room]);
 
   async function create() {
     const raw = generateRoomKeyBytes();
@@ -60,7 +67,7 @@ function Create() {
   }
   return (
     <section class="card">
-      <h2>Send this link to your person</h2>
+      <h2 ref={heading} tabIndex={-1}>Send this link to your person</h2>
       <p class="hint">Use a chat that is end-to-end encrypted, or read it out. Anyone with the link can open the room.</p>
       <p class="invite">{room.invite}</p>
       <button class="primary" onClick={copy}>{copied ? 'Copied' : 'Copy link'}</button>

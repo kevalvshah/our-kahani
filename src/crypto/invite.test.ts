@@ -30,6 +30,16 @@ describe('invite link', () => {
     expect(parseInviteFragment(url.hash)).toEqual(key);
   });
 
+  it('refuses to build links with a bad room id or key', () => {
+    expect(() => buildInviteUrl('https://example.test', 'a/b', generateRoomKeyBytes())).toThrow('Invalid room id');
+    expect(() => buildInviteUrl('https://example.test', 'room-1', new Uint8Array(16))).toThrow('wrong length');
+  });
+
+  it('accepts a fragment without the leading #', () => {
+    const key = generateRoomKeyBytes();
+    expect(parseInviteFragment('k1.' + toBase64Url(key))).toEqual(key);
+  });
+
   it('rejects bad fragments', () => {
     expect(parseInviteFragment('')).toBeNull();
     expect(parseInviteFragment('#')).toBeNull();

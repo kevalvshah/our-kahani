@@ -20,7 +20,7 @@ export async function safetyCode(rawKey: Bytes): Promise<string[]> {
   for (let i = 0; i < SAFETY_CODE_LENGTH; i++) {
     const bit = i * 6;
     const byte = bit >> 3;
-    const word = ((digest[byte] ?? 0) << 8) | (digest[byte + 1] ?? 0);
+    const word = (digest[byte]! << 8) | digest[byte + 1]!; // byte + 1 <= 4 < 32
     const index = (word >> (10 - (bit & 7))) & 0x3f;
     code.push(SAFETY_EMOJI[index]!);
   }
