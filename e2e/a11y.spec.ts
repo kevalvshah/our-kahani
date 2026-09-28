@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, openScreen, SCREENS, test } from './helpers';
 
+/** Tests that visit every screen in one go need longer than the default 30 s (Firefox in CI). */
+const LOOP_TIMEOUT = 120_000;
+
 /** Presses Tab (through the skip link and navigation) until the Create button has focus. */
 async function tabToCreate(page: Page) {
   const create = page.getByRole('button', { name: 'Create a room' });
@@ -54,6 +57,7 @@ test.describe('accessibility', { tag: '@a11y' }, () => {
   });
 
   test('every screen has a language and exactly one h1', async ({ page, newDevice }) => {
+    test.setTimeout(LOOP_TIMEOUT);
     for (const screen of SCREENS) {
       const shown = await openScreen(screen, page, newDevice);
       await expect(shown.locator('html')).toHaveAttribute('lang', 'en');
@@ -65,6 +69,7 @@ test.describe('accessibility', { tag: '@a11y' }, () => {
 test.describe('responsive layout', { tag: '@responsive' }, () => {
   for (const width of [320, 375, 768, 1280]) {
     test(`no sideways scrolling at ${width}px`, async ({ page, newDevice }) => {
+      test.setTimeout(LOOP_TIMEOUT);
       await page.setViewportSize({ width, height: 800 });
       for (const screen of SCREENS) {
         const shown = await openScreen(screen, page, newDevice);
@@ -75,6 +80,7 @@ test.describe('responsive layout', { tag: '@responsive' }, () => {
   }
 
   test('touch targets are at least 44px tall on every screen', async ({ page, newDevice }) => {
+    test.setTimeout(LOOP_TIMEOUT);
     for (const screen of SCREENS) {
       const shown = await openScreen(screen, page, newDevice);
       // Measure every visible target on the screen in one pass.

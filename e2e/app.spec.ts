@@ -2,6 +2,7 @@ import { createRoom, expect, guard, PAGES, test } from './helpers';
 
 test.describe('app shell and screens', { tag: '@functional' }, () => {
   test('every screen loads straight from its URL, and survives a reload', async ({ page }) => {
+    test.setTimeout(120_000);
     const check = await guard(page);
     for (const [path, heading] of Object.entries(PAGES)) {
       await page.goto(path);

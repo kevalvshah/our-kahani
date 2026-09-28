@@ -213,6 +213,10 @@ If a CI run found it, link the run and attach the trace.
 - WebKit does not move focus to buttons with Tab unless a Safari setting is on, so the
   keyboard tests are skipped on WebKit; check keyboard use on a real Mac manually.
 - Some Windows machines block the test Firefox from starting; use the container or rely on CI.
+- Firefox in the CI container occasionally stalls on a first page load; the one automatic retry
+  covers it and the run reports the test as "flaky". A test that fails twice fails the run.
+- Full-page screenshots on phone sizes show the bottom tabs part-way down the page: that is how
+  full-page capture stitches sticky elements, not how the app looks on a phone.
 - Server-side tests (isolation, reveal, canary, lifecycle) arrive with the Supabase schema.
 - The security headers in the main browser tests come from `vite preview`; the preview and
   production smoke tests check the real Cloudflare ones.
