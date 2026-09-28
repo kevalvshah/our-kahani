@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test';
-import { openScreen, SCREENS } from './helpers';
+import { expect, openScreen, SCREENS, test } from './helpers';
 
 // Screenshot comparison against committed baselines in e2e/visual.spec.ts-snapshots/.
 // Fonts render differently per OS, so baselines are made and checked on Linux (CI) only.
@@ -9,9 +8,9 @@ test.describe('visual regression', { tag: '@visual' }, () => {
 
   for (const scheme of ['light', 'dark'] as const) {
     for (const screen of SCREENS) {
-      test(`${screen} (${scheme})`, async ({ page, browser }) => {
+      test(`${screen} (${scheme})`, async ({ page, newDevice }) => {
         await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
-        const shown = await openScreen(screen, page, browser);
+        const shown = await openScreen(screen, page, newDevice);
         await shown.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
         await expect(shown).toHaveScreenshot(`${screen}-${scheme}.png`, {
           fullPage: true,

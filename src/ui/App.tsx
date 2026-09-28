@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { newId } from '../crypto/ids';
 import { buildInviteUrl, parseJoinPath, takeInviteKeyFromLocation } from '../crypto/invite';
 import { generateRoomKeyBytes, importRoomKey } from '../crypto/roomKey';
@@ -42,7 +42,7 @@ function Create() {
 
   // The button that was pressed is gone; move focus to the result for keyboard and
   // screen reader users.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (room) heading.current?.focus();
   }, [room]);
 

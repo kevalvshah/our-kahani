@@ -1,4 +1,22 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test as base, type BrowserContextOptions, type Page } from '@playwright/test';
+
+type Fixtures = {
+  /** Opens a page on another "device": a fresh browser context, closed after the test. */
+  newDevice: (options?: BrowserContextOptions) => Promise<Page>;
+};
+
+export const test = base.extend<Fixtures>({
+  newDevice: async ({ browser }, use) => {
+    const contexts: Awaited<ReturnType<typeof browser.newContext>>[] = [];
+    await use(async (options) => {
+      const context = await browser.newContext(options);
+      contexts.push(context);
+      return context.newPage();
+    });
+    await Promise.all(contexts.map((c) => c.close()));
+  },
+});
+export { expect };
 
 export const INSTAGRAM_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 330.0.0.0 (iPhone14,5; iOS 17_5; en_GB)';
@@ -43,7 +61,11 @@ export const SCREENS = ['home', 'invite', 'joined', 'incomplete', 'in-app-browse
 export type Screen = (typeof SCREENS)[number];
 
 /** Opens a screen and returns the page showing it (a new page for the in-app browser). */
-export async function openScreen(screen: Screen, page: Page, browser: Browser): Promise<Page> {
+export async function openScreen(
+  screen: Screen,
+  page: Page,
+  newDevice: Fixtures['newDevice'],
+): Promise<Page> {
   switch (screen) {
     case 'home':
       await page.goto('/');
@@ -63,8 +85,7 @@ export async function openScreen(screen: Screen, page: Page, browser: Browser): 
       await expect(page.getByRole('heading', { name: 'This invite link is incomplete' })).toBeVisible();
       return page;
     case 'in-app-browser': {
-      const ctx = await browser.newContext({ userAgent: INSTAGRAM_UA, viewport: page.viewportSize() });
-      const ig = await ctx.newPage();
+      const ig = await newDevice({ userAgent: INSTAGRAM_UA, viewport: page.viewportSize() });
       await ig.goto('/');
       await expect(ig.getByRole('heading', { name: 'Open this in Safari or Chrome' })).toBeVisible();
       return ig;

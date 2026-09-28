@@ -1,13 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
-import { openScreen, SCREENS } from './helpers';
+import { expect, openScreen, SCREENS, test } from './helpers';
 
 test.describe('accessibility', { tag: '@a11y' }, () => {
   for (const scheme of ['light', 'dark'] as const) {
     for (const screen of SCREENS) {
-      test(`${screen} (${scheme}) has no WCAG 2.2 AA violations`, async ({ page, browser }) => {
+      test(`${screen} (${scheme}) has no WCAG 2.2 AA violations`, async ({ page, newDevice }) => {
         await page.emulateMedia({ colorScheme: scheme });
-        const shown = await openScreen(screen, page, browser);
+        const shown = await openScreen(screen, page, newDevice);
         await shown.emulateMedia({ colorScheme: scheme });
         const results = await new AxeBuilder({ page: shown })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -24,7 +23,8 @@ test.describe('accessibility', { tag: '@a11y' }, () => {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Create a room' })).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page.locator('.invite')).toBeVisible();
+    // The pressed button is gone, so focus moves to the result heading.
+    await expect(page.getByRole('heading', { name: 'Send this link to your person' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Copy link' })).toBeFocused();
   });
@@ -48,10 +48,10 @@ test.describe('accessibility', { tag: '@a11y' }, () => {
 
 test.describe('responsive layout', { tag: '@responsive' }, () => {
   for (const width of [320, 375, 768, 1280]) {
-    test(`no sideways scrolling at ${width}px`, async ({ page, browser }) => {
+    test(`no sideways scrolling at ${width}px`, async ({ page, newDevice }) => {
       await page.setViewportSize({ width, height: 800 });
       for (const screen of ['home', 'invite', 'joined'] as const) {
-        const shown = await openScreen(screen, page, browser);
+        const shown = await openScreen(screen, page, newDevice);
         const overflow = await shown.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         expect(overflow, `${screen} at ${width}px`).toBeLessThanOrEqual(0);
       }

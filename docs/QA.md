@@ -19,7 +19,7 @@ Playwright with no test accounts or secrets.
 | Accessibility | WCAG 2.2 AA on every screen in light and dark mode, keyboard-only flow, visible focus | Playwright + axe-core | `e2e/a11y.spec.ts` | Yes |
 | Responsive | No sideways scrolling at 320, 375, 768, 1280 px; touch targets at least 44 px | Playwright | `e2e/a11y.spec.ts` | Yes |
 | Visual regression | Every screen, light and dark, looks the same as the approved screenshot | Playwright screenshots | `e2e/visual.spec.ts` | Yes (Linux only) |
-| Production smoke | The live site works after each deploy | Playwright | same specs, `BASE_URL` set | Yes, after deploy |
+| Deployment smoke | The real Cloudflare deployment (preview for PRs, production for `main`) works with its real headers | Playwright | same specs, `BASE_URL` set | Yes, after Cloudflare deploys |
 | Server security | Room isolation, hidden answers, plaintext canary, room lifecycle | Vitest (planned) | `src/security-pending.test.ts` | Listed as "todo" until Supabase lands |
 | Manual | Real phones, real chat apps, voice and photo round trips | People | this file | No |
 
@@ -83,30 +83,35 @@ screenshots that only match on Linux).
 ### Against a deployed site
 
 ```bash
-BASE_URL=https://kahani.unicodegroup.com npx playwright test --project=chromium --grep "@functional|@security"
+BASE_URL=https://our-kahani.pages.dev npx playwright test --project=chromium --grep "@functional|@security"
 ```
 
-On Windows PowerShell: `$env:BASE_URL="https://kahani.unicodegroup.com"; npx playwright test ...`
+On Windows PowerShell: `$env:BASE_URL="https://our-kahani.pages.dev"; npx playwright test ...`
 
 ## CI/CD pipeline
 
 `.github/workflows/ci.yml` runs on every pull request and every push to `main`:
 
 ```
-checks ──► e2e (chromium, firefox, webkit, android-chrome, iphone-safari, in parallel) ──► deploy ──► smoke
+Pull request:  checks ──► e2e (5 browser setups in parallel)
+                     └──► preview-smoke (waits for the Cloudflare preview of this commit, tests it)
+
+Merge to main: checks ──► e2e ──► production-smoke (waits for Cloudflare production, tests it)
 ```
 
 1. **checks**: type-check, unit tests with coverage limits, build, output and bundle check,
-   dependency audit. Uploads `dist` (the build) and `coverage`.
+   dependency audit. Uploads `coverage`.
 2. **e2e**: the full Playwright suite, one job per browser setup, inside the pinned container.
    Uploads the HTML report, traces for any failure, and any new screenshot baselines.
-3. **deploy** (only on `main`, only if everything passed): deploys the exact `dist` that was
-   tested to Cloudflare Pages. It uses the GitHub `production` environment, so it can be set
-   to wait for a person's approval (see below).
-4. **smoke**: reruns the functional and security tests on Chromium and iPhone Safari against
-   the live site.
+3. **Deploys are done by Cloudflare Pages**, which is connected to this repo: every branch gets
+   a preview at `https://<branch>.our-kahani.pages.dev`, and `main` goes to production. Each
+   build writes `/version.txt` with its commit id.
+4. **preview-smoke** / **production-smoke**: wait until `/version.txt` shows this commit, then
+   run the functional and security tests on Chromium and iPhone Safari against the real
+   deployment, including Cloudflare's real security headers.
 
-Pull requests never deploy. Every Dependabot update PR runs the same pipeline.
+Production only changes when a pull request is merged into `main`, and branch protection
+(below) makes merging wait for every check. Every Dependabot update PR runs the same pipeline.
 
 ### Checking a run as a QA tester
 
@@ -127,7 +132,8 @@ fonts render slightly differently on each operating system. Local runs on Window
 skip visual tests; use the container or CI.
 
 - **New screen**: CI writes the missing screenshots and uploads them as
-  `new-visual-baselines-*`. Look at them, then commit them into `e2e/visual.spec.ts-snapshots/`.
+  `new-visual-baselines-*` (the test fails until they are committed). Look at them, then commit
+  them into `e2e/visual.spec.ts-snapshots/`.
 - **Intended change**: run **Actions > Update visual baselines > Run workflow** on your branch
   (or `npm run test:visual:update` in the container). It commits new screenshots to the branch;
   review the image diffs in the pull request.
@@ -137,17 +143,21 @@ The invite link and safety code are random every run, so they are masked in scre
 
 ## Deploy setup and approval
 
-One-off setup, done by the repo owner:
+Cloudflare Pages project `our-kahani` is connected to this GitHub repo. One-off settings, done
+by the repo owner:
 
-1. Cloudflare: create a Pages project named `our-kahani` (Direct Upload), and add the custom
-   domain `kahani.unicodegroup.com` to it.
-2. Cloudflare: create an API token with only **Account > Cloudflare Pages > Edit**.
-3. GitHub **Settings > Secrets and variables > Actions**: add `CLOUDFLARE_API_TOKEN` and
-   `CLOUDFLARE_ACCOUNT_ID`. Until both exist, the deploy job passes with a warning and skips.
-4. GitHub **Settings > Environments > production**: add **Required reviewers** so each deploy
-   waits for approval, and limit deployment branches to `main`.
-5. GitHub **Settings > Branches**: protect `main`, require pull requests and require the
-   `Static checks, unit tests, build` and `Browser tests (...)` checks to pass.
+1. Cloudflare **Workers & Pages > our-kahani > Settings > Build**: framework preset *None*,
+   build command `npm run build`, build output directory `dist`, root directory empty.
+   Environment variable `NODE_VERSION` = `24`. (If the build command is missing, Pages serves
+   the raw source and the security headers are not applied.)
+2. Cloudflare **Custom domains**: add `kahani.unicodegroup.com`. Then set the GitHub repository
+   variable `PRODUCTION_URL` to `https://kahani.unicodegroup.com` so production smoke tests use it.
+3. GitHub **Settings > Branches**: protect `main`; require a pull request, and require the
+   `Static checks, unit tests, build`, all five `Browser tests (...)` and
+   `Smoke test Cloudflare preview` checks to pass. This is the approval gate for production.
+4. Optional: require a review approval on pull requests, so a second person signs off each release.
+
+No Cloudflare secrets are stored in GitHub: Cloudflare pulls from the repo itself.
 
 ## Traceability: rules to tests
 
@@ -203,5 +213,5 @@ If a CI run found it, link the run and attach the trace.
   keyboard tests are skipped on WebKit; check keyboard use on a real Mac manually.
 - Some Windows machines block the test Firefox from starting; use the container or rely on CI.
 - Server-side tests (isolation, reveal, canary, lifecycle) arrive with the Supabase schema.
-- The security headers in tests come from `vite preview`; the smoke test checks the real ones
-  on the live site after each deploy.
+- The security headers in the main browser tests come from `vite preview`; the preview and
+  production smoke tests check the real Cloudflare ones.

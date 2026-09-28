@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test';
-import { createRoom, guard } from './helpers';
+import { createRoom, expect, guard, test } from './helpers';
 
 test.describe('security', { tag: '@security' }, () => {
   test('served with strict security headers', async ({ request }) => {

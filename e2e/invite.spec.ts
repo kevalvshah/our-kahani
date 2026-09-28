@@ -1,16 +1,14 @@
-import { expect, test } from '@playwright/test';
-import { createRoom, guard, INSTAGRAM_UA } from './helpers';
+import { createRoom, expect, guard, INSTAGRAM_UA, test } from './helpers';
 
 test.describe('invite flow', { tag: '@functional' }, () => {
-  test('creator and partner see the same safety code; the key leaves the address bar', async ({ page, browser }) => {
+  test('creator and partner see the same safety code; the key leaves the address bar', async ({ page, newDevice }) => {
     const check = await guard(page);
     const { invite, code } = await createRoom(page);
     expect(invite).toMatch(/\/join\/[A-Za-z0-9-]+#k1\.[A-Za-z0-9_-]{43}$/);
     expect(Array.from(code.replace(/ /g, ''))).toHaveLength(6);
 
     // The partner is on another device: a fresh context with no shared storage.
-    const partnerContext = await browser.newContext();
-    const partner = await partnerContext.newPage();
+    const partner = await newDevice();
     const partnerCheck = await guard(partner);
     await partner.goto(invite);
     await expect(partner.getByRole('heading', { name: "You're in" })).toBeVisible();
@@ -23,7 +21,6 @@ test.describe('invite flow', { tag: '@functional' }, () => {
 
     check();
     partnerCheck();
-    await partnerContext.close();
   });
 
   test('each new room gets a different key and safety code', async ({ page }) => {
@@ -47,25 +44,23 @@ test.describe('invite flow', { tag: '@functional' }, () => {
     expect(new URL(page.url()).hash).toBe('');
   });
 
-  test('a swapped key gives a different safety code', async ({ page, browser }) => {
+  test('a swapped key gives a different safety code', async ({ page, newDevice }) => {
     const { invite, code } = await createRoom(page);
     // Change the second-to-last character: it carries key bits (the last one is part padding).
     const swapped = invite.slice(0, -2) + (invite.slice(-2, -1) === 'A' ? 'B' : 'A') + invite.slice(-1);
-    const other = await (await browser.newContext()).newPage();
+    const other = await newDevice();
     await other.goto(swapped);
     await expect(other.locator('.emoji')).toBeVisible();
     expect(await other.locator('.emoji').textContent()).not.toBe(code);
   });
 
-  test('Instagram in-app browser is asked to open Safari or Chrome and the key is left alone', async ({ page, browser }) => {
+  test('Instagram in-app browser is asked to open Safari or Chrome and the key is left alone', async ({ page, newDevice }) => {
     const { invite } = await createRoom(page);
-    const igContext = await browser.newContext({ userAgent: INSTAGRAM_UA });
-    const ig = await igContext.newPage();
+    const ig = await newDevice({ userAgent: INSTAGRAM_UA });
     await ig.goto(invite);
     await expect(ig.getByRole('heading', { name: 'Open this in Safari or Chrome' })).toBeVisible();
     // Not consumed: "Open in browser" must carry the full link across.
     expect(new URL(ig.url()).hash).toMatch(/^#k1\./);
     await expect(ig.locator('.emoji')).toHaveCount(0);
-    await igContext.close();
   });
 });
