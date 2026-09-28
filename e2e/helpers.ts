@@ -1,4 +1,8 @@
 import { expect, test as base, type BrowserContextOptions, type Page } from '@playwright/test';
+import { DEFAULT_SUPABASE_URL } from '../src/net/defaults';
+
+/** The one backend the app may talk to (the same origin the build puts in CSP connect-src). */
+export const BACKEND_HOST = new URL(process.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL).host;
 
 type Fixtures = {
   /** Opens a page on another "device": a fresh browser context, closed after the test. */
@@ -23,7 +27,7 @@ export const INSTAGRAM_UA =
 
 /**
  * Watches a page for anything that breaks the trust rules: script errors, console errors,
- * CSP violations, and requests to any host other than the app. Call the returned function
+ * CSP violations, and requests to any host other than the app and its one backend. Call the returned function
  * at the end of the test to assert none happened.
  */
 export async function guard(page: Page) {
@@ -40,17 +44,18 @@ export async function guard(page: Page) {
   });
   page.on('request', (r) => {
     const url = new URL(r.url());
-    if (url.protocol.startsWith('http') && url.host !== appHost) {
+    if (url.protocol.startsWith('http') && url.host !== appHost && url.host !== BACKEND_HOST) {
       problems.push(`third-party request: ${url.origin}`);
     }
   });
   return () => expect(problems).toEqual([]);
 }
 
+/** Creates a real room (anonymous sign-in, create_room on the backend) on this device. */
 export async function createRoom(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Create a room' }).click();
-  await expect(page.locator('.invite')).toBeVisible();
+  await expect(page.locator('.invite')).toBeVisible({ timeout: 15_000 });
   const invite = (await page.locator('.invite').textContent()) ?? '';
   const code = (await page.locator('.emoji').textContent()) ?? '';
   return { invite, code };
@@ -104,9 +109,10 @@ export async function openScreen(
       return page;
     case 'joined': {
       const { invite } = await createRoom(page);
-      await page.goto(invite);
-      await expect(page.getByRole('heading', { name: "You're in" })).toBeVisible();
-      return page;
+      const partner = await newDevice({ viewport: page.viewportSize() });
+      await partner.goto(invite);
+      await expect(partner.getByRole('heading', { name: "You're in" })).toBeVisible({ timeout: 15_000 });
+      return partner;
     }
     case 'home-with-room':
       await createRoom(page);

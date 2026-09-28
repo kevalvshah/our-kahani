@@ -34,11 +34,14 @@ test.describe('app shell and screens', { tag: '@functional' }, () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Card packs' })).toBeVisible();
   });
 
-  test('Today changes once a room exists, and a reload forgets it for now', async ({ page }) => {
+  test('Today changes once a room exists, and the room survives a reload', async ({ page }) => {
     await createRoom(page);
     await expect(page.getByText('Day 1 of 14 · room ends in 28 days').first()).toBeAttached();
-    await page.goto('/'); // nothing is saved yet, so a reload starts over
-    await expect(page.getByRole('button', { name: 'Create a room' })).toBeVisible();
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: /Open today's card/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Waiting for your person to join.')).toBeVisible();
+    await page.goto('/invite');
+    await expect(page.locator('.invite')).toBeVisible(); // the creator can show the link again
   });
 
   test('the card: pick, change your mind, and nothing is sent', async ({ page }) => {
@@ -108,7 +111,7 @@ test.describe('app shell and screens', { tag: '@functional' }, () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Room data' })).toBeVisible();
     page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Erase the room' }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
     await expect(page.getByRole('button', { name: 'Create a room' })).toBeVisible();
   });
 

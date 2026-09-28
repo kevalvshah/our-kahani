@@ -9,6 +9,9 @@ services:
     ipc: host
     environment:
       CI: "1"
+      # Browser tests make real rooms: use the CI Supabase project, never production.
+      VITE_SUPABASE_URL: https://yarkzlhuklweotdaywcr.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7VU8E8yHnbiwe1ds9YTFqQ_ONgKd9Ns
     volumes:
       - .:/work
       - qa_node_modules:/work/node_modules   # Linux node_modules, separate from the host's
