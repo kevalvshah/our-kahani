@@ -1,3 +1,4 @@
+import { InstallHint } from '../Install';
 import { useState } from 'preact/hooks';
 import { dayRef, PACKS, SEASON } from '../../content/cards';
 import { hashtagOptions, normaliseHashtag } from '../../content/extras';
@@ -81,6 +82,7 @@ export function Welcome() {
           </Link>
         </>
       )}
+      <InstallHint />
       <Note dashed>
         {isInstalled()
           ? 'Added to your Home Screen, so it opens like an app and your keys stay put. It is still just the website.'
@@ -214,6 +216,7 @@ export function Today() {
         <Row emoji="🗄️" tint={left <= 7 ? 'pink' : 'plain'} title="Room data" sub="Download everything, keep it 4 more weeks, or erase" pill={`${left}d`} href={PATHS.room} />
         <Row emoji="🔐" tint="accent" title="Privacy" sub="Locked on your phone. Even the developer cannot read it" pill="E2E" href={PATHS.privacy} />
       </div>
+      <InstallHint />
       <Note dashed>
         {isInstalled()
           ? 'Added to your Home Screen, so it opens like an app and your keys stay put. It is still just the website.'

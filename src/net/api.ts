@@ -57,6 +57,8 @@ export class ApiError extends Error {
       | 'room-ended'
       | 'too-many-rooms'
       | 'not-found'
+      | 'paused'
+      | 'read-only'
       | 'offline'
       | 'other',
   ) {
@@ -74,6 +76,8 @@ function failWith(error: { code?: string; message?: string } | null, offline: bo
   if (code === 'P0005') throw new ApiError('This room already has 20 photos', 'photo-limit');
   if (code === 'P0006') throw new ApiError('This room has ended', 'room-ended');
   if (code === 'P0007') throw new ApiError('Those words do not match a room', 'not-found');
+  if (code === 'P0008') throw new ApiError('New rooms are paused', 'paused');
+  if (code === '25006') throw new ApiError('The server is read-only for now', 'read-only');
   throw new ApiError(error?.message || 'Something went wrong', 'other');
 }
 

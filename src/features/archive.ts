@@ -40,7 +40,13 @@ export function savedSheets(items: SavedItem[], me: string, partner: string): Sh
   ];
 }
 
-export function buildArchive(d: RoomData): { bytes: Uint8Array<ArrayBuffer>; name: string } {
+/** Decrypted photos and voice notes, fetched by the caller (this module does no network). */
+export interface MediaFile {
+  name: string;
+  data: Uint8Array;
+}
+
+export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uint8Array<ArrayBuffer>; name: string } {
   const me = d.me === 'You' ? 'Me' : d.me;
   const partner = d.partner;
   const sheets: Sheet[] = [];
@@ -123,9 +129,9 @@ This file was put together on your phone. The server cannot read your data, so i
 
 Inside:
 - our-answers.xlsx: the answers you both opened, plus watched-together, stories, songs and more
-${saved.length ? `- notes-about-${slug(partner)}.xlsx: your private saved notes. Only you have these\n` : ''}
+${saved.length ? `- notes-about-${slug(partner)}.xlsx: your private saved notes. Only you have these\n` : ''}${media.length ? `- media/: ${media.length} photos and voice notes, unlocked on this phone\n` : ''}
 Your room ends on ${new Date(d.room.endsAt).toISOString().slice(0, 10)} unless you both choose to keep it for 4 more weeks.
 Keep this file somewhere private.
 `;
-  return { bytes: makeZip([{ name: 'README.txt', data: readme }, ...files]), name: `room-data-${today()}.zip` };
+  return { bytes: makeZip([{ name: 'README.txt', data: readme }, ...files, ...media.map((m) => ({ name: `media/${m.name}`, data: m.data }))]), name: `room-data-${today()}.zip` };
 }

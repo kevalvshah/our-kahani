@@ -418,6 +418,7 @@ h1:focus { outline: none; }
 .compare tr.is-both th, .compare tr.is-both td { background: var(--k-gold-soft); }
 
 .big-emoji { font-size: 3.5rem; line-height: 1; margin: 6px 0; }
+.voice { width: 100%; margin-top: 6px; }
 .timer { font-family: var(--k-serif); font-size: 4rem; line-height: 1; text-align: center; margin: 6px 0 0; }
 .bar { height: 10px; border-radius: 999px; background: var(--k-surface2); overflow: hidden; margin: 10px 0 14px; }
 .bar i { display: block; height: 100%; background: var(--k-accent); border-radius: 999px; }

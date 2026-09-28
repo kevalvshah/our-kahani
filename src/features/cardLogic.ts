@@ -13,6 +13,14 @@ export interface Answer {
   rates?: Record<string, string>;
   /** Options this person added with "Something else…" (shown at the reveal). */
   custom?: Opt[];
+  /** A voice note (recall cards): the encrypted audio is in the photo store under `obj`. */
+  voice?: VoiceNote;
+}
+
+export interface VoiceNote {
+  obj: string;
+  secs: number;
+  type: string;
 }
 
 export interface BonusCard {
@@ -58,8 +66,9 @@ export function isAnswered(card: Card, a: Answer | undefined): boolean {
     case 'multi':
       return (a.picks?.length ?? 0) > 0;
     case 'line':
-    case 'recall':
       return !!a.text || !!a.skip;
+    case 'recall':
+      return !!a.text || !!a.skip || !!a.voice;
     case 'try':
       return !!a.rates && Object.keys(a.rates).length === card.items.length;
     default:
@@ -76,6 +85,7 @@ export function answerText(card: Card, a: Answer | undefined, opts: Opt[] = allO
       return (a.picks ?? []).map(plain).join(', ');
     case 'line':
     case 'recall':
+      if (a.voice) return `Voice note (${a.voice.secs} s)`;
       return a.skip ? 'Skipped' : (a.text ?? '');
     case 'try':
       return card.items.map((it) => `${it.l}: ${TRY_LABELS[a.rates?.[it.id] ?? '']?.replace(/[^\p{L}\s]/gu, '').trim() ?? ''}`).join('; ');

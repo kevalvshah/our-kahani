@@ -37,18 +37,23 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     await b.getByRole('button', { name: 'Agree and lock it 🔒' }).click({ timeout: 20_000 });
     await expect(b.locator('.hashtag-pill')).toBeVisible({ timeout: 20_000 });
 
-    // Day 1: both answer; hidden until both; then the reveal with names.
+    // Day 1: the invited person answers first; hidden until both; then the reveal with names.
     await page.goto('/card/day/1');
+    await expect(page.getByText('Ravi goes first on this one 💭', { exact: false })).toBeVisible({ timeout: 20_000 });
+    await b.goto('/card/day/1');
+    await b.getByRole('button', { name: 'Coffee' }).click();
+    await b.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(b.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
+    await page.reload();
+    await expect(page.getByText('Ravi is in')).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: 'Chai' }).click();
     await page.getByLabel(/Why\?/).fill('Adrak wali');
     await page.getByRole('button', { name: 'Seal my answer' }).click();
-    await expect(page.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
-    await b.goto('/card/day/1');
-    await expect(b.getByText('Asha is in')).toBeVisible({ timeout: 20_000 });
-    await b.getByRole('button', { name: 'Coffee' }).click();
-    await b.getByRole('button', { name: 'Seal my answer' }).click();
+    await page.getByRole('button', { name: /open both/ }).click({ timeout: 20_000 });
+    await expect(page.getByText('Two different picks. Good to know 😄')).toBeVisible();
+
+    await b.reload();
     await b.getByRole('button', { name: /open both/ }).click({ timeout: 20_000 });
-    await expect(b.getByText('Two different picks. Good to know 😄')).toBeVisible();
     await expect(b.locator('.reveal-theirs')).toContainText('Chai');
     await expect(b.locator('.reveal-theirs')).toContainText('Adrak wali');
     // Ravi sends love and saves Asha's answer (privately).
@@ -60,13 +65,17 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     await page.getByRole('button', { name: /open both/ }).click({ timeout: 20_000 });
     await expect(page.getByText('Ravi sent you 💛')).toBeVisible({ timeout: 20_000 });
 
-    // A pack card (tick any), with a custom option.
+    // Either person can switch the answer order off; then a pack card (tick any), with a custom option.
+    await page.goto('/room');
+    await page.getByRole('switch', { name: 'Take turns answering' }).click();
+    await expect(page.getByRole('switch', { name: 'Take turns answering' })).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
     await page.goto('/card/pack/warm/1');
     await page.getByRole('button', { name: /Kind words/ }).click();
     await page.getByRole('button', { name: 'Something else…' }).click();
     await page.getByLabel(/Type your own option/).fill('Chai on the balcony');
     await page.getByRole('button', { name: 'Add my option' }).click();
     await page.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(page.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
     await b.goto('/card/pack/warm/1');
     await b.getByRole('button', { name: /Kind words/ }).click();
     await b.getByRole('button', { name: 'Seal my answer' }).click();
@@ -107,6 +116,10 @@ test.describe('the full journey', { tag: '@journey' }, () => {
   test('recovery: the twelve words bring the room back on a fresh browser', async ({ page, newDevice }) => {
     test.setTimeout(120_000);
     const { words } = await createAndSetUp(page, 'Mira');
+    // Alone in the room, so switch off "the invited person answers first".
+    await page.goto('/room');
+    await page.getByRole('switch', { name: 'Take turns answering' }).click();
+    await expect(page.getByRole('switch', { name: 'Take turns answering' })).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
     await page.goto('/card/day/1');
     await page.getByRole('button', { name: 'Chai' }).click();
     await page.getByRole('button', { name: 'Seal my answer' }).click();

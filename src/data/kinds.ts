@@ -28,12 +28,15 @@ export const K = {
   ANTA_SAVED: 116,
   PHOTO: 120,
   PHOTO_REACTION: 121,
+  /** Not a record: binds encrypted voice-note audio to its purpose (the note lives in an answer). */
+  VOICE: 122,
   GENTLE_OPT: 130,
   GENTLE_NOTE: 131,
   GENTLE_RESPONSE: 132,
   GENTLE_REACT: 133,
   HASHTAG: 140,
   SEASON_NEXT: 141,
+  ROOM_SETTINGS: 142,
   // 200-299: private to the author, encrypted with their own notes key
   SAVED: 200,
 } as const;

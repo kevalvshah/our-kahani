@@ -17,9 +17,11 @@ import {
   type BonusCard,
 } from '../../features/cardLogic';
 import { nextCardFor } from '../../features/progress';
+import { currentSettings, waitsForPartner } from '../../features/settings';
 import { Back, Check, Done, Em, Link, OptTile, Problem, RevealRow, Wait } from '../components';
 import { cardPath, packPath, PATHS } from '../router';
 import { problemText } from '../problems';
+import { VoicePlayer, VoiceRecord } from '../Voice';
 
 // One screen for every card type. My answer is sealed on this phone; the partner's arrives only
 // once the server's reveal rule lets it through (after I have answered the same card).
@@ -158,6 +160,17 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
   }
 
   const bettor = card.type === 'bet' ? (d.room.role === 'creator' ? 'me' : 'partner') : null;
+  const settings = currentSettings(d.list(K.ROOM_SETTINGS));
+  if (waitsForPartner(settings, d.room.role, card.type, !!mine, partnerIn)) {
+    return (
+      <>
+        <Heading card={card} />
+        <Wait>
+          {d.partner} goes first on this one 💭 Your turn opens as soon as they answer.
+        </Wait>
+      </>
+    );
+  }
 
   return (
     <>
@@ -344,6 +357,9 @@ function RecallInput({
   const left = start === null ? RECALL_SECONDS : Math.max(0, RECALL_SECONDS - Math.floor((now - start) / 1000));
   const expired = start !== null && left === 0;
 
+  if (draft.voice) {
+    return <p class="small muted">You sent a voice note ({draft.voice.secs} s) 🎙️</p>;
+  }
   if (disabled || draft.skip || (draft.text && start === null)) {
     return <p class="small muted">{draft.skip ? 'You skipped this one 🙂' : `You sent: “${draft.text}”`}</p>;
   }
@@ -354,6 +370,7 @@ function RecallInput({
         <button type="button" class="btn btn-primary btn-block" onClick={() => { setStart(Date.now()); setNow(Date.now()); }}>
           Start the 60-second timer ⏱️
         </button>
+        <VoiceRecord onSent={(voice) => onSend({ voice })} />
         <button type="button" class="btn btn-secondary btn-block seal" onClick={() => onSend({ skip: true })}>
           Skip this one
         </button>
@@ -428,6 +445,7 @@ function Reveal({
         </span>
       ));
     }
+    if (a.voice) return <VoicePlayer note={a.voice} who={who === 'me' ? 'you' : d.partner} />;
     if (card.type === 'line' || card.type === 'recall') return a.skip ? 'Skipped this one 🙂' : a.text;
     const label = optionLabel(opts, a.pick);
     if (card.type === 'bet') return `${(who === 'me') === (bettor === 'me') ? 'Bet on' : 'Picked'} ${label}`;

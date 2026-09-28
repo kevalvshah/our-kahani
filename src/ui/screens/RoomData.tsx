@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
-import { buildArchive } from '../../features/archive';
+import { open } from '../../crypto/envelope';
+import { buildArchive, type MediaFile } from '../../features/archive';
+import type { Answer } from '../../features/cardLogic';
+import { currentSettings } from '../../features/settings';
 import { downloadFile } from '../../features/xlsx';
 import { controller } from '../../state/controller';
 import { daysLeft } from '../../state/room';
@@ -43,8 +46,34 @@ function useKeep() {
   return { voted, vote, msg, problem };
 }
 
-export function download(d: ReturnType<typeof useRoomData>): string {
-  const { bytes, name } = buildArchive(d);
+/** Photos and voice notes, fetched and unlocked on this phone. Any that fail are left out. */
+async function mediaFiles(d: ReturnType<typeof useRoomData>): Promise<MediaFile[]> {
+  const media = controller().media;
+  if (!media.enabled()) return [];
+  const wanted: { obj: string; kind: number; name: string }[] = [];
+  const stamp = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace(/[T:]/g, '-');
+  for (const p of d.list<{ obj: string }>(K.PHOTO)) {
+    wanted.push({ obj: p.data.obj, kind: K.PHOTO, name: `photo-${stamp(p.createdAt)}-${p.mine ? 'me' : 'partner'}.jpg` });
+  }
+  for (const a of d.list<Answer>(K.ANSWER)) {
+    const v = a.data.voice;
+    if (v) wanted.push({ obj: v.obj, kind: K.VOICE, name: `voice-${stamp(a.createdAt)}-${a.mine ? 'me' : 'partner'}.${v.type.includes('mp4') ? 'm4a' : v.type.includes('ogg') ? 'ogg' : 'webm'}` });
+  }
+  const out: MediaFile[] = [];
+  for (const w of wanted) {
+    try {
+      const data = await open(d.room.key, { roomId: d.room.id, recordId: w.obj, kind: w.kind }, await media.get(d.room.id, w.obj));
+      out.push({ name: `${String(out.length + 1).padStart(2, '0')}-${w.name}`, data });
+    } catch {
+      // Not reachable right now: the spreadsheet still has everything else.
+    }
+  }
+  return out;
+}
+
+export async function download(d: ReturnType<typeof useRoomData>): Promise<string> {
+  const media = await mediaFiles(d);
+  const { bytes, name } = buildArchive(d, media);
   downloadFile(name, bytes, 'application/zip');
   return 'Saved to your device 📥';
 }
@@ -103,7 +132,7 @@ export function RoomDataScreen() {
         <p class="small muted">Downloads are put together on your phone, because the server can't read your data. Each of you can download at any time.</p>
         {(msg || keep.msg) && <Done>{msg ?? keep.msg}</Done>}
         <div class="stack">
-          <button type="button" class="btn btn-primary" onClick={() => setMsg(download(d))}>
+          <button type="button" class="btn btn-primary" onClick={() => { setMsg('Putting it together on this phone…'); void download(d).then(setMsg); }}>
             📥 Download everything (zip)
           </button>
           {keep.voted ? (
@@ -118,12 +147,17 @@ export function RoomDataScreen() {
           {keep.voted && <Wait>You chose to keep it 💛 It extends when {d.partner} agrees too. If not, it is erased on {fmtDate(d.room.endsAt)}.</Wait>}
         </div>
         <Problem text={keep.problem ?? problem} />
+        <AnswerOrder />
+        <p class="small muted">
+          Using a laptop too? Open this site there and choose “I have my twelve words”. Your room opens on that device instead
+          of this one.
+        </p>
         {confirm ? (
           <div class="panel panel-pink">
             <div class="panel-title">Erase this room now?</div>
             <p class="small">This deletes every answer, photo and note for both of you, right away. It can't be undone.</p>
             <div class="stack">
-              <button type="button" class="btn btn-secondary" onClick={() => setMsg(download(d))}>
+              <button type="button" class="btn btn-secondary" onClick={() => { setMsg('Putting it together on this phone…'); void download(d).then(setMsg); }}>
                 📥 Download first
               </button>
               <button type="button" class="btn btn-danger" onClick={() => void erase()}>
@@ -142,6 +176,33 @@ export function RoomDataScreen() {
         <p class="small muted">Erasing deletes the ciphertext and discards the keys. Nobody can bring the room back, including us.</p>
       </div>
     </section>
+  );
+}
+
+/** Room setting: who answers each card first. Either person can change it. */
+function AnswerOrder() {
+  const d = useRoomData();
+  const on = currentSettings(d.list(K.ROOM_SETTINGS)).inviteeFirst;
+  const first = d.room.role === 'creator' ? d.partner : 'You';
+  return (
+    <div class="switch-row">
+      <span class="row-text">
+        <span class="row-title">{first} answer{first === 'You' ? '' : 's'} first</span>
+        <span class="row-sub">{on ? 'Each card opens for the other person once this answer is in.' : 'Off: either of you can go first.'}</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Take turns answering"
+        class="switch"
+        onClick={() => void d.add(K.ROOM_SETTINGS, 'settings', { inviteeFirst: !on })}
+      >
+        <span class="switch-track">
+          <span class="switch-knob" />
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -187,7 +248,7 @@ export function RetentionModal() {
         <p class="small">Welcome back. Everything is locked with your key. Before {fmtDate(d.room.endsAt)} you can:</p>
         <p class="small muted">Both of you need to keep it, or it is erased on that day. The server can't read your data, so the download is made on your phone.</p>
         <div class="stack">
-          <button type="button" class="btn btn-primary" onClick={() => setMsg(download(d))}>
+          <button type="button" class="btn btn-primary" onClick={() => { setMsg('Putting it together on this phone…'); void download(d).then(setMsg); }}>
             📥 Download everything
           </button>
           <button type="button" class="btn btn-secondary" onClick={() => void keep.vote(true)}>

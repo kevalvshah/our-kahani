@@ -23,6 +23,10 @@ export function problemText(e: unknown): string {
         return 'This room has ended.';
       case 'not-found':
         return 'Those words do not match a room that is still open.';
+      case 'paused':
+        return 'New rooms are paused for a little while. Please try again in a few days.';
+      case 'read-only':
+        return 'Our server is read-only for now. You can still read everything and download your room data.';
       default:
         break;
     }

@@ -4,9 +4,8 @@ import { newId } from '../../crypto/ids';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
 import { compressImage } from '../../features/image';
-import { createMedia, MediaError } from '../../net/media';
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../../net/config';
-import { createSessionManager } from '../../net/session';
+import { MediaError } from '../../net/media';
+import { controller } from '../../state/controller';
 import type { DataRecord } from '../../state/controller';
 import { Back, Problem, Wait } from '../components';
 import { PATHS } from '../router';
@@ -21,19 +20,7 @@ interface PhotoMeta {
   h: number;
 }
 
-let mediaSingleton: ReturnType<typeof createMedia> | null = null;
-function media() {
-  if (!mediaSingleton) {
-    let storage: Storage | undefined;
-    try {
-      storage = localStorage;
-    } catch {
-      storage = undefined;
-    }
-    mediaSingleton = createMedia(createSessionManager({ url: SUPABASE_URL, apiKey: SUPABASE_PUBLISHABLE_KEY, storage }));
-  }
-  return mediaSingleton;
-}
+const media = () => controller().media;
 
 const photoCtx = (roomId: string, obj: string) => ({ roomId, recordId: obj, kind: K.PHOTO });
 

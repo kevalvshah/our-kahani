@@ -8,6 +8,7 @@ import type { Bytes } from '../crypto/bytes';
 import { isPrivateKind } from '../data/kinds';
 import { openJson, sealJson } from '../data/payload';
 import { createApi, type AnswerStatus, type Api, type RoomRow } from '../net/api';
+import { createMedia, type Media } from '../net/media';
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../net/config';
 import { createSessionManager, type SessionManager } from '../net/session';
 import type { Room } from './room';
@@ -35,6 +36,7 @@ interface Deps {
   api: Api;
   session: SessionManager;
   keystore: Keystore;
+  media: Media;
   origin: string;
 }
 
@@ -52,6 +54,7 @@ function defaultDeps(): Deps {
     session,
     api: createApi({ url: SUPABASE_URL, apiKey: SUPABASE_PUBLISHABLE_KEY, session }),
     keystore: createKeystore(),
+    media: createMedia(session),
     origin: location.origin,
   };
 }
@@ -102,6 +105,8 @@ export function createController(deps: Deps = defaultDeps()) {
 
   return {
     userId: () => session.userId(),
+    /** Encrypted photo store, sharing this app's one sign-in. */
+    media: deps.media,
 
     async load(): Promise<LoadResult> {
       const stored = await keystore.current().catch(() => null);
@@ -141,6 +146,7 @@ export function createController(deps: Deps = defaultDeps()) {
 
     async erase(room: Room): Promise<void> {
       await api.eraseRoom(room.id);
+      deps.media.purge();
       await keystore.remove(room.id);
       session.signOut();
     },
