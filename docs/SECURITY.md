@@ -13,19 +13,31 @@ backups or logs. Only the two people in a room can.
   in about 48 hours; the room closes to a third person once two have joined.
 - **Safety code**: six emoji derived from a hash of the key, shown on both phones. Compare on
   a call to detect a swapped link.
-- **Recovery**: 12-word phrase, mandatory at setup, with a check that the person saved it.
-  A wrapped copy of the key may be stored server-side, encrypted under a key derived from the
-  phrase, so the server still cannot read it.
+- **Recovery**: 12-word BIP39 phrase, mandatory at setup, with a check of three words. HKDF
+  derives a lookup token and a wrap key from it; the room key and the notes key are sealed
+  under the wrap key and stored by `save_backup`. `recover_room` returns the backup and moves
+  the membership to the new browser's anonymous account.
 - **Personal notes**: each person has their own key for Saved notes; the partner never has it.
 - **Key storage**: non-extractable CryptoKey in IndexedDB where possible. Safari can delete
   script-writable storage after 7 days of Safari use without interaction (Home Screen web apps
   are exempt). Ask for persistent storage and expect loss; recovery must work.
-- **Media**: compress, then encrypt on the device, then upload. The server sees size and time only.
+- **Media**: compress (photos: stripped of location and camera details), then encrypt with the
+  room key on the device, then upload to `/media`. The photo store checks membership with the
+  person's own token and sees size and time only.
 - **Downloads**: built in the browser after decrypting locally.
 
 ## What the server can see
-Room exists, member count, timestamps, sizes, counts, "answered" flags, IP addresses in host
-logs. Keep logs minimal and short-lived.
+- A room exists, its two anonymous member ids and roles, when it started and ends.
+- For each record: its kind (a number), an opaque ref such as `day:3` or `pack:warm:2`, who
+  wrote it and when, and its padded size (plaintext is padded to 64, 256, 1024, 4096 or 12288
+  bytes, so a size never gives away an answer).
+- Who has answered which card (to apply the reveal rule), never the answer.
+- "Keep this room" votes, a yes per person, never shown to the partner.
+- SHA-256 hashes of the join token and of the recovery lookup token, and the recovery backup
+  sealed under a key from the 12 words.
+- For photos and voice notes: the R2 object id, size and time, all ciphertext.
+- IP addresses in host logs. Keep logs minimal and short-lived.
+It never sees a name, answer, note, hashtag, caption, photo, voice note, key or the 12 words.
 
 ## Honest limits (say these to users)
 - We serve the app's code. A changed version could steal keys. Mitigate: open source, strict
@@ -38,6 +50,10 @@ logs. Keep logs minimal and short-lived.
 - If keys and recovery phrase are both lost, data is gone.
 
 ## Tests that must exist
+Where they are: crypto in `src/crypto/*.test.ts`; isolation, reveal and lifecycle in
+`supabase/tests/rls.sql` and `supabase/tests/features.sql`; the plaintext canary over all
+network traffic in `e2e/journey.spec.ts` and `e2e/security.spec.ts`.
+
 1. Crypto: right key opens, wrong key fails, tampering fails, AAD swap fails, same text gives
    different ciphertext.
 2. Isolation: two rooms; every read of the other room returns nothing.

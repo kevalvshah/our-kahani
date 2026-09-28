@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { EnvelopeError } from './envelope';
+import { toBase64Url, utf8 } from './bytes';
+import { EnvelopeError, seal } from './envelope';
 import {
   entropyToWords,
   lookupToken,
@@ -85,5 +86,30 @@ describe('recovery phrase', () => {
     const { entropy } = await newPhrase();
     const env = await sealBackup(entropy, 'room-1', { roomKey: new Uint8Array(16), notesKey: generateRoomKeyBytes() });
     await expect(openBackup(entropy, 'room-1', env)).rejects.toThrow('could not be read');
+  });
+
+  // Seals arbitrary JSON the way sealBackup does (same HKDF wrap key), to test malformed backups.
+  async function sealRaw(entropy: Uint8Array<ArrayBuffer>, roomId: string, body: unknown) {
+    const ikm = await crypto.subtle.importKey('raw', entropy, 'HKDF', false, ['deriveBits']);
+    const raw = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info: utf8('our-kahani/recovery/wrap/v1') }, ikm, 256);
+    const key = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
+    return seal(key, { roomId, recordId: 'backup', kind: 0 }, utf8(JSON.stringify(body)));
+  }
+
+  it('rejects backups with missing, unreadable or wrong-version keys', async () => {
+    const { entropy } = await newPhrase();
+    const good = toBase64Url(generateRoomKeyBytes());
+    // Sanity check: the helper produces a backup that opens.
+    expect((await openBackup(entropy, 'r', await sealRaw(entropy, 'r', { v: 1, room: good, notes: good }))).roomKey).toHaveLength(32);
+    for (const body of [
+      { v: 1, notes: good },
+      { v: 1, room: good },
+      { v: 1, room: '', notes: good },
+      { v: 1, room: good, notes: '!!not base64!!' },
+      { v: 2, room: good, notes: good },
+      {},
+    ]) {
+      await expect(openBackup(entropy, 'r', await sealRaw(entropy, 'r', body))).rejects.toBeInstanceOf(PhraseError);
+    }
   });
 });

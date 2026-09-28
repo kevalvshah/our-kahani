@@ -1,5 +1,10 @@
 # Build plan
 
+Status (2026-09-28): Stages 1 to 7 are built. Stage 8: PWA install and laptop layout are done;
+notifications, native-speaker translation review and the real-device round are still to do.
+Packs are TypeScript modules in `src/content/` rather than JSON, so they are type-checked and
+reviewed like code. Photos need the R2 binding (see `docs/ARCHITECTURE.md`).
+
 Stage 0 (done): clickable prototype in `prototype/index.html`.
 
 Stage 1: rooms and E2E core. Create room, invite link, join, recovery phrase, safety code,

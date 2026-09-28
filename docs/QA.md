@@ -15,13 +15,14 @@ Playwright with no test accounts or secrets.
 | Performance budget | JS under 60 KB and CSS under 15 KB gzipped | Node script | `scripts/check-dist.mjs` | Yes |
 | Dependency audit | No known high or critical issues in shipped dependencies | `npm audit` | `package.json` | Yes |
 | Functional end to end | Create room, invite, join, broken links, Instagram gate | Playwright | `e2e/invite.spec.ts` | Yes, 5 browsers and devices |
-| App shell and screens | Every screen by URL and reload, phone tabs vs laptop sidebar, card picking, "Make it ours" settings, country-aware safety footer, erase room, unbuilt features marked "Soon" | Playwright | `e2e/app.spec.ts` | Yes |
+| App shell and screens | Every screen by URL and reload, phone tabs vs laptop sidebar, card picking, "Make it ours" settings, country-aware safety footer, erase room | Playwright | `e2e/app.spec.ts` | Yes |
 | Security end to end | Security headers, no CSP violations, no third-party requests, key never stored or logged, page cannot be framed | Playwright | `e2e/security.spec.ts` | Yes |
 | Accessibility | WCAG 2.2 AA on every screen in light and dark mode, keyboard-only flow, visible focus, skip link, one h1 per screen | Playwright + axe-core | `e2e/a11y.spec.ts` | Yes |
 | Responsive | No sideways scrolling at 320, 375, 768, 1280 px on every screen; touch targets at least 44 px on every screen | Playwright | `e2e/a11y.spec.ts` | Yes |
 | Visual regression | Every screen, light and dark, looks the same as the approved screenshot | Playwright screenshots | `e2e/visual.spec.ts` | Yes (Linux only) |
 | Deployment smoke | The real Cloudflare deployment (preview for PRs, production for `main`) works with its real headers | Playwright | same specs, `BASE_URL` set | Yes, after Cloudflare deploys |
-| Server security | Room isolation, hidden answers, plaintext canary, room lifecycle | Vitest (planned) | `src/security-pending.test.ts` | Listed as "todo" until Supabase lands |
+| Server security | Room isolation, hidden answers, locks, private notes, caps, keep votes, recovery, photo store | SQL (acts as several users, rolls back) | `supabase/tests/*.sql` | Manual after each migration (see below) |
+| Full journey | Two people from create to reveal, packs, games, saved notes; recovery on a fresh browser; plaintext canary over all traffic | Playwright against the CI Supabase project | `e2e/journey.spec.ts` | Yes |
 | Manual | Real phones, real chat apps, voice and photo round trips | People | this file | No |
 
 ## Browsers and devices
@@ -191,7 +192,26 @@ production smoke test after each merge still runs (production is public).
 | Instagram in-app browser: ask to open Safari or Chrome before handling keys | `inAppBrowser.test.ts`; `invite.spec.ts` |
 | No third-party scripts or hosts, no inline scripts, strict CSP | `check-dist.mjs`; `security.spec.ts` |
 | Touch targets at least 44 px, keyboard accessible, phone-first | `a11y.spec.ts` |
-| Room isolation, reveal rule, plaintext canary, lifecycle | `security-pending.test.ts` (todo until Supabase) |
+| Room isolation, reveal rule, answer locks, erase | `supabase/tests/rls.sql` |
+| Private notes, write-once hashtag, capsule, saved copies, caps, keep votes, recovery, photo store checks, storage guard | `supabase/tests/features.sql` |
+| Plaintext canary: no name, answer, note, song or key in any request, on either phone | `journey.spec.ts`; `security.spec.ts` |
+| The whole product with two people (setup, words, hashtag, cards, reveal, packs, games, saved notes, recovery) | `journey.spec.ts` |
+| Photo store: members only, size and count caps, purge of erased rooms | `mediaFunction.test.ts` |
+| The invited person answers first by default; either can switch it off | `settings.test.ts`; `journey.spec.ts` |
+
+## Database tests
+
+`supabase/tests/rls.sql` and `supabase/tests/features.sql` act as several users inside one
+transaction, then raise `ALL RLS TESTS PASSED` / `ALL FEATURE TESTS PASSED`, which rolls
+everything back. Seeing that message as an error is the pass; any message starting with `FAIL`
+is a failure. Run them against the CI project (never production) after every migration:
+
+```bash
+psql "$CI_SUPABASE_DB_URL" -f supabase/tests/rls.sql
+```
+
+or paste the file into the Supabase SQL editor of `our-kahani-ci`. They are not run by CI
+yet, because that needs the database password as a repository secret.
 
 ## Manual test checklist (each release)
 
@@ -207,7 +227,10 @@ Automated tests use emulated devices. Before a release, a person checks on real 
 - [ ] Screen reader: VoiceOver (iPhone) and TalkBack (Android) read the safety code and buttons
 - [ ] Large text (iOS Dynamic Type or Android font size at maximum): nothing cut off
 - [ ] Slow connection (Chrome DevTools "Slow 3G"): app loads and works
-- [ ] Later stages: voice note iPhone to Android and back; photo from iPhone (HEIC) and Android
+- [ ] Voice note on a "Remember when" card, iPhone to Android and back
+- [ ] Photo from iPhone (HEIC) and Android on Right Now; both appear in the downloaded zip
+- [ ] Recovery: clear the site's data, then "I have my twelve words" brings the room back
+- [ ] Install: Chrome shows "Add it"; the installed app opens offline to the last screen shell
 
 ### Exploratory ideas
 
@@ -232,6 +255,5 @@ If a CI run found it, link the run and attach the trace.
   covers it and the run reports the test as "flaky". A test that fails twice fails the run.
 - Full-page screenshots on phone sizes show the bottom tabs part-way down the page: that is how
   full-page capture stitches sticky elements, not how the app looks on a phone.
-- Server-side tests (isolation, reveal, canary, lifecycle) arrive with the Supabase schema.
 - The security headers in the main browser tests come from `vite preview`; the preview and
   production smoke tests check the real Cloudflare ones.

@@ -66,6 +66,8 @@ export default defineConfig({
         'src/crypto/keystore.ts',
         'src/net/config.ts',
         'src/net/defaults.ts',
+        // Canvas photo compression needs a real browser; covered by the e2e suite.
+        'src/features/image.ts',
       ],
       reporter: ['text', 'html', 'json-summary'],
       thresholds: { lines: 100, functions: 100, statements: 100, branches: 95 },

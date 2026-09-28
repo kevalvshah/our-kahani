@@ -53,6 +53,12 @@ describe('api', () => {
     ['P0002', 'invalid-invite'],
     ['P0003', 'room-full'],
     ['P0001', 'too-many-rooms'],
+    ['P0004', 'room-full-data'],
+    ['P0005', 'photo-limit'],
+    ['P0006', 'room-ended'],
+    ['P0007', 'not-found'],
+    ['P0008', 'paused'],
+    ['25006', 'read-only'],
     ['XX000', 'other'],
   ])('maps database error %s to %s', async (code, meaning) => {
     const { a } = api(() => pgError(code));
@@ -113,6 +119,62 @@ describe('api', () => {
     await expect(failing.a.insertRecord({ id: 'x', roomId: 'r', kind: 1, ref: 'x', envelope: new Uint8Array(1) })).rejects.toBeInstanceOf(ApiError);
     await expect(failing.a.eraseRoom('r')).rejects.toBeInstanceOf(ApiError);
     await expect(failing.a.createRoom(new Uint8Array(32))).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('reads every record in the room, oldest first', async () => {
+    const env = toBytea(new Uint8Array([9, 8]));
+    const { a, calls } = api(() => json([{ id: 'x', room_id: 'r', author_id: 'u', kind: 200, ref: 's', envelope: env, created_at: 't' }]));
+    const rows = await a.allRecords('r');
+    expect(rows).toEqual([{ id: 'x', room_id: 'r', author_id: 'u', kind: 200, ref: 's', envelope: new Uint8Array([9, 8]), created_at: 't' }]);
+    expect(calls[0]!.url).toContain('room_id=eq.r');
+    expect(calls[0]!.url).toContain('order=created_at.asc');
+    expect(calls[0]!.url).toContain('limit=5000');
+    expect(await api(() => json(null)).a.allRecords('r')).toEqual([]);
+    await expect(api(() => pgError('XX000')).a.allRecords('r')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('deletes a record by id', async () => {
+    const { a, calls } = api(() => new Response(null, { status: 204 }));
+    await a.deleteRecord('x');
+    expect(calls[0]!.init.method).toBe('DELETE');
+    expect(calls[0]!.url).toContain('id=eq.x');
+    await expect(api(() => pgError('XX000')).a.deleteRecord('x')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('votes to keep the room and reads back only its own vote', async () => {
+    const { a, calls } = api((url) => (url.includes('vote_keep') ? json(true) : json([{ cycle: 1 }])));
+    expect(await a.voteKeep('r', true)).toBe(true);
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ p_room: 'r', p_keep: true });
+    expect(await a.myKeepVote('r')).toBe(true);
+    expect(calls[1]!.url).toContain('/keep_votes');
+    expect(calls[1]!.url).toContain('room_id=eq.r');
+
+    const none = api((url) => (url.includes('vote_keep') ? json(false) : json([])));
+    expect(await none.a.voteKeep('r', false)).toBe(false);
+    expect(await none.a.myKeepVote('r')).toBe(false);
+    const empty = api(() => json(null));
+    expect(await empty.a.myKeepVote('r')).toBe(false);
+
+    const failing = api(() => pgError('XX000'));
+    await expect(failing.a.voteKeep('r', true)).rejects.toBeInstanceOf(ApiError);
+    await expect(failing.a.myKeepVote('r')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('saves a backup as ciphertext and a lookup token only', async () => {
+    const { a, calls } = api(() => new Response(null, { status: 204 }));
+    await a.saveBackup('r', new Uint8Array([1]), new Uint8Array([2, 3]));
+    expect(calls[0]!.url).toBe('https://p/rest/v1/rpc/save_backup');
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ p_room: 'r', p_token: '\\x01', p_envelope: '\\x0203' });
+    await expect(api(() => pgError('XX000')).a.saveBackup('r', new Uint8Array(1), new Uint8Array(1))).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('recovers a room from the lookup token', async () => {
+    const { a, calls } = api(() => json([{ room_id: 'r', role: 'invitee', envelope: '\\x0a0b' }]));
+    expect(await a.recoverRoom(new Uint8Array([7]))).toEqual({ roomId: 'r', role: 'invitee', envelope: new Uint8Array([10, 11]) });
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ p_token: '\\x07' });
+    await expect(api(() => json([])).a.recoverRoom(new Uint8Array(1))).rejects.toMatchObject({ code: 'not-found' });
+    await expect(api(() => json(null)).a.recoverRoom(new Uint8Array(1))).rejects.toMatchObject({ code: 'not-found' });
+    await expect(api(() => pgError('P0007')).a.recoverRoom(new Uint8Array(1))).rejects.toMatchObject({ code: 'not-found' });
   });
 
   it('uses the global fetch when none is given', async () => {

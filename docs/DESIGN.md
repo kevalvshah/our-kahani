@@ -5,14 +5,15 @@
 > - Fonts are self-hosted from `@fontsource` packages (no Google Fonts), per CLAUDE.md.
 > - Presentations are real browser behaviour: phones get header + bottom tabs, laptops (1024px+)
 >   get the sidebar, the installed Home Screen app swaps the Today footnote. No drawn device frames.
-> - No sample people, photos, notes or films in the live app. Screens that need the encrypted room
->   records show the final design with empty states and "Soon" on actions not built yet.
+> - No sample people, photos, notes or films in the live app: every name is typed by the person,
+>   and screens show designed empty states until there is data.
 > - Theme has a third choice, "Phone", matching the copy "Follow the phone, or lock it".
 > - The safety code keeps six emoji from the no-animals set (the handoff shows five, one an animal).
 > - The invite key highlight uses ink on accent-soft, and the E2E badge uses ink text, because
 >   accent-coloured small text on the light paper is below WCAG AA contrast.
-> - The safety footer is country-aware from the browser language (UK, US, Canada, Australia
->   verified numbers; everywhere else the generic line and findahelpline.com).
+> - The safety footer is country-aware from the country chosen at setup, else the browser
+>   language (UK, US, Canada, Australia verified numbers; everywhere else the generic line and
+>   findahelpline.com).
 
 
 ## Overview

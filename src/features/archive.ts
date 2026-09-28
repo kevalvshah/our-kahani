@@ -11,13 +11,18 @@ import { makeXlsx, makeZip, slug, type Sheet } from './xlsx';
 // partner's Gentle Corner note only if they allowed saving.
 
 const plain = (list: [string, string, string][], id: string) => list.find((x) => x[0] === id)?.[2] ?? id;
-const today = () => new Date().toISOString().slice(0, 10);
+/** YYYY-MM-DD in this phone's own time zone (not UTC, which can be a day off). */
+const localDate = (ms: number) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const today = () => localDate(Date.now());
 
 export function savedSheets(items: SavedItem[], me: string, partner: string): Sheet[] {
   const rows = [['Saved on', 'Category', 'Source', 'Question or topic', `${partner} said`, 'You said', 'Your note', 'Date']];
   [...items]
     .sort((a, b) => b.t - a.t)
-    .forEach((x) => rows.push([new Date(x.t).toISOString().slice(0, 10), labelOf(x.label)[2], x.src, x.q, x.theirs, x.mine, x.note, x.date]));
+    .forEach((x) => rows.push([localDate(x.t), labelOf(x.label)[2], x.src, x.q, x.theirs, x.mine, x.note, x.date]));
   const dated = items
     .filter((x) => x.date)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -114,7 +119,7 @@ export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uin
       ['Exported by', me],
       ['Room', hashtag ?? '(not named yet)'],
       ['Exported on', today()],
-      ['Room ends', new Date(d.room.endsAt).toISOString().slice(0, 10)],
+      ['Room ends', localDate(d.room.endsAt)],
       ['Note', "Only answers you have both opened are included. A partner's Gentle Corner note is included only if they allowed saving."],
     ],
     widths: [16, 80],
@@ -130,7 +135,7 @@ This file was put together on your phone. The server cannot read your data, so i
 Inside:
 - our-answers.xlsx: the answers you both opened, plus watched-together, stories, songs and more
 ${saved.length ? `- notes-about-${slug(partner)}.xlsx: your private saved notes. Only you have these\n` : ''}${media.length ? `- media/: ${media.length} photos and voice notes, unlocked on this phone\n` : ''}
-Your room ends on ${new Date(d.room.endsAt).toISOString().slice(0, 10)} unless you both choose to keep it for 4 more weeks.
+Your room ends on ${localDate(d.room.endsAt)} unless you both choose to keep it for 4 more weeks.
 Keep this file somewhere private.
 `;
   return { bytes: makeZip([{ name: 'README.txt', data: readme }, ...files, ...media.map((m) => ({ name: `media/${m.name}`, data: m.data }))]), name: `room-data-${today()}.zip` };
