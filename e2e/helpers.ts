@@ -186,6 +186,9 @@ interface ScreenDef {
   ready?: (page: Page) => Promise<void>;
   /** Screenshot the visible screen only: the page's length depends on what other tests did. */
   viewportOnly?: boolean;
+  /** Left out of screenshot comparison: its content is whatever other tests answered (still
+   *  covered by the accessibility and responsive checks). */
+  noScreenshot?: boolean;
 }
 
 const MINE = 'Asha';
@@ -280,7 +283,7 @@ export const SCREENS = {
   dreams: { who: 'creator', path: '/dreams', heading: 'Dreams board' },
   'hard-or-harmful': { who: 'creator', path: '/hard-or-harmful', heading: 'Is this hard, or is this harmful?' },
   // The book collects whatever the shared test couple has answered so far (test order).
-  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, mask: ['.book-body'], viewportOnly: true },
+  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, noScreenshot: true },
 
   // Hashtag locked: each person's room phrase (mandatory before anything else).
   'room-phrase': { who: 'named', path: '/', heading: /Your room phrase/, mask: ['.panel b', '.lead'] },
@@ -290,6 +293,8 @@ export type Screen = keyof typeof SCREENS;
 export const SCREEN_NAMES = Object.keys(SCREENS) as Screen[];
 
 /** Things that differ every run on any screen: invite links, safety codes, the install prompt. */
+export const SCREENSHOT_NAMES = SCREEN_NAMES.filter((s) => !(SCREENS[s] as ScreenDef).noScreenshot);
+
 export function fullPageFor(screen: Screen): boolean {
   return !(SCREENS[screen] as ScreenDef).viewportOnly;
 }
