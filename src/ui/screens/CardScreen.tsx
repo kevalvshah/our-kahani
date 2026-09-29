@@ -205,7 +205,7 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
             )
           ) : card.type === 'multi' ? (
             <>
-              <p class="small muted">Tick as many as you like.</p>
+              <p class="small muted"><span class="pill tint-gold">Select one or more</span> Tick as many as you like.</p>
               <div class="checks">
                 {opts.map((o) => {
                   const on = draft.picks?.includes(o.id) ?? false;

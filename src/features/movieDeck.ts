@@ -35,7 +35,7 @@ export function matchesFilter(t: CatalogTitle, f: DeckFilter): boolean {
 }
 
 /** The round's deck: titles matching the filter, minus ones already watched, in a shared order. */
-export function buildDeck(f: DeckFilter, round: number, watched: string[] = [], catalog: CatalogTitle[] = CATALOG): CatalogTitle[] {
+export function buildDeck(f: DeckFilter, round: number, watched: string[] = [], catalog: CatalogTitle[] = CATALOG, size = DECK_SIZE): CatalogTitle[] {
   const seen = new Set(watched.map((w) => w.toLowerCase()));
   const pool = catalog.filter((t) => matchesFilter(t, f) && !seen.has(t.t.toLowerCase()));
   const r = rng(round * 7919 + pool.length);
@@ -44,7 +44,22 @@ export function buildDeck(f: DeckFilter, round: number, watched: string[] = [], 
     const j = Math.floor(r() * (i + 1));
     [out[i], out[j]] = [out[j]!, out[i]!];
   }
-  return out.slice(0, DECK_SIZE);
+  return out.slice(0, size);
+}
+
+export const PICKS = 5;
+
+/** Old rounds saved swipes ({votes}); new ones save up to five picks. */
+export function picksOf(v: { picks?: string[]; votes?: Record<string, boolean> } | undefined): string[] {
+  if (!v) return [];
+  if (v.picks) return v.picks.slice(0, PICKS);
+  return Object.entries(v.votes ?? {}).filter(([, yes]) => yes).map(([id]) => id);
+}
+
+/** Titles both picked first, then the rest of each person's picks. */
+export function comparePicks(mine: string[], theirs: string[]) {
+  const both = mine.filter((id) => theirs.includes(id));
+  return { both, onlyMine: mine.filter((id) => !both.includes(id)), onlyTheirs: theirs.filter((id) => !both.includes(id)) };
 }
 
 /** How many titles a filter would offer (to show before starting). */

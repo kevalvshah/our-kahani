@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { howToWatch, SERVICES, type MovieSetup } from '../../content/extras';
 import type { Genre, TitleLang } from '../../content/titles';
-import { buildDeck, GENRE_LABEL, poolSize, type DeckFilter } from '../../features/movieDeck';
+import { buildDeck, comparePicks, GENRE_LABEL, PICKS, picksOf, poolSize, type DeckFilter } from '../../features/movieDeck';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
-import { Back, Chips, Done, Wait } from '../components';
+import { Back, Chips, Done, Problem, Wait } from '../components';
 import { PATHS } from '../router';
 
 // Movie Night. Swipes are an answer (kind 2): the server withholds the partner's swipes until
@@ -73,7 +73,7 @@ export function MovieNight() {
             Genre <span class="muted">(any if none picked)</span>
           </p>
           <Multi label="Genre" all={(Object.keys(GENRE_LABEL) as Genre[]).map((g) => [g, GENRE_LABEL[g]] as [Genre, string])} value={genres} onChange={setGenres} />
-          {fmt && <p class="small muted">{pool ? `${pool} titles to pick from. You each swipe the same ${Math.min(pool, 20)}.` : 'Nothing matches: try fewer filters.'}</p>}
+          {fmt && <p class="small muted">{pool ? `${pool} titles to pick from. You each pick up to 5.` : 'Nothing matches: try fewer filters.'}</p>}
           <button
             type="button"
             class="btn btn-primary btn-block seal"
@@ -109,34 +109,51 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
   const d = useRoomData();
   const ref = `movie:${setup.round}`;
   const watched = d.list<{ t: string }>(K.WATCHED).map((w) => w.data.t);
-  const deck = buildDeck({ fmt: setup.fmt, langs: setup.langs, genres: setup.genres }, setup.round, watched);
-  const mine = d.mine<{ votes: Record<string, boolean> }>(K.MOVIE_VOTES, ref)?.data.votes;
-  const theirs = d.theirs<{ votes: Record<string, boolean> }>(K.MOVIE_VOTES, ref)?.data.votes;
+  const pool = useMemo(
+    () => buildDeck({ fmt: setup.fmt, langs: setup.langs, genres: setup.genres }, setup.round, watched, undefined, Infinity),
+    [setup.round, setup.fmt, JSON.stringify(setup.langs), JSON.stringify(setup.genres), watched.length],
+  );
+  const byId = useMemo(() => new Map(pool.map((t) => [t.id, t])), [pool]);
+  const mineRec = d.mine<{ picks?: string[]; votes?: Record<string, boolean> }>(K.MOVIE_VOTES, ref);
+  const theirsRec = d.theirs<{ picks?: string[]; votes?: Record<string, boolean> }>(K.MOVIE_VOTES, ref);
+  const mine = mineRec ? picksOf(mineRec.data) : null;
+  const theirs = theirsRec ? picksOf(theirsRec.data) : null;
   const partnerDone = d.partnerAnswered(K.MOVIE_VOTES, ref);
-  const [votes, setVotes] = useState<Record<string, boolean>>({});
-  const [drag, setDrag] = useState(0);
-  const start = useRef<number | null>(null);
-  const idx = Object.keys(votes).length;
-  const item = deck[idx];
+  const [picks, setPicks] = useState<string[]>(() => mine ?? []);
+  const [editing, setEditing] = useState(false);
+  const [query, setQuery] = useState('');
+  const [shown, setShown] = useState(30);
+  const [problem, setProblem] = useState<string | null>(null);
 
-  function swipe(yes: boolean) {
-    if (!item) return;
-    const next = { ...votes, [item.id]: yes };
-    setVotes(next);
-    setDrag(0);
-    if (Object.keys(next).length === deck.length) void d.put(K.MOVIE_VOTES, ref, { votes: next });
+  const q = query.trim().toLowerCase();
+  const list = q ? pool.filter((t) => t.t.toLowerCase().includes(q) || t.lang.toLowerCase().includes(q)) : pool;
+  const toggle = (id: string) => setPicks((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= PICKS ? cur : [...cur, id]));
+
+  async function seal() {
+    setProblem(null);
+    const ok = await d.put(K.MOVIE_VOTES, ref, { picks });
+    if (!ok) setProblem(`${d.partner} has already picked, so your five are locked in.`);
+    setEditing(false);
   }
 
-  useEffect(() => {
-    if (mine) return;
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT') return;
-      if (e.key === 'ArrowRight') swipe(true);
-      if (e.key === 'ArrowLeft') swipe(false);
-    };
-    addEventListener('keydown', onKey);
-    return () => removeEventListener('keydown', onKey);
-  });
+  const Title = ({ id, picked, onPick }: { id: string; picked?: boolean; onPick: () => void }) => {
+    const t = byId.get(id);
+    if (!t) return null;
+    return (
+      <button type="button" class={picked ? 'option option-row is-picked' : 'option option-row'} aria-pressed={!!picked} onClick={onPick}>
+        <span class="option-emoji" aria-hidden="true">
+          {t.e}
+        </span>
+        <span class="option-text">
+          <span class="option-label">{t.t}</span>
+          <span class="option-sub">
+            {t.lang} · {t.genres.slice(0, 2).map((g) => GENRE_LABEL[g].split(' ').slice(1).join(' ')).join(', ')} · {t.year}
+          </span>
+          <span class="option-sub">{t.hook}</span>
+        </span>
+      </button>
+    );
+  };
 
   const summary = (
     <div class="chip-row">
@@ -155,150 +172,135 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
   );
 
   let body;
-  if (!mine) {
-    body = item ? (
+  if (!mine || editing) {
+    body = (
       <>
-        <p class="small muted">
-          {idx + 1} of {deck.length}. Swipe right for keen, left for pass (or use the arrow keys).
+        <p class="small">
+          <span class="pill tint-gold">Pick up to {PICKS}</span> Choose the ones you would happily watch. {d.partner} picks theirs too; then
+          you see both lists and choose one together.
         </p>
-        <div class="deck">
-          <div
-            class={`swipecard${drag > 40 ? ' is-yes' : drag < -40 ? ' is-no' : ''}`}
-            role="group"
-            aria-label={item.t}
-            style={{ transform: drag ? `translateX(${drag}px) rotate(${drag / 18}deg)` : '' }}
-            onPointerDown={(e) => {
-              start.current = e.clientX;
-              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-            }}
-            onPointerMove={(e) => start.current !== null && setDrag(e.clientX - start.current)}
-            onPointerUp={() => {
-              start.current = null;
-              if (Math.abs(drag) > 90) swipe(drag > 0);
-              else setDrag(0);
-            }}
-            onPointerCancel={() => {
-              start.current = null;
-              setDrag(0);
-            }}
-          >
-            <div class="poster" aria-hidden="true">
-              {item.e}
-            </div>
-            <h2 class="swipe-title">{item.t}</h2>
-            <span class="pill tint-pink">
-              {item.lang} · {item.genres.slice(0, 2).map((g) => GENRE_LABEL[g].split(' ').slice(1).join(' ')).join(', ')} · {item.year}
-            </span>
-            <p class="small">{item.hook}</p>
-          </div>
+        <label class="field-label" for="msearch">
+          Search {pool.length} titles
+        </label>
+        <input
+          id="msearch"
+          class="field"
+          value={query}
+          placeholder="A title or a language"
+          autocomplete="off"
+          onInput={(e) => {
+            setQuery((e.target as HTMLInputElement).value);
+            setShown(30);
+          }}
+        />
+        <p class="small muted" aria-live="polite">
+          {picks.length} of {PICKS} picked{picks.length >= PICKS ? ' · tap one to take it out' : ''}
+        </p>
+        <div class="options options-stack">
+          {list.slice(0, shown).map((t) => (
+            <Title key={t.id} id={t.id} picked={picks.includes(t.id)} onPick={() => toggle(t.id)} />
+          ))}
         </div>
-        <div class="btn-pair">
-          <button type="button" class="btn btn-secondary" onClick={() => swipe(false)}>
-            ✖ Pass
+        {list.length > shown && (
+          <button type="button" class="btn btn-secondary btn-block" onClick={() => setShown(shown + 30)}>
+            Show more ({list.length - shown} left)
           </button>
-          <button type="button" class="btn btn-primary" onClick={() => swipe(true)}>
-            💚 Keen
-          </button>
-        </div>
-        {idx > 0 && (
+        )}
+        <Problem text={problem} />
+        <button type="button" class="btn btn-primary btn-block seal" disabled={!picks.length} onClick={() => void seal()}>
+          Seal my {picks.length === 1 ? 'pick' : `${picks.length} picks`} 🍿
+        </button>
+      </>
+    );
+  } else if (!theirs) {
+    body = (
+      <>
+        <Wait>
+          Your {mine.length === 1 ? 'pick is' : `${mine.length} picks are`} sealed ✓ {partnerDone ? 'Opening…' : `Waiting for ${d.partner} 🍿`}
+        </Wait>
+        {!partnerDone && (
           <button
             type="button"
             class="btn btn-secondary btn-block seal"
             onClick={() => {
-              const keys = Object.keys(votes);
-              const next = { ...votes };
-              delete next[keys[keys.length - 1]!];
-              setVotes(next);
+              setPicks(mine);
+              setEditing(true);
             }}
           >
-            ↩ Undo last
+            Change my picks
           </button>
         )}
       </>
-    ) : (
-      <Wait>Saving your swipes…</Wait>
     );
-  } else if (!theirs) {
-    body = <Wait>Your swipes are sealed ✓ {partnerDone ? 'Opening…' : `Waiting for ${d.partner} 🍿`}</Wait>;
   } else {
-    const matches = deck.filter((t) => mine[t.id] && theirs[t.id]);
-    if (!matches.length) {
-      body = (
+    const { both, onlyMine, onlyTheirs } = comparePicks(mine, theirs);
+    const pick = setup.pick ? byId.get(setup.pick) : undefined;
+    const ok = pick && setup.when && (setup.mode === 'home' || setup.svc) && (setup.fmt === 'movie' || setup.eps);
+    const group = (title: string, ids: string[]) =>
+      ids.length > 0 && (
         <>
-          <p class="reveal-banner">No match this time 🙂</p>
-          <p class="small muted">Only matches are shown. Try a different mood and swipe again.</p>
-          <button type="button" class="btn btn-primary btn-block" onClick={() => void save({ started: false })}>
-            Try another mood
-          </button>
-        </>
-      );
-    } else {
-      const pick = matches.find((t) => t.id === setup.pick);
-      const ok = pick && setup.when && (setup.mode === 'home' || setup.svc) && (setup.fmt === 'movie' || setup.eps);
-      body = (
-        <>
-          <p class="reveal-banner">It is a match 🎉</p>
+          <h2 class="sub-title">{title}</h2>
           <div class="options options-stack">
-            {matches.map((t) => (
-              <button key={t.id} type="button" class={setup.pick === t.id ? 'option option-row is-picked' : 'option option-row'} aria-pressed={setup.pick === t.id} onClick={() => void save({ pick: t.id })}>
-                <span class="option-emoji" aria-hidden="true">
-                  {t.e}
-                </span>
-                <span class="option-text">
-                  <span class="option-label">{t.t}</span>
-                  <span class="option-sub">{t.lang} · {t.year}</span>
-                </span>
-              </button>
+            {ids.map((id) => (
+              <Title key={id} id={id} picked={setup.pick === id} onPick={() => void save({ pick: id })} />
             ))}
           </div>
-          {pick && (
-            <>
-              <p class="field-label">When?</p>
-              <Chips label="When" value={setup.when ?? null} options={[['Tonight', '🗓️ Tonight'], ['Tomorrow', '🗓️ Tomorrow'], ['This weekend', '🗓️ This weekend']]} onPick={(when) => void save({ when })} />
-              {setup.mode === 'apart' && (
-                <>
-                  <p class="field-label">Where is it streaming?</p>
-                  <Chips label="Service" value={setup.svc ?? null} options={SERVICES.map(([id, e, l]) => [id, `${e} ${l}`] as [string, string])} onPick={(svc) => void save({ svc })} />
-                </>
-              )}
-              {setup.fmt !== 'movie' && (
-                <>
-                  <p class="field-label">How many episodes?</p>
-                  <Chips label="Episodes" value={setup.eps ?? null} options={[['1', '▶️ Just one'], ['2', '⏩ Two'], ['3', '🍿 Three or more']]} onPick={(eps) => void save({ eps })} />
-                </>
-              )}
-            </>
-          )}
-          {ok && (
-            <div class="panel panel-accent">
-              <div class="panel-title">
-                {pick.e} {pick.t}
-              </div>
-              <p class="small">
-                <b>{setup.when}</b>
-                {setup.fmt !== 'movie' ? ` · ${setup.eps === '3' ? '3+ episodes' : setup.eps === '2' ? '2 episodes' : '1 episode'}` : ''}
-              </p>
-              <ul class="tips">
-                {howToWatch(setup.mode, setup.dev, setup.svc ?? null).map((t) => (
-                  <li key={t}>{t}</li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                class="btn btn-primary btn-block"
-                onClick={async () => {
-                  await d.add(K.WATCHED, `watched:${Date.now().toString(36)}`, { t: pick.t, when: setup.when });
-                  await save({ started: false, pick: null, when: null, svc: null, eps: null });
-                }}
-              >
-                We watched it 🎉
-              </button>
-            </div>
-          )}
-          {!ok && pick && <Done>Match picked. Choose when{setup.mode === 'apart' ? ' and where' : ''} to see how to watch.</Done>}
         </>
       );
-    }
+    body = (
+      <>
+        <p class="reveal-banner">{both.length ? `${both.length} in common 🎉` : 'Different picks: choose one together 🍿'}</p>
+        {group('You both picked', both)}
+        {group(`${d.partner}'s picks`, onlyTheirs)}
+        {group('Your picks', onlyMine)}
+        <p class="small muted">Tap the one you will watch. Either of you can choose, and change it.</p>
+        {pick && (
+          <>
+            <p class="field-label">When?</p>
+            <Chips label="When" value={setup.when ?? null} options={[['Tonight', '🗓️ Tonight'], ['Tomorrow', '🗓️ Tomorrow'], ['This weekend', '🗓️ This weekend']]} onPick={(when) => void save({ when })} />
+            {setup.mode === 'apart' && (
+              <>
+                <p class="field-label">Where is it streaming?</p>
+                <Chips label="Service" value={setup.svc ?? null} options={SERVICES.map(([id, e, l]) => [id, `${e} ${l}`] as [string, string])} onPick={(svc) => void save({ svc })} />
+              </>
+            )}
+            {setup.fmt !== 'movie' && setup.fmt !== 'special' && (
+              <>
+                <p class="field-label">How many episodes?</p>
+                <Chips label="Episodes" value={setup.eps ?? null} options={[['1', '▶️ Just one'], ['2', '⏩ Two'], ['3', '🍿 Three or more']]} onPick={(eps) => void save({ eps })} />
+              </>
+            )}
+          </>
+        )}
+        {ok && (
+          <div class="panel panel-accent">
+            <div class="panel-title">
+              {pick.e} {pick.t}
+            </div>
+            <p class="small">
+              <b>{setup.when}</b>
+              {setup.fmt === 'series' || setup.fmt === 'binge' ? ` · ${setup.eps === '3' ? '3+ episodes' : setup.eps === '2' ? '2 episodes' : '1 episode'}` : ''}
+            </p>
+            <ul class="tips">
+              {howToWatch(setup.mode, setup.dev, setup.svc ?? null).map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              class="btn btn-primary btn-block"
+              onClick={async () => {
+                await d.add(K.WATCHED, `watched:${Date.now().toString(36)}`, { t: pick.t, when: setup.when });
+                await save({ started: false, pick: null, when: null, svc: null, eps: null });
+              }}
+            >
+              We watched it 🎉
+            </button>
+          </div>
+        )}
+        {!ok && pick && <Done>Picked. Choose when{setup.mode === 'apart' ? ' and where' : ''} to see how to watch.</Done>}
+      </>
+    );
   }
 
   return (
@@ -307,7 +309,7 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
       <div class="question-card">
         <span class="pack-tag">🍿 Movie Night</span>
         <h1 class="question" tabIndex={-1}>
-          Swipe to pick
+          Pick your five
         </h1>
         {summary}
         {body}

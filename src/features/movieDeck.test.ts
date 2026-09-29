@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOG, type CatalogTitle } from '../content/titles';
-import { buildDeck, DECK_SIZE, GENRE_LABEL, kindFor, matchesFilter, poolSize } from './movieDeck';
+import { buildDeck, comparePicks, DECK_SIZE, GENRE_LABEL, kindFor, matchesFilter, picksOf, poolSize } from './movieDeck';
 
 describe('Movie Night deck', () => {
   it('maps the mood to a kind of title', () => {
@@ -39,5 +39,20 @@ describe('Movie Night deck', () => {
 
   it('labels every genre', () => {
     for (const t of CATALOG) for (const g of t.genres) expect(GENRE_LABEL[g]).toBeTruthy();
+  });
+
+  it('offers the whole pool in the shared order when asked', () => {
+    const f = { fmt: 'series' as const };
+    const all = buildDeck(f, 2, [], undefined, Infinity);
+    expect(all).toHaveLength(poolSize(f));
+    expect(all.slice(0, DECK_SIZE).map((t) => t.id)).toEqual(buildDeck(f, 2).map((t) => t.id));
+  });
+
+  it('reads picks (and old swipes), and compares them', () => {
+    expect(picksOf(undefined)).toEqual([]);
+    expect(picksOf({ picks: ['a', 'b', 'c', 'd', 'e', 'f'] })).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(picksOf({ votes: { a: true, b: false, c: true } })).toEqual(['a', 'c']);
+    expect(picksOf({})).toEqual([]);
+    expect(comparePicks(['a', 'b', 'c'], ['c', 'd', 'a'])).toEqual({ both: ['a', 'c'], onlyMine: ['b'], onlyTheirs: ['d'] });
   });
 });

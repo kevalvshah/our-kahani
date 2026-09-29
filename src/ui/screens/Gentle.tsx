@@ -199,7 +199,7 @@ function Compose({ onDone }: { onDone: () => void }) {
   return (
     <div class="gentle-compose">
       <p class="small muted">You never have to share details. Just pick what feels true.</p>
-      <p class="field-label">What would you like {d.partner} to know?</p>
+      <p class="field-label">What would you like {d.partner} to know? <span class="pill tint-gold">Select one or more</span></p>
       <div class="checks">
         {G_TOPICS.map(([id, e, l]) => (
           <Check key={id} on={draft.topics.includes(id)} onToggle={() => toggle('topics', id)}>
