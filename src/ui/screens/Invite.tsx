@@ -5,7 +5,7 @@ import { useRoom } from '../../state/roomContext';
 import { Em, Link, ScreenTitle } from '../components';
 import { PATHS } from '../router';
 import { problemText } from '../problems';
-import { useCreateRoom } from './Today';
+import { useCreateRoom } from './Welcome';
 
 export function Invite() {
   const { room, setRoom } = useRoom();

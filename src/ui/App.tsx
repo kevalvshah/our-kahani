@@ -2,7 +2,6 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { K } from '../data/kinds';
 import { RoomDataProvider, useMaybeRoomData } from '../data/RoomData';
-import { keepPlaying } from '../features/progress';
 import { isInAppBrowser } from '../platform/inAppBrowser';
 import { controller } from '../state/controller';
 import type { Room } from '../state/room';
@@ -11,13 +10,11 @@ import { Em, Link } from './components';
 import { AREA_PATH, Badge, Toasts, useActivity } from './Activity';
 import { PartnerPause } from './PauseBanner';
 import type { Area } from '../features/activity';
-import { cardPath, navigate, PATHS, useRoute, type Route, type RouteName } from './router';
+import { navigate, PATHS, useRoute, type Route, type RouteName } from './router';
 import { Blocked } from './screens/Blocked';
 import { lazy } from './lazy';
-import { CardScreen } from './screens/CardScreen';
 import { Invite, Join } from './screens/Invite';
-import { AddCard, PackScreen, Packs } from './screens/Packs';
-import { Today, Welcome } from './screens/Today';
+import { Welcome } from './screens/Welcome';
 
 // Everything not on the first screen loads when opened.
 const MicroDates = lazy(() => import('./screens/Games').then((m) => m.MicroDates));
@@ -37,6 +34,12 @@ const Recap = lazy(() => import('./screens/Seasons').then((m) => m.Recap));
 const DilKiBaat = lazy(() => import('./screens/Together').then((m) => m.DilKiBaat));
 const ShukriyaJar = lazy(() => import('./screens/Rituals').then((m) => m.ShukriyaJar));
 const WeeklyHuddle = lazy(() => import('./screens/Rituals').then((m) => m.WeeklyHuddle));
+const Today = lazy(() => import('./screens/Today').then((m) => m.Today));
+const NextCard = lazy(() => import('./screens/Today').then((m) => m.NextCard));
+const CardScreen = lazy(() => import('./screens/CardScreen').then((m) => m.CardScreen));
+const Packs = lazy(() => import('./screens/Packs').then((m) => m.Packs));
+const PackScreen = lazy(() => import('./screens/Packs').then((m) => m.PackScreen));
+const AddCard = lazy(() => import('./screens/Packs').then((m) => m.AddCard));
 const DreamsBoard = lazy(() => import('./screens/Rituals').then((m) => m.DreamsBoard));
 const HardOrHarmful = lazy(() => import('./screens/Safety').then((m) => m.HardOrHarmful));
 const KahaniBook = lazy(() => import('./screens/Book').then((m) => m.KahaniBook));
@@ -277,15 +280,11 @@ function InRoom({ route, onName, onCounts }: { route: Route; onName: (name: stri
 }
 
 function Screen({ route }: { route: Route }): ComponentChildren {
-  const d = useMaybeRoomData()!;
   switch (route.name) {
     case 'card':
       return <CardScreen key={route.ref} cardRef={route.ref} />;
-    case 'next': {
-      const next = keepPlaying(d);
-      queueMicrotask(() => navigate(next ? cardPath(next) : PATHS.today, { replace: true }));
-      return null;
-    }
+    case 'next':
+      return <NextCard />;
     case 'seasons':
       return <Seasons />;
     case 'season':
