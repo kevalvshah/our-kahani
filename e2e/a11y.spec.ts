@@ -22,6 +22,11 @@ test.describe('accessibility', { tag: '@a11y' }, () => {
       test(`${screen} (${scheme}) has no WCAG 2.2 AA violations`, async ({ stage }) => {
         test.setTimeout(SCREEN_TIMEOUT);
         const shown = await stage.open(screen, { colorScheme: scheme });
+        // Check the whole screen at once: the sticky header and tab bar would otherwise cover part
+        // of whatever sits at the fold, which depends on font metrics, not on the design.
+        const size = shown.viewportSize()!;
+        const tall = await shown.evaluate(() => document.documentElement.scrollHeight);
+        if (tall > size.height) await shown.setViewportSize({ width: size.width, height: tall });
         const results = await new AxeBuilder({ page: shown })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
           .analyze();

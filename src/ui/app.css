@@ -38,6 +38,14 @@ h1:focus { outline: none; }
   border-bottom: 1px solid var(--k-line);
 }
 .header-mark { font-family: var(--k-serif); font-size: 1.5625rem; line-height: 1.1; letter-spacing: -0.2px; }
+.header-mark, .sidebar-mark { display: flex; align-items: center; gap: 0.5rem; }
+.mark-icon { flex: none; border-radius: 22.4%; }
+/* Stacked lockup from the icon handoff: icon, then the name, centred on the phone. */
+.lockup { display: flex; align-items: center; gap: 0.875rem; margin: 0.25rem 0 1rem; }
+.lockup img { width: 4.5rem; height: 4.5rem; border-radius: 22.4%; }
+.lockup-name { font-family: var(--k-serif); font-size: 2.5rem; line-height: 1; letter-spacing: -0.5px; }
+.welcome-note { border-color: color-mix(in srgb, var(--k-accent) 40%, var(--k-line)); }
+.welcome-note .btn-small { margin-top: 0.25rem; }
 .kicker {
   margin-top: 3px; font-size: 0.71875rem; color: var(--k-muted);
   letter-spacing: 0.06em; text-transform: uppercase;
@@ -57,6 +65,8 @@ h1:focus { outline: none; }
 :root[data-k-texture='plain'] .scroll { background-image: none; }
 .content { max-width: 40rem; margin: 0 auto; }
 
+/* Focus and in-page jumps never land behind the sticky header or tab bar (WCAG 2.4.11). */
+html { scroll-padding-top: 5.5rem; scroll-padding-bottom: 5.5rem; }
 .tabs {
   position: sticky; bottom: 0; z-index: 2;
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
@@ -428,6 +438,8 @@ h1:focus { outline: none; }
 .btn-danger { background: var(--k-pink); color: var(--k-on-accent); }
 .panel-accent { background: var(--k-accent-soft); border-color: var(--k-accent); }
 .panel-pink { background: var(--k-pink-soft); border-color: var(--k-pink); }
+/* Soft pink ground: full-strength ink so small print and links keep AA contrast. */
+.panel-pink .muted, .panel-pink a { color: var(--k-ink); }
 
 .reveal-line { display: block; }
 .why { display: block; margin-top: 3px; font-style: italic; font-weight: 400; color: var(--k-muted); font-size: 0.84375rem; }

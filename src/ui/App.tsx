@@ -151,7 +151,10 @@ function Shell() {
       </a>
       <div class="shell">
         <aside class="sidebar">
-          <div class="sidebar-mark">{roomName ?? 'Our Kahani'}</div>
+          <div class="sidebar-mark">
+            <img class="mark-icon" src="/icons/favicon.svg" alt="" width={32} height={32} />
+            {roomName ?? 'Our Kahani'}
+          </div>
           <div class="kicker sidebar-kicker">{kicker}</div>
           <nav aria-label="All screens">
             {NAV.map((n) => (
@@ -168,7 +171,10 @@ function Shell() {
         <div class="column">
           <header class="app-header">
             <div>
-              <div class="header-mark">{roomName ?? 'Our Kahani'}</div>
+              <div class="header-mark">
+                <img class="mark-icon" src="/icons/favicon.svg" alt="" width={28} height={28} />
+                {roomName ?? 'Our Kahani'}
+              </div>
               <div class="kicker">{kicker}</div>
             </div>
             <Link class="e2e" href={PATHS.privacy} title="End-to-end encrypted">

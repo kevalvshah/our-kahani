@@ -3,6 +3,7 @@ import { VoicePlayer, VoiceRecord } from '../Voice';
 import type { VoiceNote } from '../../features/cardLogic';
 import { InstallHint } from '../Install';
 import { useState } from 'preact/hooks';
+
 import { dayRef, PACKS, SEASON } from '../../content/cards';
 import { hashtagOptions, normaliseHashtag } from '../../content/extras';
 import { K } from '../../data/kinds';
@@ -15,9 +16,12 @@ import { controller } from '../../state/controller';
 import { SEASON_DAYS } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
 import { Brand } from '../Brand';
+import { lazy } from '../lazy';
 import { Done, Em, Link, Note, Problem, Row } from '../components';
 import { problemText } from '../problems';
 import { cardPath, navigate, packPath, PATHS } from '../router';
+
+const WelcomeNote = lazy(() => import('../WelcomeNote').then((m) => m.WelcomeNote));
 
 export function useCreateRoom() {
   const { setRoom } = useRoom();
@@ -125,6 +129,8 @@ export function Today() {
             ? 'Your cards are ready. Send the link so your person can join.'
             : 'Small cards at your own pace. One tap or one line each.'}
       </p>
+
+      <WelcomeNote roomId={d.room.id} />
 
       {!d.room.partnerJoined && d.room.role === 'creator' && (
         <div class="pingbar">
@@ -520,3 +526,4 @@ function NeedMenu() {
     </div>
   );
 }
+
