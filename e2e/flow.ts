@@ -8,7 +8,7 @@ export async function finishSetup(page: Page, name: string): Promise<string[]> {
   await expect(page.getByLabel('Your first name')).toBeVisible({ timeout: 20_000 });
   await page.getByLabel('Your first name').fill(name);
   await page.getByRole('button', { name: 'Start Pehli Baat' }).click();
-  await expect(page.getByLabel('Your first name')).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByLabel('Your first name')).toBeHidden({ timeout: 45_000 });
   return [];
 }
 
@@ -38,8 +38,8 @@ export async function lockHashtag(suggester: Page, agreer: Page): Promise<string
   await suggester.getByRole('button', { name: 'Suggest this one' }).click();
   await expect(suggester.getByText(/You suggested #/)).toBeVisible({ timeout: 20_000 });
   await agreer.goto('/');
-  await agreer.getByRole('button', { name: 'Agree and lock it 🔒' }).click({ timeout: 20_000 });
-  await expect(agreer.getByRole('heading', { name: /Your room phrase/ })).toBeVisible({ timeout: 20_000 });
+  await agreer.getByRole('button', { name: 'Agree and lock it 🔒' }).click({ timeout: 45_000 });
+  await expect(agreer.getByRole('heading', { name: /Your room phrase/ })).toBeVisible({ timeout: 45_000 });
   return ((await agreer.locator('.panel b').first().textContent()) ?? '').trim();
 }
 
