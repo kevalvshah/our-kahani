@@ -118,7 +118,7 @@ export function VoicePlayer({ note, who }: { note: VoiceNote; who: string }) {
     };
   }, [note.obj]);
 
-  if (failed) return <span class="small muted">🎙️ Voice note ({note.secs} s) could not be opened here.</span>;
+  if (failed) return <span class="small muted">🎙️ Voice note ({note.secs} s) has gone: voice notes are kept for 28 days.</span>;
   if (!url) return <span class="small muted">🎙️ Opening the voice note…</span>;
   return <audio class="voice" controls preload="metadata" src={url} aria-label={`Voice note from ${who}, ${note.secs} seconds`} />;
 }

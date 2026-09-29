@@ -255,9 +255,9 @@ export const SCREENS = {
   'room-data': {
     who: 'creator',
     path: '/room',
-    heading: /days? left|Ends today/,
+    heading: 'Your room, your pace',
     mask: ['.question-card h1', '.facts dd', '.question-card p.small b'],
-    ready: (p) => expect(p.getByRole('button', { name: /Keep it 4 more weeks/ })).toBeEnabled({ timeout: 20_000 }),
+    ready: (p) => expect(p.getByRole('button', { name: /Download everything/ })).toBeEnabled({ timeout: 20_000 }),
   },
   'invite-both-in': { who: 'creator', path: '/invite', heading: 'You’re both in', mask: ['.emoji'] },
 

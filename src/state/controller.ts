@@ -79,7 +79,8 @@ export function createController(deps: Deps = defaultDeps()) {
       partnerJoined,
       backedUp: stored.backedUp,
       startedAt: server ? Date.parse(server.created_at) : stored.savedAt,
-      endsAt: server ? Date.parse(server.ends_at) : stored.savedAt + 28 * 86_400_000,
+      // Rooms have no end date now ('infinity' on the server).
+      endsAt: server && Number.isFinite(Date.parse(server.ends_at)) ? Date.parse(server.ends_at) : Infinity,
     };
   }
 

@@ -26,7 +26,7 @@ const ROOM_PAGES: Record<string, string | RegExp> = {
   '/right-now': 'What are you up to?',
   '/gentle': 'Only if you both want it',
   '/saved': 'About Your person',
-  '/room': /days? left|Ends today/,
+  '/room': 'Your room, your pace',
   '/invite': 'Send this to your person',
   '/look': 'Make it ours',
   '/privacy': "Even the developer can't read it",
@@ -59,9 +59,9 @@ test.describe('app shell and screens', { tag: '@functional' }, () => {
     // Setup took us to the invite; Today now says we are waiting for the partner.
     await page.goto('/');
     await expect(h1(page, 'Namaste, Asha')).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Day 1 of 14 · room ends in 28 days').first()).toBeAttached();
+    await expect(page.getByText('Season 1 · Pehli Baat · at your own pace').first()).toBeAttached();
     await expect(page.getByText('Waiting for your person to join')).toBeVisible();
-    await expect(page.getByRole('link', { name: /Open today's card/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open the next card/ })).toBeVisible();
     await page.getByRole('link', { name: 'Show link' }).click();
     await expect(h1(page, 'Send this to your person')).toBeVisible();
     await expect(page.locator('.invite')).toHaveText(invite);
@@ -114,7 +114,7 @@ test.describe('app shell and screens', { tag: '@functional' }, () => {
     await page.goto('/');
     await expect(h1(page, 'Namaste, Asha')).toBeVisible({ timeout: 20_000 });
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Room' }).click();
-    await expect(h1(page, /days? left/)).toBeFocused({ timeout: 20_000 });
+    await expect(h1(page, 'Your room, your pace')).toBeFocused({ timeout: 20_000 });
   });
 
   test('"Make it ours" applies at once, persists on this device, and never leaves it', async ({ page }) => {
@@ -168,14 +168,16 @@ test.describe('app shell and screens', { tag: '@functional' }, () => {
     await page.goto('/room');
     await expect(page.getByText('Ravi joined')).toBeVisible({ timeout: 20_000 });
     // Asking first; cancelling keeps everything.
-    await page.getByRole('button', { name: '🧹 Erase this room now' }).click();
-    await expect(page.getByText('Erase this room now?')).toBeVisible();
-    await expect(page.getByRole('button', { name: '📥 Download first' })).toBeVisible();
+    await page.getByRole('button', { name: '🧹 Erase this room' }).click();
+    await expect(page.getByText('Erase this room?')).toBeVisible();
     await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.getByText('Erase this room now?')).toBeHidden();
+    await expect(page.getByText('Erase this room?')).toBeHidden();
 
-    await page.getByRole('button', { name: '🧹 Erase this room now' }).click();
-    await page.getByRole('button', { name: 'Erase for good' }).click();
+    // Erasing downloads everything first, then deletes the room for both.
+    await page.getByRole('button', { name: '🧹 Erase this room' }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: '📥 Download and erase' }).click();
+    expect((await download).suggestedFilename()).toMatch(/^room-data-.*\.zip$/);
     await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
     await expect(page.getByRole('button', { name: 'Create a room' })).toBeVisible({ timeout: 20_000 });
     await page.reload();

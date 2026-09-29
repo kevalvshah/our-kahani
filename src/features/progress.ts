@@ -1,7 +1,7 @@
 import { PACKS, packRef, SEASON, dayRef, type CardEntry } from '../content/cards';
 import { K } from '../data/kinds';
 import type { RoomData } from '../data/RoomData';
-import { dayOfSeason, SEASON_DAYS } from '../state/room';
+import { SEASON_DAYS } from '../state/room';
 import type { Answer, BonusCard } from './cardLogic';
 import { entryFor, isAnswered } from './cardLogic';
 
@@ -18,15 +18,15 @@ export function doneByMe(d: RoomData, ref: string): boolean {
   return isAnswered(c, d.mine<Answer>(K.ANSWER, ref)?.data);
 }
 
-export function unlockedDays(d: RoomData): number[] {
-  const today = dayOfSeason(d.room);
-  return Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).filter((n) => n <= today && SEASON[n]);
+/** Every season card is open from the start: couples go at their own pace. */
+export function unlockedDays(_d?: RoomData): number[] {
+  return Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).filter((n) => SEASON[n]);
 }
 
 /** The first card waiting on this person: season days so far, then extra cards from the partner. */
-export function firstWaiting(d: RoomData): string | null {
-  for (const n of unlockedDays(d)) if (!doneByMe(d, dayRef(n))) return dayRef(n);
-  for (const b of d.list(K.BONUS_CARD)) if (!b.mine && !doneByMe(d, b.ref)) return b.ref;
+export function firstWaiting(d: RoomData, skip?: string): string | null {
+  for (const n of unlockedDays(d)) if (dayRef(n) !== skip && !doneByMe(d, dayRef(n))) return dayRef(n);
+  for (const b of d.list(K.BONUS_CARD)) if (b.ref !== skip && !b.mine && !doneByMe(d, b.ref)) return b.ref;
   return null;
 }
 
@@ -38,8 +38,8 @@ export function firstPackCard(d: RoomData): string | null {
 
 /** What to play next: anything waiting today, else carry on through the packs. Never stops early. */
 export function keepPlaying(d: RoomData, after?: string): string | null {
-  const next = firstWaiting(d);
-  if (next && next !== after) return next;
+  const next = firstWaiting(d, after);
+  if (next) return next;
   const pack = firstPackCard(d);
   return pack && pack !== after ? pack : null;
 }

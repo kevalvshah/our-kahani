@@ -9,7 +9,7 @@ import { waitingCounts, waitingRefs } from '../../features/activity';
 import { doneByMe, firstWaiting, keepPlaying, packProgress, seasonDone } from '../../features/progress';
 import { upcomingSaved, untilText, type SavedItem } from '../../features/saved';
 import { controller } from '../../state/controller';
-import { dayOfSeason, daysLeft, SEASON_DAYS } from '../../state/room';
+import { SEASON_DAYS } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
 import { Brand } from '../Brand';
 import { Done, Em, Link, Note, Problem, Row } from '../components';
@@ -54,7 +54,7 @@ export function Welcome() {
       </span>
       <Brand />
       <p class="lead">
-        One small card a day. One tap or one line, under twenty seconds. Answers stay hidden until you both reply — no
+        Small cards, one tap or one line, at your own pace. Answers stay hidden until you both reply — no
         scores, no streaks, skipping is always fine.
       </p>
       {status === 'loading' ? (
@@ -102,11 +102,9 @@ export function Welcome() {
 // ---------------------------------------------------------------------------
 export function Today() {
   const d = useRoomData();
-  const today = dayOfSeason(d.room);
   const next = firstWaiting(d);
   const done = seasonDone(d);
   const greeting = d.myProfile?.greeting || 'Namaste';
-  const left = daysLeft(d.room);
 
   return (
     <section>
@@ -119,10 +117,10 @@ export function Today() {
       </h1>
       <p class="lead">
         {d.room.partnerJoined
-          ? 'One small card a day. One tap or one line, and you are done.'
+          ? 'Small cards at your own pace. One tap or one line each.'
           : d.room.role === 'creator'
             ? 'Your cards are ready. Send the link so your person can join.'
-            : 'One small card a day. One tap or one line, and you are done.'}
+            : 'Small cards at your own pace. One tap or one line each.'}
       </p>
 
       {!d.room.partnerJoined && d.room.role === 'creator' && (
@@ -136,12 +134,12 @@ export function Today() {
       <PartnerPing />
       <UpcomingDate />
 
-      <ol class="days" aria-label={`Day ${today} of ${SEASON_DAYS}`}>
+      <ol class="days" aria-label={`Season 1: ${SEASON_DAYS} cards, play at your own pace`}>
         {Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).map((n) => {
           const ref = dayRef(n);
           const isDone = SEASON[n] && doneByMe(d, ref);
-          const open = n <= today;
-          const label = `Day ${n}${isDone ? ', answered' : open ? '' : ', not yet'}`;
+          const open = true;
+          const label = `Card ${n}${isDone ? ', answered' : open ? '' : ', not yet'}`;
           return (
             <li key={n}>
               {open ? (
@@ -149,7 +147,6 @@ export function Today() {
                   class={`day${isDone ? ' is-done' : ''}${ref === next ? ' is-today' : ''}`}
                   href={cardPath(ref)}
                   aria-label={label}
-                  aria-current={n === today ? 'date' : undefined}
                 >
                   {isDone ? '✓' : n}
                 </Link>
@@ -169,9 +166,9 @@ export function Today() {
       {next ? (
         <Link class="btn btn-cta" href={cardPath(next)}>
           <span>
-            <Em>🎉</Em> {next.startsWith('day:') ? "Open today's card" : 'Open the extra card waiting for you'}
+            <Em>🎉</Em> {next.startsWith('day:') ? 'Open the next card' : 'Open the extra card waiting for you'}
           </span>
-          <span class="cta-meta">{next.startsWith('day:') ? `Day ${next.split(':')[1]} →` : '→'}</span>
+          <span class="cta-meta">{next.startsWith('day:') ? `Card ${next.split(':')[1]} →` : '→'}</span>
         </Link>
       ) : (
         <>
@@ -224,7 +221,7 @@ export function Today() {
       <BonusList />
 
       <div class="rows home-rows">
-        <Row emoji="🗄️" tint={left <= 7 ? 'pink' : 'plain'} title="Room data" sub="Download everything, keep it 4 more weeks, or erase" pill={`${left}d`} href={PATHS.room} />
+        <Row emoji="🗄️" tint="plain" title="Room data" sub="Download everything, devices, or erase" pill="Data" href={PATHS.room} />
         <Row emoji="🔐" tint="accent" title="Privacy" sub="Locked on your phone. Even the developer cannot read it" pill="E2E" href={PATHS.privacy} />
       </div>
       <InstallHint />

@@ -85,4 +85,4 @@ network traffic in `e2e/journey.spec.ts` and `e2e/security.spec.ts`.
 3. Reveal rule: partner ciphertext is not delivered before both have answered.
 4. Plaintext canary: write known words through the UI, dump every table and storage bucket,
    fail the build if any canary appears.
-5. Lifecycle: extension needs both; unkept rooms erase at the end; erased means gone.
+5. Lifecycle: rooms have no end date; photos and voice notes go after 28 days; erased means gone.

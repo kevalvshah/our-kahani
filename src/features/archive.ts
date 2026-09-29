@@ -119,7 +119,6 @@ export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uin
       ['Exported by', me],
       ['Room', hashtag ?? '(not named yet)'],
       ['Exported on', today()],
-      ['Room ends', localDate(d.room.endsAt)],
       ['Note', "Only answers you have both opened are included. A partner's Gentle Corner note is included only if they allowed saving."],
     ],
     widths: [16, 80],
@@ -135,7 +134,7 @@ This file was put together on your phone. The server cannot read your data, so i
 Inside:
 - our-answers.xlsx: the answers you both opened, plus watched-together, stories, songs and more
 ${saved.length ? `- notes-about-${slug(partner)}.xlsx: your private saved notes. Only you have these\n` : ''}${media.length ? `- media/: ${media.length} photos and voice notes, unlocked on this phone\n` : ''}
-Your room ends on ${localDate(d.room.endsAt)} unless you both choose to keep it for 4 more weeks.
+Your room stays until one of you erases it. Photos and voice notes are kept for 28 days each, so keep this file safe.
 Keep this file somewhere private.
 `;
   return { bytes: makeZip([{ name: 'README.txt', data: readme }, ...files, ...media.map((m) => ({ name: `media/${m.name}`, data: m.data }))]), name: `room-data-${today()}.zip` };

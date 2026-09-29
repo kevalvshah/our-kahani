@@ -44,7 +44,7 @@ export function CardScreen({ cardRef }: { cardRef: string }) {
 
   const pack = entry.pack ? PACKS.find((p) => p.id === entry.pack) : undefined;
   const index = pack ? Number(cardRef.split(':')[2]) : 0;
-  const tagLine = pack ? `Card ${index} of ${pack.cards.length}` : entry.day ? `Day ${entry.day} of ${SEASON_DAYS}` : 'Extra card';
+  const tagLine = pack ? `Card ${index} of ${pack.cards.length}` : entry.day ? `Card ${entry.day} of ${SEASON_DAYS}` : 'Extra card';
   const bonusBy = bonus ? d.list(K.BONUS_CARD).find((r) => r.ref === cardRef)?.mine : undefined;
   const tagText = pack ? `${pack.e} ${pack.name}` : bonus ? (bonusBy ? 'Your card' : `From ${d.partner}`) : entry.tag;
 

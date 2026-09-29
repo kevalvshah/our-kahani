@@ -5,7 +5,7 @@ import { RoomDataProvider, useMaybeRoomData } from '../data/RoomData';
 import { keepPlaying } from '../features/progress';
 import { isInAppBrowser } from '../platform/inAppBrowser';
 import { controller } from '../state/controller';
-import { dayOfSeason, daysLeft, SEASON_DAYS, type Room } from '../state/room';
+import type { Room } from '../state/room';
 import { RoomContext, type RoomStatus } from '../state/roomContext';
 import { Em, Link } from './components';
 import { AREA_PATH, Badge, Toasts, useActivity } from './Activity';
@@ -29,7 +29,7 @@ const MovieNight = lazy(() => import('./screens/Movie').then((m) => m.MovieNight
 const Photo = lazy(() => import('./screens/Photo').then((m) => m.Photo));
 const Privacy = lazy(() => import('./screens/Privacy').then((m) => m.Privacy));
 const RoomDataScreen = lazy(() => import('./screens/RoomData').then((m) => m.RoomDataScreen));
-const RetentionModal = lazy(() => import('./screens/RoomData').then((m) => m.RetentionModal));
+const MediaReminder = lazy(() => import('./screens/RoomData').then((m) => m.MediaReminder));
 const Saved = lazy(() => import('./screens/Saved').then((m) => m.Saved));
 const ProfileSetup = lazy(() => import('./screens/Setup').then((m) => m.ProfileSetup));
 const RoomPhrase = lazy(() => import('./screens/Setup').then((m) => m.RoomPhrase));
@@ -125,7 +125,7 @@ function Shell() {
     setStatus('ready');
   }
 
-  const kicker = room ? `Day ${dayOfSeason(room)} of ${SEASON_DAYS} · room ends in ${daysLeft(room)} days` : 'Season 1 · Pehli Baat';
+  const kicker = 'Season 1 · Pehli Baat · at your own pace';
   const active = (name: RouteName) =>
     name === route.name || (name === 'today' && (route.name === 'card' || route.name === 'next')) || (name === 'packs' && route.name === 'pack');
 
@@ -245,7 +245,7 @@ function InRoom({ route, onName, onCounts }: { route: Route; onName: (name: stri
     <>
       <Toasts items={activity.toasts} onDismiss={activity.dismiss} onOpen={(a) => navigate(AREA_PATH[a])} />
       <Screen route={route} />
-      {route.name === 'today' && <RetentionModal />}
+      {route.name === 'today' && <MediaReminder />}
     </>
   );
 }

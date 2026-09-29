@@ -79,13 +79,13 @@ describe('buildArchive', () => {
     expect([...files.keys()]).toEqual(['README.txt', 'our-answers.xlsx']);
     const readme = dec.decode(files.get('README.txt'));
     expect(readme).toContain('The server cannot read your data');
-    expect(readme).toContain('Your room ends on 2026-06-07');
+    expect(readme).toContain('Your room stays until one of you erases it.');
     expect(readme).not.toContain('notes-about');
     expect(readme).not.toContain('media/');
     const s = sheets(files.get('our-answers.xlsx')!);
     expect(Object.keys(s)).toEqual(['Answers', 'About']);
     expect(s.About).toContain('(not named yet)');
-    expect(s.About).toContain('2026-06-07');
+    expect(s.About).not.toContain('Room ends');
     expect(s.Answers).toContain('Asha (you)');
   });
 

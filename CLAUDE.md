@@ -53,11 +53,13 @@ script, and Google Fonts.
    else say "call your local emergency number" and link findahelpline.com. Never guess numbers.
 
 ## Hard rules: room lifecycle
-- A room lasts 28 days. In the last 7 days, each sign-in shows: Download everything, Keep it
-  4 more weeks, or Remind me later. Keeping needs both people to agree; votes stay hidden from
-  each other. Either person can erase now (confirm, offer download first).
-- At the end date an unkept room is erased: ciphertext deleted and key discarded. No email
-  reminders by default. Optional generic notification only ("Your room needs attention").
+- Couples go at their own pace (owner's decision): every season card is open from the start,
+  and a room has no end date. It lasts until either person erases it; erasing first downloads
+  everything to that device (Excel, plus photos and voice notes still kept), then deletes the
+  ciphertext and discards the keys.
+- Photos and voice notes are kept for 28 days each (R2 files older than that are deleted daily,
+  photo records nightly). When any will go within a week, the app offers the download. No
+  email reminders. Optional generic notification only ("Your room needs attention").
 - Downloads are built on the device (the server cannot read data): a zip with answers .xlsx,
   the person's private notes .xlsx, photos, voice notes, README. See `docs/SECURITY.md`.
 - The room hashtag is the room's permanent name. One person suggests, the other agrees or

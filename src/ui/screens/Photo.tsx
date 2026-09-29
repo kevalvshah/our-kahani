@@ -104,7 +104,7 @@ export function Photo() {
               📷 Share what you are up to
               <input class="sr-only" type="file" accept="image/*" onChange={(e) => void choose((e.target as HTMLInputElement).files?.[0])} />
             </label>
-            <p class="small muted">Whenever you feel like it. No schedule, no streaks. Photos are shrunk and locked on your phone, and location details are removed.</p>
+            <p class="small muted">Whenever you feel like it. No schedule, no streaks. Photos are shrunk and locked on your phone, location details are removed, and each photo is kept for 28 days (download to keep them).</p>
           </>
         )}
         <Problem text={problem} />
