@@ -253,6 +253,8 @@ function InRoom({ route, onName, onCounts }: { route: Route; onName: (name: stri
     };
   }, [hashtag]);
   if (route.name === 'join') return <Join />;
+  // The safety page never waits for the room: it shows at once, and does not flicker away.
+  if (route.name === 'safety') return <HardOrHarmful />;
   if (!d.loaded) {
     return (
       <p class="caption" role="status">

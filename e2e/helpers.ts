@@ -184,6 +184,8 @@ interface ScreenDef {
   mask?: readonly string[];
   /** Waits for content that loads after the heading. */
   ready?: (page: Page) => Promise<void>;
+  /** Screenshot the visible screen only: the page's length depends on what other tests did. */
+  viewportOnly?: boolean;
 }
 
 const MINE = 'Asha';
@@ -268,7 +270,8 @@ export const SCREENS = {
   huddle: { who: 'creator', path: '/huddle', heading: 'Weekly huddle' },
   dreams: { who: 'creator', path: '/dreams', heading: 'Dreams board' },
   'hard-or-harmful': { who: 'creator', path: '/hard-or-harmful', heading: 'Is this hard, or is this harmful?' },
-  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i },
+  // The book collects whatever the shared test couple has answered so far (test order).
+  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, mask: ['.book-chapter', '.book-names'], viewportOnly: true },
 
   // Hashtag locked: each person's room phrase (mandatory before anything else).
   'room-phrase': { who: 'named', path: '/', heading: /Your room phrase/, mask: ['.panel b', '.lead'] },
@@ -278,6 +281,10 @@ export type Screen = keyof typeof SCREENS;
 export const SCREEN_NAMES = Object.keys(SCREENS) as Screen[];
 
 /** Things that differ every run on any screen: invite links, safety codes, the install prompt. */
+export function fullPageFor(screen: Screen): boolean {
+  return !(SCREENS[screen] as ScreenDef).viewportOnly;
+}
+
 export function masksFor(page: Page, screen: Screen): Locator[] {
   const def: ScreenDef = SCREENS[screen];
   return ['.invite', '.emoji', '.install', ...(def.mask ?? [])].map((s) => page.locator(s));

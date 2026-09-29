@@ -1,4 +1,4 @@
-import { expect, masksFor, SCREEN_NAMES, test } from './helpers';
+import { expect, fullPageFor, masksFor, SCREEN_NAMES, test } from './helpers';
 
 /** The first screen in a worker also builds its rooms (slow on WebKit). */
 const SCREEN_TIMEOUT = 120_000;
@@ -20,7 +20,7 @@ test.describe('visual regression', { tag: '@visual' }, () => {
         await shown.evaluate(() => document.fonts.ready.then(() => true));
         await shown.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
         await expect(shown).toHaveScreenshot(`${screen}-${scheme}.png`, {
-          fullPage: true,
+          fullPage: fullPageFor(screen),
           mask: masksFor(shown, screen),
           maxDiffPixelRatio: 0.01,
         });
