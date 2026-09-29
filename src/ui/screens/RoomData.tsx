@@ -9,7 +9,7 @@ import { downloadFile } from '../../features/xlsx';
 import { controller } from '../../state/controller';
 import { daysLeft } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
-import { Back, Done, Problem, Wait } from '../components';
+import { Back, Done, Field, Problem, SupportLine, Wait } from '../components';
 import { problemText } from '../problems';
 import { NotificationSwitch } from '../Notifications';
 import { navigate, PATHS } from '../router';
@@ -150,6 +150,7 @@ export function RoomDataScreen() {
         <Problem text={keep.problem ?? problem} />
         <AnswerOrder />
         <NotificationSwitch />
+        <Rescue />
         <p class="small muted">
           Using a laptop too? Open this site there, choose “Enter my room” and type your hashtag and phrase. Your room opens on
           that device instead of this one.
@@ -177,7 +178,120 @@ export function RoomDataScreen() {
         )}
         <p class="small muted">Erasing deletes the ciphertext and discards the keys. Nobody can bring the room back, including us.</p>
       </div>
+      <SupportLine />
     </section>
+  );
+}
+
+/**
+ * Partner rescue, on whichever device (phone or laptop) still has the room: a one-time code for a partner who lost
+ * both their device and their phrase. This person's own phrase unlocks the room key to seal.
+ */
+function Rescue() {
+  const d = useRoomData();
+  const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag;
+  const [step, setStep] = useState<'idle' | 'phrase' | 'code'>('idle');
+  const [waiting, setWaiting] = useState<number | null>(null);
+  const [phrase, setPhrase] = useState('');
+  const [made, setMade] = useState<{ code: string; expiresAt: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const ready = !!hashtag && d.room.partnerJoined && d.room.backedUp;
+
+  useEffect(() => {
+    if (ready) void controller().rescueStatus(d.room).then(setWaiting).catch(() => setWaiting(null));
+  }, [ready, d.room.id]);
+
+  if (!ready || !hashtag) return null;
+  const time = (ms: number) => new Date(ms).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+
+  async function make() {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const r = await controller().makeRescue(d.room, hashtag!, phrase);
+      setMade(r);
+      setWaiting(r.expiresAt);
+      setPhrase('');
+      setStep('code');
+    } catch (e) {
+      setProblem(problemText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancel() {
+    await controller().cancelRescue(d.room).catch(() => undefined);
+    setWaiting(null);
+    setMade(null);
+    setStep('idle');
+  }
+
+  if (step === 'code' && made) {
+    return (
+      <div class="panel panel-gold">
+        <div class="panel-title">Rescue code for {d.partner}</div>
+        <p class="rescue-code" aria-label={`Rescue code ${made.code.split('').join(' ')}`}>
+          {made.code}
+        </p>
+        <p class="small">
+          Give it to {d.partner} yourself: in person, on a call, or in an end-to-end encrypted chat. On their new device:
+          <b> Enter my room → I have a rescue code</b>, then <b>{hashtag}</b> and this code. It works once, until{' '}
+          {time(made.expiresAt)}. Then they pick a new phrase.
+        </p>
+        <div class="btn-pair">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onClick={() => void navigator.clipboard?.writeText(made.code).then(() => setCopied(true)).catch(() => undefined)}
+          >
+            {copied ? 'Copied' : 'Copy the code'}
+          </button>
+          <button type="button" class="btn btn-secondary btn-narrow" onClick={() => void cancel()}>
+            Cancel it
+          </button>
+        </div>
+        <p class="small muted">This screen shows the code once. Leaving it is fine: make a new one if it gets lost.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div class="panel">
+      <div class="panel-title">Help {d.partner} back in</div>
+      <p class="small">
+        If {d.partner} lost their device and their phrase, you can make a one-time rescue code for them. It works once, for
+        24 hours. Their old private notes cannot come back.
+      </p>
+      {waiting && step === 'idle' && (
+        <p class="small">
+          A rescue code is waiting until {time(waiting)}.{' '}
+          <button type="button" class="link-button" onClick={() => void cancel()}>
+            Cancel it
+          </button>
+        </p>
+      )}
+      {step === 'phrase' ? (
+        <>
+          <Field id="myphrase" label="Your own phrase (to unlock the room key on this device)" value={phrase} onInput={setPhrase} maxLength={120} />
+          <Problem text={problem} />
+          <div class="btn-pair">
+            <button type="button" class="btn btn-primary" disabled={busy || !phrase.trim()} onClick={() => void make()}>
+              {busy ? 'Making it…' : 'Make the rescue code'}
+            </button>
+            <button type="button" class="btn btn-secondary btn-narrow" onClick={() => setStep('idle')}>
+              Not now
+            </button>
+          </div>
+        </>
+      ) : (
+        <button type="button" class="btn btn-secondary btn-block" onClick={() => setStep('phrase')}>
+          {waiting ? 'Make a new rescue code' : `Help ${d.partner} back in`}
+        </button>
+      )}
+    </div>
   );
 }
 

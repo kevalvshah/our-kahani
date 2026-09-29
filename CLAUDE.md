@@ -27,7 +27,11 @@ script, and Google Fonts.
    at least 4 words, checked against names and the hashtag, stretched with PBKDF2-SHA256
    (600,000 rounds, salted with the hashtag) before HKDF derives the lookup token and wrap key.
    The phrase never leaves the device. A weak phrase could be guessed offline by whoever holds
-   the database: never lower these limits without asking. Safari deletes IndexedDB and
+   the database: never lower these limits without asking. If someone loses both device and
+   phrase, only their partner can help: a one-time rescue code (80 random bits, 24 hours, single
+   use) made on the partner's phone or laptop seals the room key for them. Support
+   (support@unicodegroup.com) can explain this but can never see, reset or restore anything, and
+   must never ask for a phrase, rescue code or invite link. Never add a server-side reset. Safari deletes IndexedDB and
    localStorage after 7 days of Safari use without interaction, so keys can vanish. Handle "key
    not found" gracefully. Request persistent storage. Nudge iPhone users to add to Home Screen.
 5. "Answers stay hidden until both reply" is enforced by the server using metadata only

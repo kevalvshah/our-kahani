@@ -178,6 +178,34 @@ describe('api', () => {
     await expect(api(() => pgError('P0007')).a.recoverRoom(new Uint8Array(1))).rejects.toMatchObject({ code: 'not-found' });
   });
 
+  it('reads only the caller’s own backup, or nothing', async () => {
+    const { a, calls } = api(() => json('\\x0102'));
+    expect(await a.readBackup(new Uint8Array([9]))).toEqual(new Uint8Array([1, 2]));
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ p_token: '\\x09' });
+    expect(await api(() => json(null)).a.readBackup(new Uint8Array(1))).toBeNull();
+    await expect(api(() => pgError('XX000')).a.readBackup(new Uint8Array(1))).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('makes, checks and cancels a rescue with only hashes and sealed bytes', async () => {
+    const { a, calls } = api(() => json('2026-09-30T10:00:00+00:00'));
+    expect(await a.createRescue('room-1', new Uint8Array([1]), new Uint8Array([2]))).toBe(Date.parse('2026-09-30T10:00:00Z'));
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ p_room: 'room-1', p_token: '\\x01', p_envelope: '\\x02' });
+    await expect(api(() => pgError('P0010')).a.createRescue('r', new Uint8Array(1), new Uint8Array(1))).rejects.toMatchObject({ code: 'no-partner' });
+    expect(await a.rescueStatus('room-1')).toBe(Date.parse('2026-09-30T10:00:00Z'));
+    expect(await api(() => json(null)).a.rescueStatus('room-1')).toBeNull();
+    await expect(api(() => pgError('XX000')).a.rescueStatus('r')).rejects.toBeInstanceOf(ApiError);
+    await api(() => json(null)).a.cancelRescue('room-1');
+    await expect(api(() => pgError('XX000')).a.cancelRescue('r')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('uses a rescue once, or says it does not work', async () => {
+    const { a } = api(() => json([{ room_id: 'r', role: 'creator', envelope: '\\x0a' }]));
+    expect(await a.useRescue(new Uint8Array([7]))).toEqual({ roomId: 'r', role: 'creator', envelope: new Uint8Array([10]) });
+    await expect(api(() => json([])).a.useRescue(new Uint8Array(1))).rejects.toMatchObject({ code: 'rescue-invalid' });
+    await expect(api(() => json(null)).a.useRescue(new Uint8Array(1))).rejects.toMatchObject({ code: 'rescue-invalid' });
+    await expect(api(() => pgError('P0009')).a.useRescue(new Uint8Array(1))).rejects.toMatchObject({ code: 'rescue-invalid' });
+  });
+
   it('uses the global fetch when none is given', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json('room-9'));
     const session = { accessToken: async () => 'tok', userId: () => null, signOut: () => {} };

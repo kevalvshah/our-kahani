@@ -23,6 +23,10 @@ export function problemText(e: unknown): string {
         return 'This room has ended.';
       case 'not-found':
         return 'That hashtag and phrase do not match a room that is still open. Check both, including spaces between words.';
+      case 'rescue-invalid':
+        return 'That rescue code does not work. It works once, for 24 hours, with your room’s hashtag. Ask your person to make a new one.';
+      case 'no-partner':
+        return 'There is nobody else in the room yet.';
       case 'phrase-taken':
         return 'Please pick a different phrase.';
       case 'paused':

@@ -125,6 +125,18 @@ export function Problem({ text }: { text: string | null }) {
   ) : null;
 }
 
+export const SUPPORT_EMAIL = 'support@unicodegroup.com';
+
+/** Where to ask for help, and what support can never do. */
+export function SupportLine() {
+  return (
+    <p class="small muted support">
+      Need help? Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We can help with the app, but we can never
+      see or reset your phrase, and we will never ask for it. Never send us your phrase, a rescue code or an invite link.
+    </p>
+  );
+}
+
 /** A big option tile (this-or-that, guess, pick). */
 export function OptTile({
   opt,

@@ -4,7 +4,7 @@ import { EnvelopeError, open, seal } from '../../crypto/envelope';
 import { utf8 } from '../../crypto/bytes';
 import { generateRoomKeyBytes, importRoomKey } from '../../crypto/roomKey';
 import { useRoom } from '../../state/roomContext';
-import { Back, Done, RevealRow, ScreenTitle } from '../components';
+import { Back, Done, RevealRow, ScreenTitle, SupportLine } from '../components';
 import { PATHS } from '../router';
 
 // Explains, and shows, the lock. The demo uses a throwaway key made for this screen only;
@@ -105,8 +105,10 @@ export function Privacy() {
         phone, or if the app's own code were swapped, which is why the code is open source. Whoever can read the chat you send
         the invite link in could copy it, so use an end-to-end encrypted chat or read it out. Your room phrase protects the backup
         of your key, so pick one others could not guess: a weak phrase could be guessed by anyone holding the database. If
-        you lose your phone and forget your phrase, nobody can bring the room back.
+        you lose your device and forget your phrase, only your person can help you back in, with a one-time rescue code from
+        their phone or laptop. If you both lose everything, nobody can bring the room back, including us.
       </div>
+      <SupportLine />
     </section>
   );
 }

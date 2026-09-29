@@ -186,6 +186,41 @@ export function createController(deps: Deps = defaultDeps()) {
       return toRoom(stored, await api.getRoom(roomId));
     },
 
+    // ---- Partner rescue ----------------------------------------------------
+
+    /**
+     * On a device (phone or laptop) of the person who still has the room: makes a one-time rescue code for their
+     * partner. A device keeps its room key unexportable, so the person's own hashtag + phrase
+     * open their own backup to get the key, which is then sealed under the new code.
+     */
+    async makeRescue(room: Room, hashtag: string, myPhrase: string): Promise<{ code: string; expiresAt: number }> {
+      const { phraseSecret, lookupToken, openBackup, PhraseError } = await import('../crypto/recovery');
+      const { newRescueCode, rescueLookup, sealRescue } = await import('../crypto/rescue');
+      const secret = await phraseSecret(hashtag, myPhrase);
+      const envelope = await api.readBackup(await lookupToken(secret));
+      if (!envelope) throw new PhraseError('That is not your phrase for this room. Check it and try again.');
+      const { roomKey } = await openBackup(secret, room.id, envelope);
+      const { code, bytes } = newRescueCode();
+      const expiresAt = await api.createRescue(room.id, await rescueLookup(bytes, hashtag), await sealRescue(bytes, hashtag, room.id, roomKey));
+      return { code, expiresAt };
+    },
+
+    rescueStatus: (room: Room) => api.rescueStatus(room.id),
+    cancelRescue: (room: Room) => api.cancelRescue(room.id),
+
+    /** On a new device: hashtag + rescue code bring this person's place back; a new phrase follows. */
+    async useRescue(hashtag: string, codeText: string): Promise<Room> {
+      const { parseRescueCode, rescueLookup, openRescue } = await import('../crypto/rescue');
+      const bytes = parseRescueCode(codeText);
+      const lookup = await rescueLookup(bytes, hashtag);
+      session.signOut(); // a fresh anonymous account takes the lost person's place
+      const { roomId, role, envelope } = await api.useRescue(lookup);
+      const roomKey = await openRescue(bytes, hashtag, roomId, envelope);
+      // The old private notes were sealed with a notes key nobody has any more: start a new one.
+      const stored = await store({ id: roomId, role, raw: roomKey, notesRaw: generateRoomKeyBytes(), backedUp: false });
+      return toRoom(stored, await api.getRoom(roomId));
+    },
+
     // ---- Records -----------------------------------------------------------
 
     /** Every record this person may read, decrypted on the phone. */

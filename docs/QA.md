@@ -198,6 +198,7 @@ production smoke test after each merge still runs (production is public).
 | The whole product with two people (setup, words, hashtag, cards, reveal, packs, games, saved notes, recovery) | `journey.spec.ts` |
 | Photo store: members only, size and count caps, purge of erased rooms | `mediaFunction.test.ts` |
 | The invited person answers first by default; either can switch it off | `settings.test.ts`; `journey.spec.ts` |
+| Partner rescue: one-time, 24 hours, own phrase checked, lost device locked out | `rescue.test.ts`; `api.test.ts`; `journey.spec.ts` |
 
 ## Database tests
 
@@ -231,6 +232,11 @@ Automated tests use emulated devices. Before a release, a person checks on real 
 - [ ] Photo from iPhone (HEIC) and Android on Right Now; both appear in the downloaded zip
 - [ ] Recovery: clear the site's data, then "Enter my room" with the hashtag and phrase brings the room back; a wrong phrase is refused
 - [ ] Install: Chrome shows "Add it"; the installed app opens offline to the last screen shell
+- [ ] Partner rescue from a laptop and from a phone: Room data → Help … back in (own phrase) →
+      code; on a new device Enter my room → I have a rescue code → new phrase; the code fails a
+      second time; the lost device shows Welcome
+- [ ] support@unicodegroup.com link opens the mail app on Enter your room, the phrase screen,
+      Room data and Privacy
 
 ### Exploratory ideas
 
