@@ -1,111 +1,36 @@
+import { NEED_MENU } from '../../content/together';
+import { VoicePlayer, VoiceRecord } from '../Voice';
+import type { VoiceNote } from '../../features/cardLogic';
 import { InstallHint } from '../Install';
 import { useState } from 'preact/hooks';
+
 import { dayRef, PACKS, SEASON } from '../../content/cards';
 import { hashtagOptions, normaliseHashtag } from '../../content/extras';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
 import type { BonusCard } from '../../features/cardLogic';
-import { doneByMe, firstWaiting, packProgress, seasonDone } from '../../features/progress';
+import { waitingCounts, waitingRefs } from '../../features/activity';
+import { doneByMe, firstWaiting, keepPlaying, packProgress, seasonDone } from '../../features/progress';
 import { upcomingSaved, untilText, type SavedItem } from '../../features/saved';
 import { controller } from '../../state/controller';
-import { dayOfSeason, daysLeft, SEASON_DAYS } from '../../state/room';
+import { SEASON_DAYS } from '../../state/room';
 import { useRoom } from '../../state/roomContext';
-import { Brand } from '../Brand';
+import { isInstalled } from './Welcome';
+import { lazy } from '../lazy';
 import { Done, Em, Link, Note, Problem, Row } from '../components';
 import { problemText } from '../problems';
 import { cardPath, navigate, packPath, PATHS } from '../router';
 
-export function useCreateRoom() {
-  const { setRoom } = useRoom();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  async function create() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      setRoom(await controller().create());
-      navigate(PATHS.today);
-    } catch (e) {
-      setError(problemText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return { create, busy, error };
-}
-
-function isInstalled(): boolean {
-  return (
-    matchMedia('(display-mode: standalone)').matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
-
-/** Welcome screen before there is a room on this device. */
-export function Welcome() {
-  const { status } = useRoom();
-  const { create, busy, error } = useCreateRoom();
-  return (
-    <section>
-      <span class="season-badge">
-        <Em>✨</Em> Season 1 · Pehli Baat
-      </span>
-      <Brand />
-      <p class="lead">
-        One small card a day. One tap or one line, under twenty seconds. Answers stay hidden until you both reply — no
-        scores, no streaks, skipping is always fine.
-      </p>
-      {status === 'loading' ? (
-        <p class="caption" role="status">
-          Opening your room…
-        </p>
-      ) : (
-        <>
-          <button type="button" class="btn btn-cta" onClick={create} disabled={busy} aria-busy={busy}>
-            <span>
-              <Em>🎉</Em> {busy ? 'Making your room…' : 'Create a room'}
-            </span>
-            <span class="cta-meta" aria-hidden="true">
-              Start →
-            </span>
-          </button>
-          {error ? (
-            <p class="caption error" role="alert">
-              {error}
-            </p>
-          ) : (
-            <p class="caption">Your person joins with a link. No sign-up, no email, no phone number.</p>
-          )}
-          <Link class="btn btn-ghost" href={PATHS.recover}>
-            <Em>🔑</Em> Enter my room (hashtag + phrase)
-          </Link>
-        </>
-      )}
-      <InstallHint />
-      <Note dashed>
-        {isInstalled()
-          ? 'Added to your Home Screen, so it opens like an app and your keys stay put. It is still just the website.'
-          : 'Your room arrives as a link in your chat. One tap, no login, no account.'}
-      </Note>
-      <div class="rows home-rows">
-        <Row emoji="🔐" tint="accent" title="Privacy" sub="Locked on your phone. Even the developer cannot read it" pill="E2E" href={PATHS.privacy} />
-        <Row emoji="🎨" tint="accent" title="Make it ours" sub="Theme, accent, text size, motion — just for you" pill="Look" href={PATHS.look} />
-      </div>
-    </section>
-  );
-}
+const WelcomeNote = lazy(() => import('../WelcomeNote').then((m) => m.WelcomeNote));
 
 // ---------------------------------------------------------------------------
 // Home, inside a room
 // ---------------------------------------------------------------------------
 export function Today() {
   const d = useRoomData();
-  const today = dayOfSeason(d.room);
   const next = firstWaiting(d);
   const done = seasonDone(d);
   const greeting = d.myProfile?.greeting || 'Namaste';
-  const left = daysLeft(d.room);
 
   return (
     <section>
@@ -118,11 +43,13 @@ export function Today() {
       </h1>
       <p class="lead">
         {d.room.partnerJoined
-          ? 'One small card a day. One tap or one line, and you are done.'
+          ? 'Small cards at your own pace. One tap or one line each.'
           : d.room.role === 'creator'
             ? 'Your cards are ready. Send the link so your person can join.'
-            : 'One small card a day. One tap or one line, and you are done.'}
+            : 'Small cards at your own pace. One tap or one line each.'}
       </p>
+
+      <WelcomeNote roomId={d.room.id} />
 
       {!d.room.partnerJoined && d.room.role === 'creator' && (
         <div class="pingbar">
@@ -135,12 +62,12 @@ export function Today() {
       <PartnerPing />
       <UpcomingDate />
 
-      <ol class="days" aria-label={`Day ${today} of ${SEASON_DAYS}`}>
+      <ol class="days" aria-label={`Season 1: ${SEASON_DAYS} cards, play at your own pace`}>
         {Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).map((n) => {
           const ref = dayRef(n);
           const isDone = SEASON[n] && doneByMe(d, ref);
-          const open = n <= today;
-          const label = `Day ${n}${isDone ? ', answered' : open ? '' : ', not yet'}`;
+          const open = true;
+          const label = `Card ${n}${isDone ? ', answered' : open ? '' : ', not yet'}`;
           return (
             <li key={n}>
               {open ? (
@@ -148,7 +75,6 @@ export function Today() {
                   class={`day${isDone ? ' is-done' : ''}${ref === next ? ' is-today' : ''}`}
                   href={cardPath(ref)}
                   aria-label={label}
-                  aria-current={n === today ? 'date' : undefined}
                 >
                   {isDone ? '✓' : n}
                 </Link>
@@ -168,14 +94,26 @@ export function Today() {
       {next ? (
         <Link class="btn btn-cta" href={cardPath(next)}>
           <span>
-            <Em>🎉</Em> {next.startsWith('day:') ? "Open today's card" : 'Open the extra card waiting for you'}
+            <Em>🎉</Em> {next.startsWith('day:') ? 'Open the next card' : 'Open the extra card waiting for you'}
           </span>
-          <span class="cta-meta">{next.startsWith('day:') ? `Day ${next.split(':')[1]} →` : '→'}</span>
+          <span class="cta-meta">{next.startsWith('day:') ? `Card ${next.split(':')[1]} →` : '→'}</span>
         </Link>
       ) : (
-        <Done>Nothing waiting on you 🎉 Try a pack, or add a card for {d.partner}.</Done>
+        <>
+          <Done>Today's card is done 🎉 Want more? Keep going as long as you like.</Done>
+          {keepPlaying(d) && (
+            <Link class="btn btn-cta" href={cardPath(keepPlaying(d)!)}>
+              <span>
+                <Em>▶️</Em> Keep playing
+              </span>
+              <span class="cta-meta">Next card →</span>
+            </Link>
+          )}
+        </>
       )}
       <ThinkingOfYou />
+      <NeedMenu />
+      <Row emoji="📚" tint="gold" title="Your seasons" sub="Five seasons of your story, at your own pace" pill="Play" href={PATHS.seasons} />
 
       <h2 class="section-title">
         <Em>🃏</Em> Card packs
@@ -191,7 +129,7 @@ export function Today() {
               tint={pr.done === pr.total ? 'plain' : 'gold'}
               title={p.name}
               sub={p.blurb}
-              pill={`${pr.done}/${pr.total}`}
+              pill={waitingHere(d, p.id) ? `${waitingHere(d, p.id)} your turn · ${pr.done}/${pr.total}` : `${pr.done}/${pr.total}`}
               href={packPath(p.id)}
             />
           );
@@ -213,7 +151,7 @@ export function Today() {
       <BonusList />
 
       <div class="rows home-rows">
-        <Row emoji="🗄️" tint={left <= 7 ? 'pink' : 'plain'} title="Room data" sub="Download everything, keep it 4 more weeks, or erase" pill={`${left}d`} href={PATHS.room} />
+        <Row emoji="🗄️" tint="plain" title="Room data" sub="Download everything, devices, or erase" pill="Data" href={PATHS.room} />
         <Row emoji="🔐" tint="accent" title="Privacy" sub="Locked on your phone. Even the developer cannot read it" pill="E2E" href={PATHS.privacy} />
       </div>
       <InstallHint />
@@ -398,7 +336,8 @@ const seenKey = (room: string) => `ok.ping-seen.${room}`;
 
 function PartnerPing() {
   const d = useRoomData();
-  const ping = d.theirs<{ at: number }>(K.PING, 'ping')?.data.at;
+  const pingData = d.theirs<{ at: number; voice?: VoiceNote }>(K.PING, 'ping')?.data;
+  const ping = pingData?.at;
   const [seen, setSeen] = useState(() => {
     try {
       return Number(localStorage.getItem(seenKey(d.room.id)) ?? 0);
@@ -409,7 +348,10 @@ function PartnerPing() {
   if (!ping || ping <= seen) return null;
   return (
     <div class="pingbar">
-      <span>{d.partner} is thinking of you 💛</span>
+      <span>
+        {d.partner} is thinking of you 💛
+        {pingData?.voice && <VoicePlayer note={pingData.voice} who={d.partner} />}
+      </span>
       <button
         type="button"
         class="btn-small"
@@ -444,6 +386,15 @@ function ThinkingOfYou() {
       >
         <Em>💛</Em> Send a “thinking of you”
       </button>
+      {d.room.partnerJoined && !sent && (
+        <VoiceRecord
+          label="🎙️ Send a voice hug"
+          onSent={(voice) => {
+            void d.put(K.PING, 'ping', { at: Date.now(), voice });
+            setSent(true);
+          }}
+        />
+      )}
       {sent && <Done>Sent 💛 {d.partner} will see it next time they open the app.</Done>}
     </>
   );
@@ -465,4 +416,41 @@ function UpcomingDate() {
       </Link>
     </div>
   );
+}
+
+/** Cards in a pack the partner has answered and this person has not. */
+function waitingHere(d: { status: import('../../net/api').AnswerStatus[] }, packId: string): number {
+  return waitingCounts(waitingRefs(d.status)).packs[packId] ?? 0;
+}
+
+/** "What do we need right now?" Routes to the right thing, whatever season you are in. */
+function NeedMenu() {
+  const go: Record<string, string> = {
+    spark: PATHS.micro,
+    talk: PATHS.talk,
+    fun: PATHS.antakshari,
+    plan: PATHS.dreams,
+    thanks: PATHS.thanks,
+  };
+  return (
+    <div class="need-menu">
+      <p class="field-label">What do we need right now?</p>
+      <div class="chip-row">
+        {NEED_MENU.map((n) => (
+          <Link key={n.id} class="chip" href={go[n.id] ?? PATHS.today} title={n.sub}>
+            {n.e} {n.l}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+/** "/next": jumps to the next card to play, or home when there is none. */
+export function NextCard() {
+  const d = useRoomData();
+  const next = keepPlaying(d);
+  queueMicrotask(() => navigate(next ? cardPath(next) : PATHS.today, { replace: true }));
+  return null;
 }

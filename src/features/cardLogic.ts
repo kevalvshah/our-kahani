@@ -1,3 +1,5 @@
+import { SEASON_PREFIX, seasonEntry } from './seasons';
+import { GENTLE_PREFIX, gentleEntry } from './gentleDeck';
 import { entryForRef, NHIE_OPTS, TRY_LABELS, type Card, type CardEntry, type Opt } from '../content/cards';
 import { PACK_LABEL } from '../content/extras';
 
@@ -40,6 +42,8 @@ export function bonusEntry(ref: string, bonus: BonusCard): CardEntry {
 
 export function entryFor(ref: string, bonus?: BonusCard): CardEntry | null {
   if (ref.startsWith('bonus:')) return bonus ? bonusEntry(ref, bonus) : null;
+  if (ref.startsWith(GENTLE_PREFIX)) return gentleEntry(ref);
+  if (ref.startsWith(SEASON_PREFIX)) return seasonEntry(ref);
   return entryForRef(ref);
 }
 
@@ -144,6 +148,10 @@ export function revealBanner(card: Card, mine: Answer, theirs: Answer, names: { 
       return card.banner ?? 'Two answers ✍️';
     case 'recall':
       return 'Two memories 🧠';
+    case 'then':
+      if (mine.pick === 'same' && theirs.pick === 'same') return 'Still true for you both 💛';
+      if (mine.pick === theirs.pick) return 'You have both changed a little 🌱';
+      return 'Somebody has changed their mind 👀';
     case 'try': {
       const both = card.items.filter((it) => mine.rates?.[it.id] === 'keen' && theirs.rates?.[it.id] === 'keen');
       return both.length ? `Both keen on ${both.length} ${both.length > 1 ? 'things' : 'thing'} 🎉` : 'No double-keens yet. Try a Maybe!';

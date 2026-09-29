@@ -15,7 +15,7 @@ import { canRecordVoice, startVoice, type Recording } from './voiceRecorder';
 
 const voiceCtx = (roomId: string, obj: string) => ({ roomId, recordId: obj, kind: K.VOICE });
 
-export function VoiceRecord({ onSent }: { onSent: (v: VoiceNote) => void }) {
+export function VoiceRecord({ onSent, label }: { onSent: (v: VoiceNote) => void; label?: string }) {
   const d = useRoomData();
   const [rec, setRec] = useState<Recording | null>(null);
   const [started, setStarted] = useState(0);
@@ -87,7 +87,7 @@ export function VoiceRecord({ onSent }: { onSent: (v: VoiceNote) => void }) {
         </>
       ) : (
         <button type="button" class="btn btn-secondary btn-block seal" disabled={busy} onClick={() => void begin()}>
-          {busy ? 'Locking and sending…' : `🎙️ Record a voice note instead (${VOICE_SECONDS} s)`}
+          {busy ? 'Locking and sending…' : (label ?? `🎙️ Record a voice note instead (${VOICE_SECONDS} s)`)}
         </button>
       )}
       <Problem text={problem} />
@@ -118,7 +118,7 @@ export function VoicePlayer({ note, who }: { note: VoiceNote; who: string }) {
     };
   }, [note.obj]);
 
-  if (failed) return <span class="small muted">🎙️ Voice note ({note.secs} s) could not be opened here.</span>;
+  if (failed) return <span class="small muted">🎙️ Voice note ({note.secs} s) has gone: voice notes are kept for 28 days.</span>;
   if (!url) return <span class="small muted">🎙️ Opening the voice note…</span>;
   return <audio class="voice" controls preload="metadata" src={url} aria-label={`Voice note from ${who}, ${note.secs} seconds`} />;
 }

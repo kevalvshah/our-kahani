@@ -76,7 +76,7 @@ test.describe('answers and the reveal', { tag: '@functional' }, () => {
 
     // Today counts it as answered, with no streak or score.
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Day 1, answered' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('link', { name: 'Card 1, answered' })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('1 of 14 answered · No streaks. Skip any day, no guilt.')).toBeVisible();
   });
 });

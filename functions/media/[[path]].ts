@@ -1,7 +1,7 @@
 // Encrypted photos, served from R2 on the app's own origin (so the CSP needs no extra host).
 //
 //   GET|PUT|DELETE /media/o/<room>/<object>   the person's own Supabase token as Bearer
-//   POST           /media/purge               deletes files of erased or ended rooms
+//   POST           /media/purge               deletes files of erased rooms, and any file over 28 days old
 //
 // The bytes are ciphertext sealed on the phone with the room key; this code never sees a key.
 // It holds no Supabase secret: membership is checked by calling media_allowed() with the
@@ -19,7 +19,7 @@ interface R2Bucket {
   get(key: string): Promise<R2Object | null>;
   put(key: string, value: ArrayBuffer): Promise<unknown>;
   delete(keys: string | string[]): Promise<void>;
-  list(opts: { prefix: string; limit?: number; cursor?: string }): Promise<{ objects: { key: string }[]; truncated: boolean; cursor?: string }>;
+  list(opts: { prefix?: string; limit?: number; cursor?: string }): Promise<{ objects: { key: string; uploaded: Date }[]; truncated: boolean; cursor?: string }>;
 }
 interface Env {
   MEDIA?: R2Bucket;
@@ -32,6 +32,7 @@ interface Context {
   params: { path?: string[] };
 }
 
+const KEEP_MS = 28 * 86_400_000; // photos and voice notes are kept for 28 days
 const MAX_BYTES = 1_100_000; // 1 MB of photo plus the envelope
 const MAX_OBJECTS_PER_ROOM = 40; // 20 photos (the server caps records), with room to replace
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -72,6 +73,20 @@ async function countObjects(bucket: R2Bucket, room: string): Promise<number> {
   return page.objects.length;
 }
 
+/** Every file older than 28 days, in any room. */
+async function purgeOld(bucket: R2Bucket, now: number): Promise<number> {
+  let removed = 0;
+  let cursor: string | undefined;
+  do {
+    const page = await bucket.list({ cursor });
+    const old = page.objects.filter((o) => now - new Date(o.uploaded).getTime() > KEEP_MS).map((o) => o.key);
+    if (old.length) await bucket.delete(old);
+    removed += old.length;
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  return removed;
+}
+
 async function purgeRoom(bucket: R2Bucket, room: string): Promise<number> {
   let removed = 0;
   let cursor: string | undefined;
@@ -98,7 +113,8 @@ export async function onRequest({ request, env, params }: Context): Promise<Resp
     const rooms = ((await res.json()) as string[]).filter((r) => UUID.test(r));
     let removed = 0;
     for (const room of rooms) removed += await purgeRoom(bucket, room);
-    return reply(200, JSON.stringify({ rooms: rooms.length, removed }), 'application/json');
+    const expired = await purgeOld(bucket, Date.now());
+    return reply(200, JSON.stringify({ rooms: rooms.length, removed, expired }), 'application/json');
   }
 
   if (path.length !== 3 || path[0] !== 'o') return reply(404);

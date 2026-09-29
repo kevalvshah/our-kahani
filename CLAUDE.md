@@ -43,7 +43,9 @@ script, and Google Fonts.
    plaintext? If yes, encrypt it or do not store it.
 8. Saved notes are private to each person and encrypted with a key the partner never has.
    Saving never notifies the partner (surprises stay surprises). First run says saving exists.
-9. Gentle Corner (sensitive sharing) is opt-in by both people. A heads-up can be saved by the
+9. Gentle Corner (sensitive sharing) is opt-in by both people: either can open it, which invites
+   the other; nothing is shared until both have said yes. Its deck goes only as deep as the lighter
+   of the two people's chosen depths (light, personal, emotional, deep). A heads-up can be saved by the
    partner only if the sharer ticked "OK to save". Taking it back deletes saved copies. Never
    put a partner's Gentle Corner entry in an export unless they allowed saving. The safety
    footer is country-aware and lists only numbers we have verified: UK 999 and Samaritans
@@ -51,11 +53,13 @@ script, and Google Fonts.
    else say "call your local emergency number" and link findahelpline.com. Never guess numbers.
 
 ## Hard rules: room lifecycle
-- A room lasts 28 days. In the last 7 days, each sign-in shows: Download everything, Keep it
-  4 more weeks, or Remind me later. Keeping needs both people to agree; votes stay hidden from
-  each other. Either person can erase now (confirm, offer download first).
-- At the end date an unkept room is erased: ciphertext deleted and key discarded. No email
-  reminders by default. Optional generic notification only ("Your room needs attention").
+- Couples go at their own pace (owner's decision): every season card is open from the start,
+  and a room has no end date. It lasts until either person erases it; erasing first downloads
+  everything to that device (Excel, plus photos and voice notes still kept), then deletes the
+  ciphertext and discards the keys.
+- Photos and voice notes are kept for 28 days each (R2 files older than that are deleted daily,
+  photo records nightly). When any will go within a week, the app offers the download. No
+  email reminders. Optional generic notification only ("Your room needs attention").
 - Downloads are built on the device (the server cannot read data): a zip with answers .xlsx,
   the person's private notes .xlsx, photos, voice notes, README. See `docs/SECURITY.md`.
 - The room hashtag is the room's permanent name. One person suggests, the other agrees or

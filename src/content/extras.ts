@@ -24,35 +24,6 @@ export const STORY_STARTERS = [
   'A suitcase full of pickles was mistakenly delivered to a very confused astronaut.',
 ];
 
-export interface Title {
-  id: string;
-  type: 'movie' | 'series';
-  e: string;
-  t: string;
-  tag: string;
-  hook: string;
-}
-
-// Films appear as emoji plus title only, never artwork (copyright).
-export const TITLES: Title[] = [
-  { id: 'ddlj', type: 'movie', e: '🚂', t: 'Dilwale Dulhania Le Jayenge', tag: 'Hindi · Romance', hook: 'The train, the mustard fields, the classic.' },
-  { id: 'kkhh', type: 'movie', e: '🏀', t: 'Kuch Kuch Hota Hai', tag: 'Hindi · Romance', hook: 'Friendship, college and a lot of feelings.' },
-  { id: '3i', type: 'movie', e: '🎓', t: '3 Idiots', tag: 'Hindi · Comedy drama', hook: 'College days and finding your own path.' },
-  { id: 'znmd', type: 'movie', e: '🏝️', t: 'Zindagi Na Milegi Dobara', tag: 'Hindi · Road trip', hook: 'Three friends, Spain, one big trip.' },
-  { id: 'lagaan', type: 'movie', e: '🏏', t: 'Lagaan', tag: 'Hindi · Cricket drama', hook: 'A village, a cricket match, everything on the line.' },
-  { id: 'hellaro', type: 'movie', e: '💃', t: 'Hellaro', tag: 'Gujarati · Drama', hook: 'The women of Kutch, dhol and garba.' },
-  { id: 'chhello', type: 'movie', e: '🎒', t: 'Chhello Divas', tag: 'Gujarati · Comedy', hook: 'A gang of college friends and their last days.' },
-  { id: 'jwm', type: 'movie', e: '🚆', t: 'Jab We Met', tag: 'Hindi · Rom-com', hook: 'A chatty stranger and a very long train ride.' },
-  { id: 'panchayat', type: 'series', e: '🌾', t: 'Panchayat', tag: 'Hindi · Comedy drama', hook: 'An engineer, a village office, gentle chaos.' },
-  { id: 'gullak', type: 'series', e: '🏠', t: 'Gullak', tag: 'Hindi · Family comedy', hook: 'Small-town family life in short episodes.' },
-  { id: 'scam92', type: 'series', e: '📈', t: 'Scam 1992', tag: 'Hindi · Drama', hook: 'The rise of a stock market star.' },
-  { id: 'cloy', type: 'series', e: '🪂', t: 'Crash Landing on You', tag: 'Korean · K-drama', hook: 'A paraglider, a border and a big love story.' },
-  { id: 'lasso', type: 'series', e: '⚽', t: 'Ted Lasso', tag: 'English · Comedy', hook: 'An optimistic coach in a new country.' },
-  { id: 'b99', type: 'series', e: '🚔', t: 'Brooklyn Nine-Nine', tag: 'English · Comedy', hook: 'A goofy police squad and running jokes.' },
-  { id: 'sherlock', type: 'series', e: '🔎', t: 'Sherlock', tag: 'English · Crime', hook: 'Modern-day mysteries and quick wits.' },
-  { id: 'bakeoff', type: 'series', e: '🍰', t: 'The Great British Bake Off', tag: 'English · Cosy', hook: 'Baking, a big tent, very polite drama.' },
-];
-
 export const SERVICES: [string, string, string][] = [
   ['netflix', '🔴', 'Netflix'],
   ['prime', '📦', 'Prime Video'],

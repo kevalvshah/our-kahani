@@ -94,6 +94,37 @@ begin
   select count(*) into n from public.records where id = capsule_id;
   if n <> 1 then raise exception 'FAIL the capsule did not open after 90 days'; end if;
 
+  -- ==== Seasons and together tools (kinds 3, 4, 150-156) ===================
+  -- Shukriya jar (3) and weekly huddle (4) stay sealed until both write the same week;
+  -- Dil ki Baat notes (150) and dreams (155) reach the partner straight away.
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.records (id, room_id, kind, ref, envelope)
+  values (gen_random_uuid(), room, 3, 'jar:2026-W40', extensions.gen_random_bytes(40)),
+         (gen_random_uuid(), room, 3, 'jar:2026-W41', extensions.gen_random_bytes(40)),
+         (gen_random_uuid(), room, 4, 'huddle:2026-W40', extensions.gen_random_bytes(40)),
+         (gen_random_uuid(), room, 150, 'soft:1', extensions.gen_random_bytes(40)),
+         (gen_random_uuid(), room, 155, 'dream:1', extensions.gen_random_bytes(40)),
+         (gen_random_uuid(), room, 1, 'season:s2:1', extensions.gen_random_bytes(40));
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.records where room_id = room and (kind in (3, 4) or ref = 'season:s2:1');
+  if n <> 0 then raise exception 'FAIL jar, huddle or season answer visible before both wrote (% rows)', n; end if;
+  select count(*) into n from public.room_answers(room) where kind = 3 and not mine;
+  if n <> 2 then raise exception 'FAIL the jar should show two waiting weeks, without content (saw %)', n; end if;
+  select count(*) into n from public.records where room_id = room and kind in (150, 155);
+  if n <> 2 then raise exception 'FAIL Dil ki Baat note or dream not visible to partner'; end if;
+  insert into public.records (id, room_id, kind, ref, envelope)
+  values (gen_random_uuid(), room, 3, 'jar:2026-W40', extensions.gen_random_bytes(40));
+  select count(*) into n from public.records where room_id = room and kind = 3 and ref = 'jar:2026-W40';
+  if n <> 2 then raise exception 'FAIL the jar did not open once both wrote'; end if;
+  select count(*) into n from public.records where room_id = room and kind = 3 and ref = 'jar:2026-W41';
+  if n <> 0 then raise exception 'FAIL a different week leaked'; end if;
+  select count(*) into n from public.records where room_id = room and kind = 4;
+  if n <> 0 then raise exception 'FAIL the huddle opened because of the jar'; end if;
+
   -- ==== Caps: 20 photos per room =============================================
   insert into public.records (id, room_id, kind, ref, envelope)
   select gen_random_uuid(), room, 120, 'photo:' || i, extensions.gen_random_bytes(40) from generate_series(1, 20) i;
@@ -155,10 +186,22 @@ begin
   end;
   select * into rec from public.recover_room(lookup_a);
   if rec.room_id <> room or rec.role <> 'creator' then raise exception 'FAIL recovery returned the wrong room or role'; end if;
-  select count(*) into n from public.records where room_id = room and author_id = a2 and kind = 140;
-  if n <> 1 then raise exception 'FAIL recovery did not move the person''s records'; end if;
-  select count(*) into n from public.members where room_id = room and user_id = a;
-  if n <> 0 then raise exception 'FAIL the old account kept its seat'; end if;
+  -- Recovery adds a device to the same seat (multi-device); the old device keeps working.
+  select count(*) into n from public.records where room_id = room and seat = 'creator' and kind = 140;
+  if n <> 1 then raise exception 'FAIL the new device cannot see its seat''s records'; end if;
+  select count(*) into n from public.members where room_id = room and role = 'creator';
+  if n <> 2 then raise exception 'FAIL recovery should add a second creator device, saw %', n; end if;
+  select count(*) into n from public.records where room_id = room and kind = 200 and seat = 'invitee';
+  if n <> 0 then raise exception 'FAIL a new device sees the partner''s private notes'; end if;
+  reset role;
+  -- The partner cannot use the creator's recovery to take the creator's seat.
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    perform public.recover_room(lookup_a);
+    raise exception 'FAIL the partner took the other seat through recovery';
+  exception when sqlstate 'P0007' then null;
+  end;
   reset role;
 
   -- ==== Storage guard: size only, callable by anyone =========================

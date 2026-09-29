@@ -1,3 +1,5 @@
+import { SEASONS } from '../content/seasons';
+import { seasonRefs } from './seasons';
 import { PACKS, SEASON } from '../content/cards';
 import { G_DEPTH, G_HELPS, G_TOPICS, labelOf } from '../content/extras';
 import { K } from '../data/kinds';
@@ -60,6 +62,7 @@ export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uin
   const ans = [['Source', 'Question or topic', `${me} (you)`, partner]];
   const refs = [
     ...Object.keys(SEASON).map((n) => `day:${n}`),
+    ...SEASONS.flatMap((x) => seasonRefs(x)),
     ...PACKS.flatMap((p) => p.cards.map((_, i) => `pack:${p.id}:${i + 1}`)),
     ...d.list(K.BONUS_CARD).map((r) => r.ref),
   ];
@@ -111,6 +114,22 @@ export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uin
   if (capTheirs) cap.push([partner, capTheirs.data.line]);
   if (cap.length > 1) sheets.push({ name: 'Time capsule', rows: cap, widths: [14, 60] });
 
+  // Weekly thank-yous and huddles you have both opened, and the dreams board.
+  const weekly = [['Week', 'What', me, partner]];
+  const weeks = [...new Set(d.list(K.SHUKRIYA).map((r) => r.ref).concat(d.list(K.HUDDLE).map((r) => r.ref)))].sort();
+  for (const ref of weeks) {
+    const kind = ref.startsWith('jar:') ? K.SHUKRIYA : K.HUDDLE;
+    const m = d.mine<Record<string, string>>(kind, ref)?.data;
+    const t = d.theirs<Record<string, string>>(kind, ref)?.data;
+    if (!m || !t) continue;
+    const say = (x: Record<string, string>) => (kind === K.SHUKRIYA ? [x.t] : [x.best, x.hard, x.need, x.line]).filter(Boolean).join(' · ');
+    weekly.push([ref.slice(ref.indexOf(':') + 1), kind === K.SHUKRIYA ? 'Shukriya jar' : 'Weekly huddle', say(m), say(t)]);
+  }
+  if (weekly.length > 1) sheets.push({ name: 'Weekly', rows: weekly, widths: [12, 16, 40, 40] });
+  const dreamRows = [['Dream', 'Type', 'Added by']];
+  for (const x of d.list<{ type: string; t: string }>(K.DREAM)) dreamRows.push([x.data.t, x.data.type, x.mine ? me : partner]);
+  if (dreamRows.length > 1) sheets.push({ name: 'Dreams', rows: dreamRows, widths: [50, 14, 14] });
+
   const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag;
   sheets.push({
     name: 'About',
@@ -119,7 +138,6 @@ export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uin
       ['Exported by', me],
       ['Room', hashtag ?? '(not named yet)'],
       ['Exported on', today()],
-      ['Room ends', localDate(d.room.endsAt)],
       ['Note', "Only answers you have both opened are included. A partner's Gentle Corner note is included only if they allowed saving."],
     ],
     widths: [16, 80],
@@ -135,7 +153,7 @@ This file was put together on your phone. The server cannot read your data, so i
 Inside:
 - our-answers.xlsx: the answers you both opened, plus watched-together, stories, songs and more
 ${saved.length ? `- notes-about-${slug(partner)}.xlsx: your private saved notes. Only you have these\n` : ''}${media.length ? `- media/: ${media.length} photos and voice notes, unlocked on this phone\n` : ''}
-Your room ends on ${localDate(d.room.endsAt)} unless you both choose to keep it for 4 more weeks.
+Your room stays until one of you erases it. Photos and voice notes are kept for 28 days each, so keep this file safe.
 Keep this file somewhere private.
 `;
   return { bytes: makeZip([{ name: 'README.txt', data: readme }, ...files, ...media.map((m) => ({ name: `media/${m.name}`, data: m.data }))]), name: `room-data-${today()}.zip` };

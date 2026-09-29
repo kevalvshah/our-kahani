@@ -12,6 +12,8 @@ export interface SavedItem {
   /** yyyy-mm-dd, optional (birthdays, plans). */
   date: string;
   t: number;
+  /** The partner's voice note, if the saved answer or heads-up had one (kept 28 days). */
+  voice?: import('./cardLogic').VoiceNote;
 }
 
 export function daysUntil(date: string, now = new Date()): number | null {

@@ -2,19 +2,19 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { K } from '../data/kinds';
 import { RoomDataProvider, useMaybeRoomData } from '../data/RoomData';
-import { firstWaiting } from '../features/progress';
 import { isInAppBrowser } from '../platform/inAppBrowser';
 import { controller } from '../state/controller';
-import { dayOfSeason, daysLeft, SEASON_DAYS, type Room } from '../state/room';
+import type { Room } from '../state/room';
 import { RoomContext, type RoomStatus } from '../state/roomContext';
 import { Em, Link } from './components';
-import { cardPath, navigate, PATHS, useRoute, type Route, type RouteName } from './router';
+import { AREA_PATH, Badge, Toasts, useActivity } from './Activity';
+import { PartnerPause } from './PauseBanner';
+import type { Area } from '../features/activity';
+import { navigate, PATHS, useRoute, type Route, type RouteName } from './router';
 import { Blocked } from './screens/Blocked';
 import { lazy } from './lazy';
-import { CardScreen } from './screens/CardScreen';
 import { Invite, Join } from './screens/Invite';
-import { AddCard, PackScreen, Packs } from './screens/Packs';
-import { Today, Welcome } from './screens/Today';
+import { Welcome } from './screens/Welcome';
 
 // Everything not on the first screen loads when opened.
 const MicroDates = lazy(() => import('./screens/Games').then((m) => m.MicroDates));
@@ -27,7 +27,22 @@ const MovieNight = lazy(() => import('./screens/Movie').then((m) => m.MovieNight
 const Photo = lazy(() => import('./screens/Photo').then((m) => m.Photo));
 const Privacy = lazy(() => import('./screens/Privacy').then((m) => m.Privacy));
 const RoomDataScreen = lazy(() => import('./screens/RoomData').then((m) => m.RoomDataScreen));
-const RetentionModal = lazy(() => import('./screens/RoomData').then((m) => m.RetentionModal));
+const MediaReminder = lazy(() => import('./screens/RoomData').then((m) => m.MediaReminder));
+const Seasons = lazy(() => import('./screens/Seasons').then((m) => m.Seasons));
+const SeasonScreen = lazy(() => import('./screens/Seasons').then((m) => m.SeasonScreen));
+const Recap = lazy(() => import('./screens/Seasons').then((m) => m.Recap));
+const DilKiBaat = lazy(() => import('./screens/Together').then((m) => m.DilKiBaat));
+const ShukriyaJar = lazy(() => import('./screens/Rituals').then((m) => m.ShukriyaJar));
+const WeeklyHuddle = lazy(() => import('./screens/Rituals').then((m) => m.WeeklyHuddle));
+const Today = lazy(() => import('./screens/Today').then((m) => m.Today));
+const NextCard = lazy(() => import('./screens/Today').then((m) => m.NextCard));
+const CardScreen = lazy(() => import('./screens/CardScreen').then((m) => m.CardScreen));
+const Packs = lazy(() => import('./screens/Packs').then((m) => m.Packs));
+const PackScreen = lazy(() => import('./screens/Packs').then((m) => m.PackScreen));
+const AddCard = lazy(() => import('./screens/Packs').then((m) => m.AddCard));
+const DreamsBoard = lazy(() => import('./screens/Rituals').then((m) => m.DreamsBoard));
+const HardOrHarmful = lazy(() => import('./screens/Safety').then((m) => m.HardOrHarmful));
+const KahaniBook = lazy(() => import('./screens/Book').then((m) => m.KahaniBook));
 const Saved = lazy(() => import('./screens/Saved').then((m) => m.Saved));
 const ProfileSetup = lazy(() => import('./screens/Setup').then((m) => m.ProfileSetup));
 const RoomPhrase = lazy(() => import('./screens/Setup').then((m) => m.RoomPhrase));
@@ -39,13 +54,18 @@ const Recover = lazy(() => import('./screens/Setup').then((m) => m.Recover));
 const NAV: { route: keyof typeof PATHS; label: string; emoji: string }[] = [
   { route: 'today', label: 'Today', emoji: '🏠' },
   { route: 'next', label: "Today's card", emoji: '🃏' },
+  { route: 'seasons', label: 'Seasons', emoji: '📚' },
   { route: 'packs', label: 'Packs', emoji: '🗂️' },
   { route: 'movie', label: 'Movie Night', emoji: '🍿' },
   { route: 'micro', label: 'Micro-Dates', emoji: '🎲' },
   { route: 'antakshari', label: 'Antakshari', emoji: '🎵' },
   { route: 'story', label: 'Story Relay', emoji: '📖' },
   { route: 'photo', label: 'Right Now', emoji: '📷' },
+  { route: 'thanks', label: 'Shukriya jar', emoji: '🫙' },
+  { route: 'huddle', label: 'Weekly huddle', emoji: '🤝' },
+  { route: 'dreams', label: 'Dreams board', emoji: '🌠' },
   { route: 'gentle', label: 'Gentle Corner', emoji: '💛' },
+  { route: 'talk', label: 'Dil ki Baat', emoji: '🫶' },
   { route: 'saved', label: 'Saved', emoji: '🔖' },
   { route: 'room', label: 'Room data', emoji: '🗄️' },
   { route: 'invite', label: 'Invite', emoji: '🔗' },
@@ -71,6 +91,8 @@ function Shell() {
   const [offline, setOffline] = useState(false);
   // The room's hashtag once both have locked it: the room's name in the header and tab title.
   const [roomName, setRoomName] = useState<string | null>(null);
+  // Counters for the nav (new things and cards waiting), reported by the room below.
+  const [counts, setCounts] = useState<Partial<Record<Area, number>>>({});
   const route = useRoute();
   const main = useRef<HTMLElement>(null);
   const first = useRef(true);
@@ -121,7 +143,7 @@ function Shell() {
     setStatus('ready');
   }
 
-  const kicker = room ? `Day ${dayOfSeason(room)} of ${SEASON_DAYS} · room ends in ${daysLeft(room)} days` : 'Season 1 · Pehli Baat';
+  const kicker = 'Season 1 · Pehli Baat · at your own pace';
   const active = (name: RouteName) =>
     name === route.name || (name === 'today' && (route.name === 'card' || route.name === 'next')) || (name === 'packs' && route.name === 'pack');
 
@@ -132,13 +154,17 @@ function Shell() {
       </a>
       <div class="shell">
         <aside class="sidebar">
-          <div class="sidebar-mark">{roomName ?? 'Our Kahani'}</div>
+          <div class="sidebar-mark">
+            <img class="mark-icon" src="/icons/favicon.svg" alt="" width={32} height={32} />
+            {roomName ?? 'Our Kahani'}
+          </div>
           <div class="kicker sidebar-kicker">{kicker}</div>
           <nav aria-label="All screens">
             {NAV.map((n) => (
               <Link key={n.route} href={PATHS[n.route]} class={route.name === n.route ? 'side-link is-active' : 'side-link'} aria-current={route.name === n.route ? 'page' : undefined}>
                 <Em>{n.emoji}</Em>
                 <span>{n.label}</span>
+                <Badge n={counts[n.route as Area]} label={n.label} />
               </Link>
             ))}
           </nav>
@@ -148,7 +174,10 @@ function Shell() {
         <div class="column">
           <header class="app-header">
             <div>
-              <div class="header-mark">{roomName ?? 'Our Kahani'}</div>
+              <div class="header-mark">
+                <img class="mark-icon" src="/icons/favicon.svg" alt="" width={28} height={28} />
+                {roomName ?? 'Our Kahani'}
+              </div>
               <div class="kicker">{kicker}</div>
             </div>
             <Link class="e2e" href={PATHS.privacy} title="End-to-end encrypted">
@@ -165,7 +194,7 @@ function Shell() {
             <div class="content">
               {room ? (
                 <RoomDataProvider room={room}>
-                  <InRoom route={route} onName={setRoomName} />
+                  <InRoom route={route} onName={setRoomName} onCounts={setCounts} />
                 </RoomDataProvider>
               ) : (
                 <NoRoom route={route} />
@@ -178,6 +207,7 @@ function Shell() {
               <Link key={t.route} href={PATHS[t.route]} class={active(t.route) ? 'tab is-active' : 'tab'} aria-current={route.name === t.route ? 'page' : undefined}>
                 <Em>{t.emoji}</Em>
                 <span class="tab-label">{t.label}</span>
+                <Badge n={t.route === 'packs' ? (counts.packs ?? 0) : t.route === 'today' ? (Object.entries(counts).filter(([a]) => a !== 'packs').reduce((x, [, n]) => x + (n ?? 0), 0)) : 0} label={t.label} />
               </Link>
             ))}
           </nav>
@@ -200,14 +230,22 @@ function NoRoom({ route }: { route: Route }) {
       return <Privacy />;
     case 'invite':
       return <Invite />;
+    case 'safety':
+      return <HardOrHarmful />;
     default:
       return <Welcome />;
   }
 }
 
 /** Screens inside a room, after first-run setup. */
-function InRoom({ route, onName }: { route: Route; onName: (name: string | null) => void }) {
+function InRoom({ route, onName, onCounts }: { route: Route; onName: (name: string | null) => void; onCounts: (c: Partial<Record<Area, number>>) => void }) {
   const d = useMaybeRoomData()!;
+  const activity = useActivity(d, route.name);
+  const countsKey = JSON.stringify(activity.badges);
+  useEffect(() => {
+    onCounts(activity.badges);
+    return () => onCounts({});
+  }, [countsKey]);
   const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag ?? null;
   useEffect(() => {
     onName(hashtag);
@@ -218,6 +256,8 @@ function InRoom({ route, onName }: { route: Route; onName: (name: string | null)
     };
   }, [hashtag]);
   if (route.name === 'join') return <Join />;
+  // The safety page never waits for the room: it shows at once, and does not flicker away.
+  if (route.name === 'safety') return <HardOrHarmful />;
   if (!d.loaded) {
     return (
       <p class="caption" role="status">
@@ -231,22 +271,38 @@ function InRoom({ route, onName }: { route: Route; onName: (name: string | null)
   if (!d.room.backedUp && d.list(K.HASHTAG).length > 0) return <RoomPhrase />;
   return (
     <>
+      <Toasts items={activity.toasts} onDismiss={activity.dismiss} onOpen={(a) => navigate(AREA_PATH[a])} />
+      <PartnerPause />
       <Screen route={route} />
-      {route.name === 'today' && <RetentionModal />}
+      {route.name === 'today' && <MediaReminder />}
     </>
   );
 }
 
 function Screen({ route }: { route: Route }): ComponentChildren {
-  const d = useMaybeRoomData()!;
   switch (route.name) {
     case 'card':
       return <CardScreen key={route.ref} cardRef={route.ref} />;
-    case 'next': {
-      const next = firstWaiting(d);
-      queueMicrotask(() => navigate(next ? cardPath(next) : PATHS.today, { replace: true }));
-      return null;
-    }
+    case 'next':
+      return <NextCard />;
+    case 'seasons':
+      return <Seasons />;
+    case 'season':
+      return <SeasonScreen id={route.id} />;
+    case 'recap':
+      return <Recap />;
+    case 'talk':
+      return <DilKiBaat />;
+    case 'thanks':
+      return <ShukriyaJar />;
+    case 'huddle':
+      return <WeeklyHuddle />;
+    case 'dreams':
+      return <DreamsBoard />;
+    case 'safety':
+      return <HardOrHarmful />;
+    case 'book':
+      return <KahaniBook />;
     case 'packs':
       return <Packs />;
     case 'pack':

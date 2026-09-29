@@ -66,7 +66,8 @@ export function createController(deps: Deps = defaultDeps()) {
   const { api, session, keystore } = deps;
 
   async function toRoom(stored: StoredRoom, server: RoomRow | null): Promise<Room> {
-    const partnerJoined = (server?.members.length ?? 1) >= 2;
+    // Both seats taken (each person may use several devices).
+    const partnerJoined = new Set(server?.members.map((m) => m.role) ?? [stored.role]).size >= 2;
     if (partnerJoined && stored.inviteKey) await keystore.forgetInvite(stored.id);
     return {
       id: stored.id,
@@ -78,7 +79,8 @@ export function createController(deps: Deps = defaultDeps()) {
       partnerJoined,
       backedUp: stored.backedUp,
       startedAt: server ? Date.parse(server.created_at) : stored.savedAt,
-      endsAt: server ? Date.parse(server.ends_at) : stored.savedAt + 28 * 86_400_000,
+      // Rooms have no end date now ('infinity' on the server).
+      endsAt: server && Number.isFinite(Date.parse(server.ends_at)) ? Date.parse(server.ends_at) : Infinity,
     };
   }
 
@@ -206,6 +208,8 @@ export function createController(deps: Deps = defaultDeps()) {
     },
 
     rescueStatus: (room: Room) => api.rescueStatus(room.id),
+    myDevices: (room: Room) => api.myDevices(room.id),
+    signOutOtherDevices: (room: Room) => api.signOutOtherDevices(room.id),
     cancelRescue: (room: Room) => api.cancelRescue(room.id),
 
     /** On a new device: hashtag + rescue code bring this person's place back; a new phrase follows. */
@@ -225,14 +229,13 @@ export function createController(deps: Deps = defaultDeps()) {
 
     /** Every record this person may read, decrypted on the phone. */
     async records(room: Room): Promise<DataRecord[]> {
-      const me = session.userId();
       const rows = await api.allRecords(room.id);
       const out: DataRecord[] = [];
       for (const row of rows) {
         const key = isPrivateKind(row.kind) ? room.notesKey : room.key;
         try {
           const data = await openJson(key, { roomId: room.id, recordId: row.id, kind: row.kind }, row.envelope);
-          out.push({ id: row.id, kind: row.kind, ref: row.ref, mine: row.author_id === me, data, createdAt: Date.parse(row.created_at) });
+          out.push({ id: row.id, kind: row.kind, ref: row.ref, mine: row.seat === room.role, data, createdAt: Date.parse(row.created_at) });
         } catch {
           // Unreadable (e.g. written with a key this device does not have): skip it.
         }

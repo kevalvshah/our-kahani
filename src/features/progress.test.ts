@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { PACKS, SEASON } from '../content/cards';
+import { SEASONS } from '../content/seasons';
 import { K } from '../data/kinds';
 import type { RoomData } from '../data/RoomData';
 import type { DataRecord } from '../state/controller';
 import { DAY_MS, SEASON_DAYS, type Room } from '../state/room';
-import { doneByMe, entryFor, firstWaiting, nextCardFor, packProgress, seasonDone, unlockedDays } from './progress';
+import { doneByMe, entryFor, firstWaiting, nextCardFor,
+  keepPlaying,
+  firstPackCard,
+  firstSeasonCard,
+  seasonProgress, packProgress, seasonDone, unlockedDays } from './progress';
 
 const NOW = Date.now();
 
@@ -44,11 +49,29 @@ describe('doneByMe', () => {
   });
 });
 
+/** Every season card done by me (answers, plus the noticed and bug cards). */
+function allSeason() {
+  return Object.entries(SEASON).map(([n, s]) =>
+    s.card.type === 'noticed'
+      ? { kind: K.NOTICED, ref: `day:${n}`, mine: true, data: {} }
+      : s.card.type === 'bug'
+        ? { kind: K.BUG, ref: `day:${n}`, mine: true, data: {} }
+        : ans(`day:${n}`, { pick: 'a', picks: ['a'], text: 'a', rates: s.card.type === 'try' ? Object.fromEntries(s.card.items.map((it) => [it.id, 'keen'])) : {} }),
+  );
+}
+
+/** Every card in Seasons 2-5 answered. */
+function allLater() {
+  return SEASONS.flatMap((s) =>
+    s.cards.map((c, i) => ans(`season:${s.id}:${i + 1}`, { pick: 'a', picks: ['a'], text: 'a', rates: c.card.type === 'try' ? Object.fromEntries(c.card.items.map((it) => [it.id, 'keen'])) : {} })),
+  );
+}
+
 describe('unlockedDays', () => {
-  it('unlocks one season day per day', () => {
-    expect(unlockedDays(fake([], 1))).toEqual([1]);
-    expect(unlockedDays(fake([], 3))).toEqual([1, 2, 3]);
-    expect(unlockedDays(fake([], 40))).toEqual(Array.from({ length: SEASON_DAYS }, (_, i) => i + 1));
+  it('opens every season card from the start: couples go at their own pace', () => {
+    const all = Array.from({ length: SEASON_DAYS }, (_, i) => i + 1);
+    expect(unlockedDays(fake([], 1))).toEqual(all);
+    expect(unlockedDays()).toEqual(all);
   });
 });
 
@@ -61,9 +84,10 @@ describe('firstWaiting', () => {
     const d1 = ans('day:1', { pick: 'chai' });
     const mineBonus = { kind: K.BONUS_CARD, ref: 'bonus:m', mine: true, data: { kind: 'nhie', q: 'q' } };
     const theirBonus = { kind: K.BONUS_CARD, ref: 'bonus:t', mine: false, data: { kind: 'choice', q: 'q' } };
-    expect(firstWaiting(fake([d1, mineBonus, theirBonus], 1))).toBe('bonus:t');
-    expect(firstWaiting(fake([d1, mineBonus, theirBonus, ans('bonus:t', { pick: 'a' })], 1))).toBeNull();
-    expect(firstWaiting(fake([d1], 1))).toBeNull();
+    expect(firstWaiting(fake([d1, mineBonus, theirBonus], 1))).toBe('day:2');
+    const season = allSeason();
+    expect(firstWaiting(fake([...season, mineBonus, theirBonus], 1))).toBe('bonus:t');
+    expect(firstWaiting(fake([...season, mineBonus, theirBonus, ans('bonus:t', { pick: 'a' })], 1))).toBeNull();
   });
 });
 
@@ -72,13 +96,36 @@ describe('nextCardFor', () => {
     const d = fake([ans('pack:garba:2', { pick: 'bold' })]);
     expect(nextCardFor(d, entryFor('pack:garba:1')!)).toBe('pack:garba:3');
     const last = PACKS.find((p) => p.id === 'garba')!.cards.length;
-    expect(nextCardFor(d, entryFor(`pack:garba:${last}`)!)).toBeNull();
+    // At the end of a pack, play carries on (never stops early).
+    const after = nextCardFor(d, entryFor(`pack:garba:${last}`)!);
+    expect(after).not.toBeNull();
+    expect(after).not.toBe(`pack:garba:${last}`);
   });
   it('moves to the next waiting season card, not the same one', () => {
-    const d = fake([], 2);
-    expect(nextCardFor(d, entryFor('day:1')!)).toBeNull();
+    const firstPack = `pack:${PACKS[0]!.id}:1`;
+    expect(nextCardFor(fake([], 2), entryFor('day:1')!)).toBe('day:2');
     expect(nextCardFor(fake([ans('day:1', { pick: 'chai' })], 2), entryFor('day:1')!)).toBe('day:2');
-    expect(nextCardFor(fake([ans('day:1', { pick: 'chai' }), ans('day:2', { pick: 'sofa' })], 2), entryFor('day:2')!)).toBeNull();
+    expect(nextCardFor(fake(allSeason()), entryFor('day:14')!)).toBe('season:s2:1');
+    expect(nextCardFor(fake([...allSeason(), ...allLater()]), entryFor('day:14')!)).toBe(firstPack);
+  });
+  it('keeps playing through the packs after today, and says so when there is nothing left', () => {
+    const firstPack = `pack:${PACKS[0]!.id}:1`;
+    const doneToday = fake([...allSeason(), ...allLater()], 1);
+    expect(keepPlaying(fake(allSeason(), 1))).toBe('season:s2:1');
+    expect(firstSeasonCard(fake(allSeason(), 1), 'season:s2:1')).toBe('season:s2:2');
+    expect(keepPlaying(doneToday)).toBe(firstPack);
+    expect(keepPlaying(doneToday, firstPack)).toBeNull();
+    expect(firstPackCard(doneToday)).toBe(firstPack);
+    // Every pack card answered: nothing left to carry on to.
+    const all = PACKS.flatMap((p) =>
+      p.cards.map((c, i) => ans(`pack:${p.id}:${i + 1}`, { pick: 'a', picks: ['a'], text: 'a', rates: c.type === 'try' ? Object.fromEntries(c.items.map((it) => [it.id, 'keen'])) : {} })),
+    );
+    expect(firstPackCard(fake(all))).toBeNull();
+    expect(keepPlaying(fake([...allSeason(), ...allLater(), ...all]))).toBeNull();
+    expect(firstSeasonCard(doneToday)).toBeNull();
+    expect(seasonProgress(doneToday, 's1')).toEqual({ done: SEASON_DAYS, total: SEASON_DAYS });
+    expect(seasonProgress(fake([]), 's2')).toEqual({ done: 0, total: SEASONS[0]!.cards.length });
+    expect(seasonProgress(fake([]), 'nope')).toEqual({ done: 0, total: 0 });
   });
 });
 

@@ -24,6 +24,15 @@ export type Route =
   | { name: 'look' }
   | { name: 'privacy' }
   | { name: 'recover' }
+  | { name: 'seasons' }
+  | { name: 'season'; id: string }
+  | { name: 'recap' }
+  | { name: 'talk' }
+  | { name: 'thanks' }
+  | { name: 'huddle' }
+  | { name: 'dreams' }
+  | { name: 'safety' }
+  | { name: 'book' }
   | { name: 'join' };
 
 export type RouteName = Route['name'];
@@ -46,7 +55,19 @@ export const PATHS = {
   look: '/look',
   privacy: '/privacy',
   recover: '/recover',
+  seasons: '/seasons',
+  recap: '/what-i-learned',
+  talk: '/dil-ki-baat',
+  thanks: '/shukriya',
+  huddle: '/huddle',
+  dreams: '/dreams',
+  safety: '/hard-or-harmful',
+  book: '/our-kahani-book',
 } as const;
+
+export function seasonPath(id: string): string {
+  return `/seasons/${encodeURIComponent(id)}`;
+}
 
 /** "day:3" -> "/card/day/3"; "pack:warm:2" -> "/card/pack/warm/2"; "bonus:<id>" -> "/card/bonus/<id>" */
 export function cardPath(ref: string): string {
@@ -67,6 +88,8 @@ export function routeFromPath(pathname: string): Route {
   }
   const pack = /^\/packs\/([a-z]+)$/.exec(clean);
   if (pack) return { name: 'pack', id: pack[1]! };
+  const season = /^\/seasons\/(s[1-9])$/.exec(clean);
+  if (season) return { name: 'season', id: season[1]! };
   const hit = (Object.entries(PATHS) as [RouteName, string][]).find(([, p]) => p === clean);
   return hit ? ({ name: hit[0] } as Route) : { name: 'today' };
 }

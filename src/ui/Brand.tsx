@@ -7,6 +7,10 @@ export function Brand() {
   const L = LANGS.find((x) => x[0] === lang) ?? LANGS[0]!;
   return (
     <div class="brand">
+      <div class="lockup">
+        <img src="/icons/favicon.svg" alt="" width={84} height={84} />
+        <span class="lockup-name">Our Kahani</span>
+      </div>
       <h1 class="hero" tabIndex={-1}>
         From pehli baat <em>to our kahani.</em> <span aria-hidden="true">💛</span>
       </h1>

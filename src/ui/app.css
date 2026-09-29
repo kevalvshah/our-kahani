@@ -38,6 +38,14 @@ h1:focus { outline: none; }
   border-bottom: 1px solid var(--k-line);
 }
 .header-mark { font-family: var(--k-serif); font-size: 1.5625rem; line-height: 1.1; letter-spacing: -0.2px; }
+.header-mark, .sidebar-mark { display: flex; align-items: center; gap: 0.5rem; }
+.mark-icon { flex: none; border-radius: 22.4%; }
+/* Stacked lockup from the icon handoff: icon, then the name, centred on the phone. */
+.lockup { display: flex; align-items: center; gap: 0.875rem; margin: 0.25rem 0 1rem; }
+.lockup img { width: 4.5rem; height: 4.5rem; border-radius: 22.4%; }
+.lockup-name { font-family: var(--k-serif); font-size: 2.5rem; line-height: 1; letter-spacing: -0.5px; }
+.welcome-note { border-color: color-mix(in srgb, var(--k-accent) 40%, var(--k-line)); }
+.welcome-note .btn-small { margin-top: 0.25rem; }
 .kicker {
   margin-top: 3px; font-size: 0.71875rem; color: var(--k-muted);
   letter-spacing: 0.06em; text-transform: uppercase;
@@ -57,6 +65,8 @@ h1:focus { outline: none; }
 :root[data-k-texture='plain'] .scroll { background-image: none; }
 .content { max-width: 40rem; margin: 0 auto; }
 
+/* Focus and in-page jumps never land behind the sticky header or tab bar (WCAG 2.4.11). */
+html { scroll-padding-top: 5.5rem; scroll-padding-bottom: 5.5rem; }
 .tabs {
   position: sticky; bottom: 0; z-index: 2;
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
@@ -186,6 +196,33 @@ h1:focus { outline: none; }
   min-height: 2.75rem;
 }
 .support { margin-top: 1rem; }
+.depth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0.5rem 0 0.75rem; }
+.depth { display: grid; gap: 2px; text-align: left; padding: 12px; min-height: 2.75rem; border-radius: 14px; border: 2px solid var(--k-line); background: var(--k-surface); color: var(--k-ink); font: inherit; cursor: pointer; }
+.depth.is-on { border-color: var(--k-accent); background: var(--k-accent-soft); }
+.depth-e { font-size: 1.25rem; }
+.depth-l { font-weight: 700; }
+.depth-sub { font-size: 0.75rem; color: var(--k-muted); }
+.badge {
+  display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 5px; margin-left: auto;
+  border-radius: 999px; background: var(--k-pink); color: #fff; font-size: 0.6875rem; font-weight: 700; line-height: 1;
+}
+.tab { position: relative; }
+.tab .badge { position: absolute; top: 4px; right: calc(50% - 22px); margin: 0; }
+.toasts { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); top: 12px; width: min(92vw, 26rem); display: grid; gap: 8px; }
+.toast {
+  display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 14px; border-radius: 16px;
+  background: var(--k-ink); color: var(--k-bg); box-shadow: 0 8px 24px var(--k-shadow);
+}
+.toast-text { flex: 1; text-align: left; background: none; border: 0; color: inherit; font: inherit; font-size: 0.875rem; min-height: 2.75rem; cursor: pointer; }
+.toast-x { background: none; border: 0; color: inherit; font-size: 1.25rem; min-width: 2.75rem; min-height: 2.75rem; cursor: pointer; }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: toast-in 0.25s ease-out; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.micro-notes { margin-top: 1rem; }
+.thread { list-style: none; padding: 0; margin: 0 0 0.5rem; display: grid; gap: 6px; }
+.note-text { overflow-wrap: anywhere; white-space: pre-wrap; }
+.note-text a { color: inherit; text-decoration: underline; }
+.device-list { list-style: none; margin: 0 0 0.5rem; padding: 0; font-size: 0.875rem; }
+.device-list li { padding: 6px 0; border-bottom: 1px solid var(--k-line); }
 .support a { color: var(--k-ink); }
 
 /* ---------- Days ---------- */
@@ -401,6 +438,8 @@ h1:focus { outline: none; }
 .btn-danger { background: var(--k-pink); color: var(--k-on-accent); }
 .panel-accent { background: var(--k-accent-soft); border-color: var(--k-accent); }
 .panel-pink { background: var(--k-pink-soft); border-color: var(--k-pink); }
+/* Soft pink ground: full-strength ink so small print and links keep AA contrast. */
+.panel-pink .muted, .panel-pink a { color: var(--k-ink); }
 
 .reveal-line { display: block; }
 .why { display: block; margin-top: 3px; font-style: italic; font-weight: 400; color: var(--k-muted); font-size: 0.84375rem; }
@@ -490,6 +529,74 @@ a.day { text-decoration: none; color: var(--k-ink); }
 
 /* Laptop: sidebar instead of header and tabs, wider column, two-column rows.
    Kept last so it wins over the phone-first rules above. */
+/* ---------- Interactive polish: lift, accent glow, frosted reveal ----------
+   Motion follows the device and "Make it ours" (Calm turns every transition off, tokens.css). */
+.btn, .option, .row, .chip, .depth, .side-link, .tab, .photo-card, .day {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+@media (hover: hover) {
+  .btn:not(:disabled):hover, .option:not(:disabled):hover, .row:hover, .chip:hover, .depth:hover, .photo-card:hover, a.day:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--k-accent) 22%, transparent);
+    border-color: color-mix(in srgb, var(--k-accent) 55%, var(--k-line));
+  }
+  .side-link:hover { transform: translateX(2px); }
+}
+.btn:not(:disabled):active, .option:not(:disabled):active, .row:active, .chip:active, .depth:active { transform: translateY(0) scale(0.98); }
+.option.is-picked, .depth.is-on, .chip.is-on {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--k-accent) 18%, transparent), 0 6px 16px color-mix(in srgb, var(--k-accent) 18%, transparent);
+}
+
+/* Sealed and waiting: a soft frosted card that breathes once. */
+.wait {
+  background: color-mix(in srgb, var(--k-accent-soft) 92%, var(--k-surface));
+  color: var(--k-ink);
+  border: 1px solid color-mix(in srgb, var(--k-accent) 25%, transparent);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  animation: k-seal 0.5s ease both;
+}
+
+/* The reveal: frosted glass over the card, rows arriving one after another. */
+.reveal {
+  padding: 16px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--k-surface) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--k-accent) 22%, var(--k-line));
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--k-accent) 16%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+}
+.reveal-banner { animation: k-rise 0.45s ease both; }
+.reveal-rows > * { animation: k-rise 0.45s ease both; }
+.reveal-rows > *:nth-child(2) { animation-delay: 0.08s; }
+.reveal-rows > *:nth-child(3) { animation-delay: 0.16s; }
+.toast { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: color-mix(in srgb, var(--k-ink) 88%, transparent); }
+.question-card { box-shadow: 0 10px 30px var(--k-shadow); }
+@keyframes k-seal {
+  0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+  60% { opacity: 1; transform: translateY(0) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+
+.pause-banner {
+  margin: 0 0 12px; padding: 10px 14px; border-radius: 14px; font-size: 0.875rem;
+  background: color-mix(in srgb, var(--k-gold-soft) 80%, transparent); border: 1px solid color-mix(in srgb, var(--k-gold) 30%, transparent);
+}
+.then-block { margin: 6px 0 14px; padding: 12px 14px; border-radius: 16px; background: var(--k-surface2); border-left: 4px solid var(--k-gold); }
+.then-block p { margin: 2px 0; }
+.need-menu { margin: 1rem 0; }
+.dream-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 10px; margin-top: 1rem; }
+.dream { display: grid; gap: 6px; padding: 14px; border-radius: 18px; background: var(--k-surface); border: 1.5px solid var(--k-line); }
+.dream p { margin: 0; font-weight: 600; }
+.soft-note .chip-row { margin-top: 8px; }
+.book-names { font-family: var(--k-serif); font-size: 1.5rem; margin: 1rem 0; }
+.book-chapter { break-inside: avoid; margin-bottom: 1rem; }
+@media print {
+  .sidebar, .tabs, .app-header, .back, .no-print, .toasts, .pause-banner, .skip { display: none !important; }
+  body, .scroll { background: #fff !important; color: #000 !important; overflow: visible !important; }
+}
+
 @media (min-width: 1024px) {
   .sidebar {
     display: flex; flex-direction: column; gap: 4px;

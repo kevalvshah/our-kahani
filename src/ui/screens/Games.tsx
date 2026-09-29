@@ -5,6 +5,8 @@ import { useRoomData } from '../../data/RoomData';
 import type { DataRecord } from '../../state/controller';
 import { Back, Chips, Done, Problem, RevealRow, ScreenTitle, Wait } from '../components';
 import { PATHS } from '../router';
+import { VoicePlayer, VoiceRecord } from '../Voice';
+import type { VoiceNote } from '../../features/cardLogic';
 
 const stamp = () => Date.now().toString(36);
 
@@ -129,10 +131,76 @@ export function MicroDates() {
                 Not this one, spin again
               </button>
             )}
+            <MicroNotes round={round} />
           </>
         )}
       </div>
     </section>
+  );
+}
+
+/** Links, notes or what to watch for this micro-date. Encrypted like everything else. */
+function MicroNotes({ round }: { round: number }) {
+  const d = useRoomData();
+  const [text, setText] = useState('');
+  const notes = d.list<{ t: string; round: number; voice?: VoiceNote }>(K.MICRO_NOTE).filter((n) => n.data.round === round);
+
+  async function add() {
+    const t = text.trim().slice(0, 300);
+    if (!t) return;
+    setText('');
+    await d.add(K.MICRO_NOTE, `micronote:${round}:${stamp()}`, { t, round });
+  }
+
+  return (
+    <div class="micro-notes">
+      <label class="field-label" for="mnote">
+        Share a link, a note or what to watch
+      </label>
+      {notes.length > 0 && (
+        <ul class="thread">
+          {notes.map((n) => (
+            <li key={n.id} class={n.mine ? 'bubble bubble-mine' : 'bubble bubble-theirs'}>
+              <NoteText t={n.data.t} />
+              {n.data.voice && <VoicePlayer note={n.data.voice} who={n.mine ? 'you' : d.partner} />}
+              <small>{n.mine ? 'You' : d.partner}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+      <textarea
+        id="mnote"
+        class="field field-area"
+        rows={2}
+        maxLength={300}
+        value={text}
+        placeholder="e.g. a YouTube link, “Panchayat S3 E2”, or “bring chai”"
+        onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+      />
+      <button type="button" class="btn btn-secondary btn-block" disabled={!text.trim()} onClick={() => void add()}>
+        Share it 🔗
+      </button>
+      <VoiceRecord label="🎙️ Or send a voice note" onSent={(voice) => void d.add(K.MICRO_NOTE, `micronote:${round}:${stamp()}`, { t: '🎙️ Voice note', round, voice })} />
+      <p class="small muted">Locked on your phone before it is sent, like everything else here.</p>
+    </div>
+  );
+}
+
+/** Plain text, with https links made clickable (opened in a new tab, no referrer). */
+function NoteText({ t }: { t: string }) {
+  const parts = t.split(/(https:\/\/[^\s]+)/g);
+  return (
+    <span class="note-text">
+      {parts.map((p, i) =>
+        /^https:\/\/[^\s]+$/.test(p) ? (
+          <a key={i} href={p} target="_blank" rel="noopener noreferrer">
+            {p}
+          </a>
+        ) : (
+          p
+        ),
+      )}
+    </span>
   );
 }
 
@@ -153,13 +221,14 @@ export function Antakshari() {
   const d = useRoomData();
   const saved = d.list<{ songs: string[] }>(K.ANTA_SAVED);
   const lastSaved = saved[saved.length - 1]?.createdAt ?? 0;
-  const chain = since(d.list<{ t?: string; pass?: boolean }>(K.ANTAKSHARI), lastSaved);
+  const chain = since(d.list<{ t?: string; pass?: boolean; voice?: VoiceNote }>(K.ANTAKSHARI), lastSaved);
   const starter = ANTAKSHARI_STARTERS[saved.length % ANTAKSHARI_STARTERS.length]!;
   const songs = [starter, ...chain.filter((x) => x.data.t).map((x) => x.data.t!)];
   const L = lastLetter(songs[songs.length - 1]!);
   const last = chain[chain.length - 1];
   const myTurn = !last || !last.mine;
   const [text, setText] = useState('');
+  const [voice, setVoice] = useState<VoiceNote | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   async function add() {
@@ -168,7 +237,8 @@ export function Antakshari() {
     if (firstLetter(t) !== L) return setProblem(`It needs to start with “${L}”. Try another 🎵`);
     setProblem(null);
     setText('');
-    await d.add(K.ANTAKSHARI, `song:${stamp()}`, { t });
+    await d.add(K.ANTAKSHARI, `song:${stamp()}`, voice ? { t, voice } : { t });
+    setVoice(null);
   }
 
   return (
@@ -188,6 +258,7 @@ export function Antakshari() {
           {chain.map((x) => (
             <div key={x.id} class={`bubble ${x.mine ? 'bubble-mine' : 'bubble-theirs'}`}>
               {x.data.pass ? '⏭️ passed' : `🎵 ${x.data.t}`}
+              {x.data.voice && <VoicePlayer note={x.data.voice} who={x.mine ? 'you' : d.partner} />}
               <small>{x.mine ? 'You' : d.partner}</small>
             </div>
           ))}
@@ -198,6 +269,11 @@ export function Antakshari() {
               Your song starts with <b class="accent-text">{L}</b>
             </label>
             <input id="anta" class="field" maxLength={60} value={text} placeholder="Hindi, Gujarati or English" autocomplete="off" onInput={(e) => setText((e.target as HTMLInputElement).value)} />
+            {voice ? (
+              <Done>🎙️ Your voice note is ready. It goes with the song.</Done>
+            ) : (
+              <VoiceRecord label="🎙️ Sing a line or say it (optional)" onSent={setVoice} />
+            )}
             <Problem text={problem} />
             <div class="btn-pair">
               <button type="button" class="btn btn-primary" onClick={() => void add()}>
@@ -245,7 +321,7 @@ export function StoryRelay() {
   const d = useRoomData();
   const chapters = d.list<{ start: string; lines: { by: string; t: string }[] }>(K.STORY_CHAPTER);
   const lastChapter = chapters[chapters.length - 1]?.createdAt ?? 0;
-  const lines = since(d.list<{ t: string }>(K.STORY_LINE), lastChapter);
+  const lines = since(d.list<{ t: string; voice?: VoiceNote }>(K.STORY_LINE), lastChapter);
   const names = d.room.role === 'creator' ? [d.me, d.partner] : [d.partner, d.me];
   const start = STORY_STARTERS[chapters.length % STORY_STARTERS.length]!.replace('{A}', names[0]!).replace('{B}', names[1]!);
   const last = lines[lines.length - 1];
@@ -278,6 +354,7 @@ export function StoryRelay() {
           {lines.map((x) => (
             <div key={x.id} class={`bubble ${x.mine ? 'bubble-mine' : 'bubble-theirs'}`}>
               {x.data.t}
+              {x.data.voice && <VoicePlayer note={x.data.voice} who={x.mine ? 'you' : d.partner} />}
               <small>{x.mine ? 'You' : d.partner}</small>
             </div>
           ))}
@@ -296,6 +373,10 @@ export function StoryRelay() {
                 Finish 🎬
               </button>
             </div>
+            <VoiceRecord
+              label="🎙️ Say your sentence instead"
+              onSent={(voice) => void d.add(K.STORY_LINE, `line:${stamp()}`, { t: '🎙️ (a voice line)', voice })}
+            />
           </>
         ) : (
           <Wait>Waiting for {d.partner} ✍️</Wait>

@@ -16,6 +16,7 @@ export interface Room {
 }
 
 export const ROOM_DAYS = 28;
+/** Season 1 (Pehli Baat): 14 cards. */
 export const SEASON_DAYS = 14;
 export const DAY_MS = 86_400_000;
 

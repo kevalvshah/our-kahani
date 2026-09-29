@@ -206,6 +206,19 @@ describe('api', () => {
     await expect(api(() => pgError('P0009')).a.useRescue(new Uint8Array(1))).rejects.toMatchObject({ code: 'rescue-invalid' });
   });
 
+  it('lists this person’s devices and signs the others out', async () => {
+    const { a } = api(() => json([{ added_at: '2026-09-29T10:00:00Z', this_device: true }, { added_at: '2026-09-29T11:00:00Z', this_device: false }]));
+    expect(await a.myDevices('r')).toEqual([
+      { addedAt: Date.parse('2026-09-29T10:00:00Z'), thisDevice: true },
+      { addedAt: Date.parse('2026-09-29T11:00:00Z'), thisDevice: false },
+    ]);
+    expect(await api(() => json(null)).a.myDevices('r')).toEqual([]);
+    await expect(api(() => pgError('XX000')).a.myDevices('r')).rejects.toBeInstanceOf(ApiError);
+    expect(await api(() => json(2)).a.signOutOtherDevices('r')).toBe(2);
+    expect(await api(() => json(null)).a.signOutOtherDevices('r')).toBe(0);
+    await expect(api(() => pgError('XX000')).a.signOutOtherDevices('r')).rejects.toBeInstanceOf(ApiError);
+  });
+
   it('uses the global fetch when none is given', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json('room-9'));
     const session = { accessToken: async () => 'tok', userId: () => null, signOut: () => {} };

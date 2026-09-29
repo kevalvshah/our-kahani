@@ -184,6 +184,11 @@ interface ScreenDef {
   mask?: readonly string[];
   /** Waits for content that loads after the heading. */
   ready?: (page: Page) => Promise<void>;
+  /** Screenshot the visible screen only: the page's length depends on what other tests did. */
+  viewportOnly?: boolean;
+  /** Left out of screenshot comparison: its content is whatever other tests answered (still
+   *  covered by the accessibility and responsive checks). */
+  noScreenshot?: boolean;
 }
 
 const MINE = 'Asha';
@@ -206,7 +211,16 @@ export const SCREENS = {
   'in-app-browser': { who: 'instagram', path: '/', heading: 'Open this in Safari or Chrome' },
 
   // First run, on the creator's phone.
-  'profile-setup': { who: 'newcomer', path: '/', step: 'name', heading: /From pehli baat/ },
+  // The welcome screen shares this heading while the room is still opening: wait for the name field.
+  'profile-setup': {
+    who: 'newcomer',
+    path: '/',
+    step: 'name',
+    heading: /From pehli baat/,
+    ready: async (page) => {
+      await expect(page.getByLabel('Your first name')).toBeVisible({ timeout: 20_000 });
+    },
+  },
   invite: { who: 'newcomer', path: '/invite', step: 'alone', heading: 'Send this to your person', mask: ['.invite', '.emoji'] },
   'today-waiting': {
     who: 'newcomer',
@@ -255,11 +269,21 @@ export const SCREENS = {
   'room-data': {
     who: 'creator',
     path: '/room',
-    heading: /days? left|Ends today/,
+    heading: 'Your room, your pace',
     mask: ['.question-card h1', '.facts dd', '.question-card p.small b'],
-    ready: (p) => expect(p.getByRole('button', { name: /Keep it 4 more weeks/ })).toBeEnabled({ timeout: 20_000 }),
+    ready: (p) => expect(p.getByRole('button', { name: /Download everything/ })).toBeEnabled({ timeout: 20_000 }),
   },
   'invite-both-in': { who: 'creator', path: '/invite', heading: 'You’re both in', mask: ['.emoji'] },
+  seasons: { who: 'creator', path: '/seasons', heading: 'Your seasons' },
+  'season-2': { who: 'creator', path: '/seasons/s2', heading: 'Asli Kahani' },
+  recap: { who: 'creator', path: '/what-i-learned', heading: `What I learned about ${THEIRS}` },
+  'dil-ki-baat': { who: 'creator', path: '/dil-ki-baat', heading: 'Dil ki Baat' },
+  shukriya: { who: 'creator', path: '/shukriya', heading: 'Shukriya jar', mask: ['.field-label'] },
+  huddle: { who: 'creator', path: '/huddle', heading: 'Weekly huddle' },
+  dreams: { who: 'creator', path: '/dreams', heading: 'Dreams board' },
+  'hard-or-harmful': { who: 'creator', path: '/hard-or-harmful', heading: 'Is this hard, or is this harmful?' },
+  // The book collects whatever the shared test couple has answered so far (test order).
+  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, noScreenshot: true },
 
   // Hashtag locked: each person's room phrase (mandatory before anything else).
   'room-phrase': { who: 'named', path: '/', heading: /Your room phrase/, mask: ['.panel b', '.lead'] },
@@ -269,6 +293,12 @@ export type Screen = keyof typeof SCREENS;
 export const SCREEN_NAMES = Object.keys(SCREENS) as Screen[];
 
 /** Things that differ every run on any screen: invite links, safety codes, the install prompt. */
+export const SCREENSHOT_NAMES = SCREEN_NAMES.filter((s) => !(SCREENS[s] as ScreenDef).noScreenshot);
+
+export function fullPageFor(screen: Screen): boolean {
+  return !(SCREENS[screen] as ScreenDef).viewportOnly;
+}
+
 export function masksFor(page: Page, screen: Screen): Locator[] {
   const def: ScreenDef = SCREENS[screen];
   return ['.invite', '.emoji', '.install', ...(def.mask ?? [])].map((s) => page.locator(s));

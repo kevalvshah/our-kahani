@@ -209,3 +209,20 @@ describe('revealBanner', () => {
     expect(b(choice, { pick: 'chai' }, { pick: 'coffee' })).toBe('Two different picks. Good to know 😄');
   });
 });
+
+describe('gentle cards', () => {
+  it('resolve through entryFor', () => {
+    expect(entryFor('gentle:g-light-1')?.id).toBe('gentle:g-light-1');
+    expect(entryFor('gentle:nope')).toBeNull();
+  });
+});
+
+describe('then vs now', () => {
+  it('has a warm reveal line for each outcome', () => {
+    const card = { type: 'then' as const, q: 'Still?', from: 'day:1', opts: [] };
+    const names = { me: 'You', partner: 'Ravi' };
+    expect(revealBanner(card, { pick: 'same' }, { pick: 'same' }, names)).toBe('Still true for you both 💛');
+    expect(revealBanner(card, { pick: 'changed' }, { pick: 'changed' }, names)).toBe('You have both changed a little 🌱');
+    expect(revealBanner(card, { pick: 'same' }, { pick: 'changed' }, names)).toBe('Somebody has changed their mind 👀');
+  });
+});

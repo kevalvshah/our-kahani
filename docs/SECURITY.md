@@ -39,7 +39,8 @@ backups or logs. Only the two people in a room can.
 
 ## What the server can see
 - A room exists, its two anonymous member ids and roles, when it started and ends.
-- For each record: its kind (a number), an opaque ref such as `day:3` or `pack:warm:2`, who
+- For each record: its kind (a number), an opaque ref such as `day:3`, `season:s2:4`,
+  `pack:warm:2` or `jar:2026-W40`, who
   wrote it and when, and its padded size (plaintext is padded to 64, 256, 1024, 4096 or 12288
   bytes, so a size never gives away an answer).
 - Who has answered which card (to apply the reveal rule), never the answer.
@@ -47,6 +48,8 @@ backups or logs. Only the two people in a room can.
 - SHA-256 hashes of the join token and of the recovery lookup token, and the recovery backup
   sealed under a key from hashtag + room phrase.
 - For photos and voice notes: the R2 object id, size and time, all ciphertext.
+- How many devices each person uses (each is a separate anonymous account) and when each was
+  added; which seat (creator or invitee) each record, vote and backup belongs to.
 - For a partner rescue (24 hours): who made it and for whom, when it expires, the SHA-256 of its
   lookup token and the room key sealed under a key from the code. Never the code.
 - If a person switches notifications on: their device's push address (a random URL at Google,
@@ -56,6 +59,9 @@ backups or logs. Only the two people in a room can.
 It never sees a name, answer, note, hashtag, caption, photo, voice note, key or room phrase.
 
 ## Honest limits (say these to users)
+- Kind numbers show *which* tool was used, not what was said: the server can tell that a
+  Dil ki Baat note (150), an "I need 20 minutes" pause (152) or a repair (153) was sent, and
+  when, but never its words, feeling or need. Same as Gentle Corner (130–133) today.
 - We serve the app's code. A changed version could steal keys. Mitigate: open source, strict
   CSP, no third-party scripts, pinned dependencies, reproducible builds later.
 - The invite link carries the key. Whoever can read the message it is sent in could copy it.
@@ -83,4 +89,4 @@ network traffic in `e2e/journey.spec.ts` and `e2e/security.spec.ts`.
 3. Reveal rule: partner ciphertext is not delivered before both have answered.
 4. Plaintext canary: write known words through the UI, dump every table and storage bucket,
    fail the build if any canary appears.
-5. Lifecycle: extension needs both; unkept rooms erase at the end; erased means gone.
+5. Lifecycle: rooms have no end date; photos and voice notes go after 28 days; erased means gone.

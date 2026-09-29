@@ -1,9 +1,11 @@
 import { PACKS, packRef, SEASON, dayRef, type CardEntry } from '../content/cards';
 import { K } from '../data/kinds';
 import type { RoomData } from '../data/RoomData';
-import { dayOfSeason, SEASON_DAYS } from '../state/room';
+import { SEASON_DAYS } from '../state/room';
 import type { Answer, BonusCard } from './cardLogic';
 import { entryFor, isAnswered } from './cardLogic';
+import { SEASONS } from '../content/seasons';
+import { seasonOneRefs, seasonRefs } from './seasons';
 
 // What is done and what is next, for one person. Skipping is always fine: nothing here scores.
 
@@ -18,16 +20,45 @@ export function doneByMe(d: RoomData, ref: string): boolean {
   return isAnswered(c, d.mine<Answer>(K.ANSWER, ref)?.data);
 }
 
-export function unlockedDays(d: RoomData): number[] {
-  const today = dayOfSeason(d.room);
-  return Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).filter((n) => n <= today && SEASON[n]);
+/** Every season card is open from the start: couples go at their own pace. */
+export function unlockedDays(_d?: RoomData): number[] {
+  return Array.from({ length: SEASON_DAYS }, (_, i) => i + 1).filter((n) => SEASON[n]);
 }
 
 /** The first card waiting on this person: season days so far, then extra cards from the partner. */
-export function firstWaiting(d: RoomData): string | null {
-  for (const n of unlockedDays(d)) if (!doneByMe(d, dayRef(n))) return dayRef(n);
-  for (const b of d.list(K.BONUS_CARD)) if (!b.mine && !doneByMe(d, b.ref)) return b.ref;
+export function firstWaiting(d: RoomData, skip?: string): string | null {
+  for (const n of unlockedDays(d)) if (dayRef(n) !== skip && !doneByMe(d, dayRef(n))) return dayRef(n);
+  for (const b of d.list(K.BONUS_CARD)) if (b.ref !== skip && !b.mine && !doneByMe(d, b.ref)) return b.ref;
   return null;
+}
+
+/** The first unanswered card in the packs, in pack order: for playing on after today's card. */
+export function firstPackCard(d: RoomData): string | null {
+  for (const p of PACKS) for (let i = 0; i < p.cards.length; i++) if (!doneByMe(d, packRef(p.id, i))) return packRef(p.id, i);
+  return null;
+}
+
+/** The first unanswered card in Seasons 2-5, in order. */
+export function firstSeasonCard(d: RoomData, skip?: string): string | null {
+  for (const s of SEASONS) for (const ref of seasonRefs(s)) if (ref !== skip && !doneByMe(d, ref)) return ref;
+  return null;
+}
+
+/** What to play next: Season 1, then Seasons 2-5, then the packs. Never stops early. */
+export function keepPlaying(d: RoomData, after?: string): string | null {
+  const next = firstWaiting(d, after) ?? firstSeasonCard(d, after);
+  if (next) return next;
+  const pack = firstPackCard(d);
+  return pack && pack !== after ? pack : null;
+}
+
+/** Progress in a season (Season 2-5 id, or 's1' for Pehli Baat). */
+export function seasonProgress(d: RoomData, id: string): { done: number; total: number } {
+  const refs = id === 's1' ? seasonOneRefs() : (() => {
+    const s = SEASONS.find((x) => x.id === id);
+    return s ? seasonRefs(s) : [];
+  })();
+  return { done: refs.filter((r) => doneByMe(d, r)).length, total: refs.length };
 }
 
 /** The next card after this one: next in the pack, or the next waiting season card. */
@@ -36,10 +67,9 @@ export function nextCardFor(d: RoomData, entry: CardEntry): string | null {
     const pack = PACKS.find((p) => p.id === entry.pack)!;
     const idx = Number(entry.id.split(':')[2]) - 1;
     for (let i = idx + 1; i < pack.cards.length; i++) if (!doneByMe(d, packRef(pack.id, i))) return packRef(pack.id, i);
-    return null;
+    return keepPlaying(d, entry.id);
   }
-  const next = firstWaiting(d);
-  return next && next !== entry.id ? next : null;
+  return keepPlaying(d, entry.id);
 }
 
 export function packProgress(d: RoomData, packId: string): { done: number; total: number } {

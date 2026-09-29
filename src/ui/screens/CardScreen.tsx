@@ -44,13 +44,17 @@ export function CardScreen({ cardRef }: { cardRef: string }) {
 
   const pack = entry.pack ? PACKS.find((p) => p.id === entry.pack) : undefined;
   const index = pack ? Number(cardRef.split(':')[2]) : 0;
-  const tagLine = pack ? `Card ${index} of ${pack.cards.length}` : entry.day ? `Day ${entry.day} of ${SEASON_DAYS}` : 'Extra card';
+  const tagLine = pack ? `Card ${index} of ${pack.cards.length}` : entry.day ? `Card ${entry.day} of ${SEASON_DAYS}` : 'Extra card';
   const bonusBy = bonus ? d.list(K.BONUS_CARD).find((r) => r.ref === cardRef)?.mine : undefined;
   const tagText = pack ? `${pack.e} ${pack.name}` : bonus ? (bonusBy ? 'Your card' : `From ${d.partner}`) : entry.tag;
 
   return (
     <section>
-      <Back href={pack ? packPath(pack.id) : PATHS.today} label={pack ? `← ${pack.name}` : '← Today'} />
+      {cardRef.startsWith('gentle:') ? (
+        <Back href={PATHS.gentle} label="← Gentle Corner" />
+      ) : (
+        <Back href={pack ? packPath(pack.id) : PATHS.today} label={pack ? `← ${pack.name}` : '← Today'} />
+      )}
       <div class="question-card">
         <div class="question-meta">
           <span class="pack-tag">{tagText}</span>
@@ -175,6 +179,7 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
   return (
     <>
       <Heading card={card} />
+      {card.type === 'then' && <ThenBlock from={card.from} />}
 
       {revealed && opened ? (
         <Reveal entry={entry} card={card} mine={mine!} theirs={theirs!} theirsId={theirsRec!.id} bettor={bettor} />
@@ -201,7 +206,7 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
             )
           ) : card.type === 'multi' ? (
             <>
-              <p class="small muted">Tick as many as you like.</p>
+              <p class="small muted"><span class="pill tint-gold">Select one or more</span> Tick as many as you like.</p>
               <div class="checks">
                 {opts.map((o) => {
                   const on = draft.picks?.includes(o.id) ?? false;
@@ -564,6 +569,7 @@ export function SaveButton({
           note: '',
           date: '',
           t: Date.now(),
+          ...(theirs.voice ? { voice: theirs.voice } : {}),
         })
       }
     >
@@ -953,3 +959,31 @@ function TryCard({ entry, card }: { entry: CardEntry; card: Extract<Card, { type
   );
 }
 
+
+/** Then vs Now: both people's earlier Season 1 answers, read on this device only. */
+function ThenBlock({ from }: { from: string }) {
+  const d = useRoomData();
+  const entry = entryFor(from);
+  if (!entry) return null;
+  const mine = d.mine<Answer>(K.ANSWER, from)?.data;
+  const theirs = d.theirs<Answer>(K.ANSWER, from)?.data;
+  const opts = allOptions(entry.card, mine, theirs);
+  const both = isAnswered(entry.card, mine) && isAnswered(entry.card, theirs);
+  return (
+    <div class="then-block">
+      <p class="small muted">Back in Pehli Baat: {questionText(entry)}</p>
+      {both ? (
+        <>
+          <p class="small">
+            <b>You:</b> {answerText(entry.card, mine, opts)}
+          </p>
+          <p class="small">
+            <b>{d.partner}:</b> {answerText(entry.card, theirs, opts)}
+          </p>
+        </>
+      ) : (
+        <p class="small">You had not both opened this one yet. Answer it now, and it will show here next time.</p>
+      )}
+    </div>
+  );
+}

@@ -8,12 +8,20 @@ const OBJ = '22222222-2222-4222-8222-222222222222';
 
 function fakeBucket() {
   const store = new Map<string, ArrayBuffer>();
+  const uploaded = new Map<string, Date>();
   return {
     store,
     get: async (k: string) => (store.has(k) ? { body: new Blob([store.get(k)!]).stream() } : null),
-    put: async (k: string, v: ArrayBuffer) => void store.set(k, v),
+    put: async (k: string, v: ArrayBuffer) => {
+      store.set(k, v);
+      uploaded.set(k, new Date());
+    },
+    uploaded,
     delete: async (k: string | string[]) => void (Array.isArray(k) ? k : [k]).forEach((x) => store.delete(x)),
-    list: async ({ prefix }: { prefix: string }) => ({ objects: [...store.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })), truncated: false }),
+    list: async ({ prefix = '' }: { prefix?: string }) => ({
+      objects: [...store.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key, uploaded: uploaded.get(key) ?? new Date() })),
+      truncated: false,
+    }),
   };
 }
 
@@ -78,8 +86,20 @@ describe('media function', () => {
     b.store.set(`${ROOM}/b`, new ArrayBuffer(1));
     b.store.set(`${OBJ}/c`, new ArrayBuffer(1));
     const res = await call(b, 'POST', ['purge'], {}, null);
-    expect(await res.json()).toEqual({ rooms: 1, removed: 2 });
+    expect(await res.json()).toEqual({ rooms: 1, removed: 2, expired: 0 });
     expect([...b.store.keys()]).toEqual([`${OBJ}/c`]);
     expect((await call(b, 'GET', ['purge'])).status).toBe(405);
+  });
+
+  it('deletes photos and voice notes older than 28 days, in any room', async () => {
+    backend(true, []);
+    const b = fakeBucket();
+    b.store.set(`${OBJ}/old`, new ArrayBuffer(1));
+    b.uploaded.set(`${OBJ}/old`, new Date(Date.now() - 29 * 86_400_000));
+    b.store.set(`${OBJ}/new`, new ArrayBuffer(1));
+    b.uploaded.set(`${OBJ}/new`, new Date(Date.now() - 27 * 86_400_000));
+    const res = await call(b, 'POST', ['purge'], {}, null);
+    expect(await res.json()).toEqual({ rooms: 0, removed: 0, expired: 1 });
+    expect([...b.store.keys()]).toEqual([`${OBJ}/new`]);
   });
 });

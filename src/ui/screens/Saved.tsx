@@ -1,3 +1,4 @@
+import { VoicePlayer } from '../Voice';
 import { useState } from 'preact/hooks';
 import { IDEAS, LABELS, labelOf } from '../../content/extras';
 import { K } from '../../data/kinds';
@@ -148,6 +149,7 @@ function SavedCard({ item }: { item: DataRecord<SavedItem> }) {
           <p class="saved-q">{x.q}</p>
           <p class="small">
             <b>{d.partner}:</b> {x.theirs}
+            {x.voice && <VoicePlayer note={x.voice} who={d.partner} />}
           </p>
           {x.mine && (
             <p class="small muted">
