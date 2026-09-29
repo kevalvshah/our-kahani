@@ -41,55 +41,57 @@ export function KahaniBook() {
       <button type="button" class="btn btn-primary btn-block no-print" onClick={() => print()}>
         🖨️ Print or save as PDF
       </button>
-      <p class="book-names">
-        {d.me === 'You' ? 'Us' : d.me} &amp; {d.partner}
-      </p>
-      {chapters.map(
-        (c) =>
-          c.lines.length > 0 && (
-            <div key={c.name} class="book-chapter">
-              <h2 class="sub-title">{c.name}</h2>
-              {c.lines.map((l, i) => (
-                <p key={i} class="small">
-                  <b>{l.q}</b>
-                  <br />
-                  {d.me === 'You' ? 'Me' : d.me}: {l.me} · {d.partner}: {l.them}
-                </p>
-              ))}
-            </div>
-          ),
-      )}
-      {thanks.length > 0 && (
-        <div class="book-chapter">
-          <h2 class="sub-title">Shukriya</h2>
-          {thanks.map((t) => (
-            <p key={t.id} class="small">
-              💛 {t.mine ? 'Me' : d.partner}: {t.data.t}
-            </p>
-          ))}
-        </div>
-      )}
-      {dreams.length > 0 && (
-        <div class="book-chapter">
-          <h2 class="sub-title">Dreams</h2>
-          {dreams.map((x) => (
-            <p key={x.id} class="small">
-              {DREAM_TYPES.find(([id]) => id === x.data.type)?.[1] ?? '🌠'} {x.data.t}
-            </p>
-          ))}
-        </div>
-      )}
-      {stories.length > 0 && (
-        <div class="book-chapter">
-          <h2 class="sub-title">Our stories</h2>
-          {stories.map((s) => (
-            <p key={s.id} class="small">
-              <i>{s.data.start}</i> {s.data.lines.map((l) => l.t).join(' ')}
-            </p>
-          ))}
-        </div>
-      )}
       <p class="small muted no-print">Photos and voice notes are in the zip on Room data while they are kept (28 days each).</p>
+      <div class="book-body">
+        <p class="book-names">
+          {d.me === 'You' ? 'Us' : d.me} &amp; {d.partner}
+        </p>
+        {chapters.map(
+          (c) =>
+            c.lines.length > 0 && (
+              <div key={c.name} class="book-chapter">
+                <h2 class="sub-title">{c.name}</h2>
+                {c.lines.map((l, i) => (
+                  <p key={i} class="small">
+                    <b>{l.q}</b>
+                    <br />
+                    {d.me === 'You' ? 'Me' : d.me}: {l.me} · {d.partner}: {l.them}
+                  </p>
+                ))}
+              </div>
+            ),
+        )}
+        {thanks.length > 0 && (
+          <div class="book-chapter">
+            <h2 class="sub-title">Shukriya</h2>
+            {thanks.map((t) => (
+              <p key={t.id} class="small">
+                💛 {t.mine ? 'Me' : d.partner}: {t.data.t}
+              </p>
+            ))}
+          </div>
+        )}
+        {dreams.length > 0 && (
+          <div class="book-chapter">
+            <h2 class="sub-title">Dreams</h2>
+            {dreams.map((x) => (
+              <p key={x.id} class="small">
+                {DREAM_TYPES.find(([id]) => id === x.data.type)?.[1] ?? '🌠'} {x.data.t}
+              </p>
+            ))}
+          </div>
+        )}
+        {stories.length > 0 && (
+          <div class="book-chapter">
+            <h2 class="sub-title">Our stories</h2>
+            {stories.map((s) => (
+              <p key={s.id} class="small">
+                <i>{s.data.start}</i> {s.data.lines.map((l) => l.t).join(' ')}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

@@ -280,7 +280,7 @@ export const SCREENS = {
   dreams: { who: 'creator', path: '/dreams', heading: 'Dreams board' },
   'hard-or-harmful': { who: 'creator', path: '/hard-or-harmful', heading: 'Is this hard, or is this harmful?' },
   // The book collects whatever the shared test couple has answered so far (test order).
-  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, mask: ['.book-chapter', '.book-names'], viewportOnly: true },
+  book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, mask: ['.book-body'], viewportOnly: true },
 
   // Hashtag locked: each person's room phrase (mandatory before anything else).
   'room-phrase': { who: 'named', path: '/', heading: /Your room phrase/, mask: ['.panel b', '.lead'] },
