@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { howToWatch, SERVICES, TITLES, type MovieSetup } from '../../content/extras';
+import { howToWatch, SERVICES, type MovieSetup } from '../../content/extras';
+import type { Genre, TitleLang } from '../../content/titles';
+import { buildDeck, GENRE_LABEL, poolSize, type DeckFilter } from '../../features/movieDeck';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
 import { Back, Chips, Done, Wait } from '../components';
@@ -8,7 +10,10 @@ import { PATHS } from '../router';
 // Movie Night. Swipes are an answer (kind 2): the server withholds the partner's swipes until
 // yours are in, then each phone works out the matches. Films are emoji plus title, never art.
 
-interface Setup extends MovieSetup {
+interface Setup extends Omit<MovieSetup, 'fmt'> {
+  fmt: DeckFilter['fmt'];
+  langs?: TitleLang[];
+  genres?: Genre[];
   round: number;
   started: boolean;
   pick?: string | null;
@@ -28,12 +33,15 @@ export function MovieNight() {
   const [mode, setMode] = useState<Setup['mode'] | null>(setup?.mode ?? null);
   const [dev, setDev] = useState<Setup['dev'] | null>(setup?.dev ?? null);
   const [fmt, setFmt] = useState<Setup['fmt'] | null>(setup?.fmt ?? null);
+  const [langs, setLangs] = useState<TitleLang[]>(setup?.langs ?? []);
+  const [genres, setGenres] = useState<Genre[]>(setup?.genres ?? []);
+  const pool = fmt ? poolSize({ fmt, langs, genres }) : 0;
 
   const save = (over: Partial<Setup>) =>
     d.put(K.MOVIE_SETUP, 'movie', { ...(setup ?? { round: 0, started: false }), ...over, at: Date.now() } as Setup);
 
   if (!setup?.started) {
-    const ready = mode && fmt && (mode === 'home' || dev);
+    const ready = mode && fmt && (mode === 'home' || dev) && pool > 0;
     return (
       <section>
         <Back href={PATHS.today} label="← Today" />
@@ -51,12 +59,26 @@ export function MovieNight() {
             </>
           )}
           <p class="field-label">What are you in the mood for?</p>
-          <Chips label="Mood" value={fmt} options={[['movie', '🎬 One movie'], ['series', '📺 A series episode'], ['binge', '🍿 Binge weekend']]} onPick={setFmt} />
+          <Chips
+            label="Mood"
+            value={fmt}
+            options={[['movie', '🎬 One movie'], ['series', '📺 A series episode'], ['binge', '🍿 Binge weekend'], ['special', '😂 A comedy special']]}
+            onPick={setFmt}
+          />
+          <p class="field-label">
+            Language <span class="muted">(any if none picked)</span>
+          </p>
+          <Multi label="Language" all={LANGS} value={langs} onChange={setLangs} />
+          <p class="field-label">
+            Genre <span class="muted">(any if none picked)</span>
+          </p>
+          <Multi label="Genre" all={(Object.keys(GENRE_LABEL) as Genre[]).map((g) => [g, GENRE_LABEL[g]] as [Genre, string])} value={genres} onChange={setGenres} />
+          {fmt && <p class="small muted">{pool ? `${pool} titles to pick from. You each swipe the same ${Math.min(pool, 20)}.` : 'Nothing matches: try fewer filters.'}</p>}
           <button
             type="button"
             class="btn btn-primary btn-block seal"
             disabled={!ready}
-            onClick={() => void save({ mode: mode!, dev: mode === 'apart' ? dev! : undefined, fmt: fmt!, round: (setup?.round ?? 0) + 1, started: true, pick: null, when: null, svc: null, eps: null })}
+            onClick={() => void save({ mode: mode!, dev: mode === 'apart' ? dev! : undefined, fmt: fmt!, langs, genres, round: (setup?.round ?? 0) + 1, started: true, pick: null, when: null, svc: null, eps: null })}
           >
             Start swiping
           </button>
@@ -86,7 +108,8 @@ export function MovieNight() {
 function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) => Promise<boolean> }) {
   const d = useRoomData();
   const ref = `movie:${setup.round}`;
-  const deck = TITLES.filter((t) => (setup.fmt === 'movie' ? t.type === 'movie' : t.type === 'series'));
+  const watched = d.list<{ t: string }>(K.WATCHED).map((w) => w.data.t);
+  const deck = buildDeck({ fmt: setup.fmt, langs: setup.langs, genres: setup.genres }, setup.round, watched);
   const mine = d.mine<{ votes: Record<string, boolean> }>(K.MOVIE_VOTES, ref)?.data.votes;
   const theirs = d.theirs<{ votes: Record<string, boolean> }>(K.MOVIE_VOTES, ref)?.data.votes;
   const partnerDone = d.partnerAnswered(K.MOVIE_VOTES, ref);
@@ -119,7 +142,12 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
     <div class="chip-row">
       <span class="pill tint-plain">{setup.mode === 'home' ? '🏠 Home' : '📱 Apart'}</span>
       {setup.mode === 'apart' && <span class="pill tint-plain">{{ ios: '🍎 iPhones', android: '🤖 Android', mixed: '🔀 Mixed' }[setup.dev ?? 'mixed']}</span>}
-      <span class="pill tint-plain">{{ movie: '🎬 One movie', series: '📺 A series episode', binge: '🍿 Binge weekend' }[setup.fmt]}</span>
+      <span class="pill tint-plain">{{ movie: '🎬 One movie', series: '📺 A series episode', binge: '🍿 Binge weekend', special: '😂 Comedy special' }[setup.fmt]}</span>
+      {(setup.langs ?? []).map((l) => (
+        <span key={l} class="pill tint-plain">
+          {l}
+        </span>
+      ))}
       <button type="button" class="btn-small" onClick={() => void save({ started: false })}>
         Change
       </button>
@@ -158,7 +186,9 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
               {item.e}
             </div>
             <h2 class="swipe-title">{item.t}</h2>
-            <span class="pill tint-pink">{item.tag}</span>
+            <span class="pill tint-pink">
+              {item.lang} · {item.genres.slice(0, 2).map((g) => GENRE_LABEL[g].split(' ').slice(1).join(' ')).join(', ')} · {item.year}
+            </span>
             <p class="small">{item.hook}</p>
           </div>
         </div>
@@ -216,7 +246,7 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
                 </span>
                 <span class="option-text">
                   <span class="option-label">{t.t}</span>
-                  <span class="option-sub">{t.tag}</span>
+                  <span class="option-sub">{t.lang} · {t.year}</span>
                 </span>
               </button>
             ))}
@@ -283,5 +313,37 @@ function Swiping({ setup, save }: { setup: Setup; save: (over: Partial<Setup>) =
         {body}
       </div>
     </section>
+  );
+}
+
+const LANGS: [TitleLang, string][] = [
+  ['Hindi', 'Hindi'],
+  ['English', 'English'],
+  ['Gujarati', 'Gujarati'],
+  ['Punjabi', 'Punjabi'],
+  ['Tamil', 'Tamil'],
+  ['Telugu', 'Telugu'],
+  ['Malayalam', 'Malayalam'],
+  ['Marathi', 'Marathi'],
+  ['Bengali', 'Bengali'],
+  ['Kannada', 'Kannada'],
+  ['Korean', 'Korean'],
+  ['Japanese', 'Japanese'],
+  ['Spanish', 'Spanish'],
+];
+
+/** Pick any number; none picked means any. */
+function Multi<T extends string>({ label, all, value, onChange }: { label: string; all: [T, string][]; value: T[]; onChange: (v: T[]) => void }) {
+  return (
+    <div class="chip-row" role="group" aria-label={label}>
+      {all.map(([id, text]) => {
+        const on = value.includes(id);
+        return (
+          <button key={id} type="button" class={on ? 'chip is-on' : 'chip'} aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== id) : [...value, id])}>
+            {text}
+          </button>
+        );
+      })}
+    </div>
   );
 }
