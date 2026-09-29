@@ -43,6 +43,14 @@ export async function lockHashtag(suggester: Page, agreer: Page): Promise<string
   return ((await agreer.locator('.panel b').first().textContent()) ?? '').trim();
 }
 
+/**
+ * A phrase no earlier test run used: the test rooms share names, so they share suggested
+ * hashtags, and the same hashtag + phrase twice is refused (it would find the other room).
+ */
+export function uniquePhrase(base: string): string {
+  return `${base} ${Math.random().toString(36).slice(2, 9).replace(/\d/g, 'q')}`;
+}
+
 /** The mandatory room-phrase step that follows the locked hashtag. */
 export async function setPhrase(page: Page, phrase: string) {
   await page.goto('/');

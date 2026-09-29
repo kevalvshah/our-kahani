@@ -23,6 +23,25 @@ async function registration(): Promise<ServiceWorkerRegistration | undefined> {
   return navigator.serviceWorker.getRegistration();
 }
 
+// Whether this device switched notifications on, kept on the device. The push API itself is only
+// touched after a tap (some browsers' push support misbehaves when merely asked for its state).
+const flagKey = (room: string) => `ok.push.${room}`;
+function readFlag(room: string): boolean {
+  try {
+    return localStorage.getItem(flagKey(room)) === '1';
+  } catch {
+    return false;
+  }
+}
+function writeFlag(room: string, on: boolean) {
+  try {
+    if (on) localStorage.setItem(flagKey(room), '1');
+    else localStorage.removeItem(flagKey(room));
+  } catch {
+    // Storage blocked: the switch just shows off next time.
+  }
+}
+
 export function NotificationSwitch() {
   const d = useRoomData();
   const [state, setState] = useState<State>('checking');
@@ -30,14 +49,11 @@ export function NotificationSwitch() {
   const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
-    void (async () => {
-      if (iosNotInstalled()) return setState('ios-install');
-      if (!supported()) return setState('unsupported');
-      if (Notification.permission === 'denied') return setState('blocked');
-      const sub = await (await registration())?.pushManager.getSubscription();
-      setState(sub ? 'on' : 'off');
-    })().catch(() => setState('unsupported'));
-  }, []);
+    if (iosNotInstalled()) return setState('ios-install');
+    if (!supported()) return setState('unsupported');
+    if (Notification.permission === 'denied') return setState('blocked');
+    setState(Notification.permission === 'granted' && readFlag(d.room.id) ? 'on' : 'off');
+  }, [d.room.id]);
 
   async function turnOn() {
     const reg = await registration();
@@ -52,6 +68,7 @@ export function NotificationSwitch() {
       (await reg.pushManager.getSubscription()) ??
       (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(await push.publicKey()) }));
     await push.subscribe(d.room.id, sub.endpoint);
+    writeFlag(d.room.id, true);
     setState('on');
   }
 
@@ -61,6 +78,7 @@ export function NotificationSwitch() {
       await controller().push.unsubscribe(sub.endpoint).catch(() => undefined);
       await sub.unsubscribe();
     }
+    writeFlag(d.room.id, false);
     setState('off');
   }
 

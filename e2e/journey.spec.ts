@@ -1,6 +1,6 @@
 import type { Page, Request } from '@playwright/test';
 import { BACKEND_HOST, expect, test } from './helpers';
-import { createAndSetUp, joinAndSetUp, lockHashtag, setPhrase } from './flow';
+import { createAndSetUp, joinAndSetUp, lockHashtag, setPhrase, uniquePhrase } from './flow';
 
 // The whole product, end to end, as two people on two phones.
 
@@ -36,8 +36,8 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     await b.getByLabel('Type it again').fill('ravi ravi');
     await b.getByRole('button', { name: 'Save my phrase' }).click();
     await expect(b.getByRole('alert')).toContainText('at least 4 words');
-    await setPhrase(b, 'monsoon evenings with adrak chai');
-    await setPhrase(page, 'mango lassi on sunday mornings');
+    await setPhrase(b, uniquePhrase('monsoon evenings with adrak chai'));
+    await setPhrase(page, uniquePhrase('mango lassi on sunday mornings'));
     await expect(b.locator('.hashtag-pill')).toBeVisible({ timeout: 20_000 });
     await expect(b.locator('.header-mark, .sidebar-mark').filter({ hasText: hashtag }).first()).toBeAttached();
 
@@ -123,8 +123,9 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     const b = await newDevice();
     await joinAndSetUp(b, invite, 'Kabir');
     const hashtag = await lockHashtag(page, b);
-    await setPhrase(b, 'kite festival on the terrace');
-    await setPhrase(page, 'filter coffee and rainy mornings');
+    await setPhrase(b, uniquePhrase('kite festival on the terrace'));
+    const miraPhrase = uniquePhrase('filter coffee and rainy mornings');
+    await setPhrase(page, miraPhrase);
 
     // Kabir answers first (the default), then Mira.
     await b.goto('/card/day/1');
@@ -139,12 +140,12 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     const fresh = await newDevice();
     await fresh.goto('/recover');
     await fresh.getByLabel("Your room's hashtag").fill(hashtag.toLowerCase());
-    await fresh.getByLabel('Your phrase').fill('filter coffee and sunny mornings');
+    await fresh.getByLabel('Your phrase').fill(miraPhrase.replace('rainy', 'sunny'));
     await fresh.getByRole('button', { name: 'Enter the room' }).click();
     await expect(fresh.getByRole('alert')).toContainText('do not match', { timeout: 30_000 });
 
     // Case and extra spaces do not matter.
-    await fresh.getByLabel('Your phrase').fill('  Filter Coffee and   rainy mornings ');
+    await fresh.getByLabel('Your phrase').fill(`  ${miraPhrase.replace('filter coffee', 'Filter Coffee').replace(' and ', ' and   ')} `);
     await fresh.getByRole('button', { name: 'Enter the room' }).click();
     await expect(fresh.getByRole('heading', { name: /Namaste, Mira/ })).toBeVisible({ timeout: 30_000 });
     await expect(fresh.locator('.header-mark, .sidebar-mark').filter({ hasText: hashtag }).first()).toBeAttached();

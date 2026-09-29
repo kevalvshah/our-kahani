@@ -55,7 +55,9 @@ export function Invite() {
           emoji="🔗"
           lead={
             room.partnerJoined
-              ? 'You are both in. The link is not needed any more, so this phone has forgotten it.'
+              ? room.role === 'creator'
+                ? 'You are both in. The link is not needed any more, so this phone has forgotten it.'
+                : 'You are both in. The invite link has done its job and nobody else can use it.'
               : 'You joined with your person’s link, so the link stays with them.'
           }
         >

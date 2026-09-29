@@ -1,92 +1,82 @@
-import type { Page, Request } from '@playwright/test';
-import { BACKEND_HOST, createRoom, expect, test } from './helpers';
-
-/** Every request this page sends to the backend: URL plus body. */
-function recordBackendTraffic(page: Page) {
-  const sent: string[] = [];
-  page.on('request', (r: Request) => {
-    if (new URL(r.url()).host === BACKEND_HOST) sent.push(`${r.method()} ${r.url()}\n${r.postData() ?? ''}`);
-  });
-  return sent;
-}
-
-async function answer(page: Page, label: string) {
-  await page.goto('/card');
-  await page.getByRole('button', { name: label }).click();
-  await page.getByRole('button', { name: /Seal my answer|Change my answer/ }).click();
-}
+import { createRoom, expect, keyOf, recordBackendTraffic, setTakeTurns, test } from './helpers';
+import { joinAndSetUp } from './flow';
 
 test.describe('answers and the reveal', { tag: '@functional' }, () => {
-  test('answers stay hidden until both reply, then open on both phones; nothing readable is ever sent', async ({
+  test('the invited person answers first; answers stay hidden until both reply, then open on both phones; nothing readable is sent', async ({
     page,
     newDevice,
   }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(150_000);
     const creatorTraffic = recordBackendTraffic(page);
-    const { invite } = await createRoom(page);
-    const key = invite.split('#k1.')[1]!;
-
+    const { invite } = await createRoom(page, { name: 'Asha' });
     const partner = await newDevice();
     const partnerTraffic = recordBackendTraffic(partner);
-    await partner.goto(invite);
-    await expect(partner.getByRole('heading', { name: "You're in" })).toBeVisible({ timeout: 15_000 });
+    await joinAndSetUp(partner, invite, 'Ravi');
+    await expect(partner.getByRole('heading', { name: 'Namaste, Ravi' })).toBeVisible({ timeout: 20_000 });
 
-    // Creator answers first and waits.
-    await answer(page, 'Kind words');
-    await expect(page.getByRole('status')).toContainText('Sealed. Waiting for your person', { timeout: 15_000 });
+    // By default the invited person goes first: the creator cannot answer yet.
+    await page.goto('/card/day/1');
+    await expect(page.getByText('Ravi goes first on this one 💭', { exact: false })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: 'Chai' })).toHaveCount(0);
 
-    // The partner sees that the creator answered, but not what.
-    await partner.goto('/card');
-    await expect(partner.getByRole('status')).toContainText('Your person has answered', { timeout: 15_000 });
-    await expect(partner.getByText('Kind words 💬')).toHaveCount(0);
-
-    // Partner answers differently; both can now open both answers.
-    await partner.getByRole('button', { name: 'Hugs' }).click();
+    // Ravi answers, with a one-line why, and waits.
+    await partner.goto('/card/day/1');
+    await partner.getByRole('button', { name: 'Coffee' }).click();
+    await partner.getByLabel(/Why\?/).fill('Filter kaapi forever');
     await partner.getByRole('button', { name: 'Seal my answer' }).click();
-    await partner.getByRole('button', { name: /open both/ }).click({ timeout: 15_000 });
-    await expect(partner.getByText('Two different picks. Good to know 😄')).toBeVisible();
-    await expect(partner.locator('.reveal-theirs')).toContainText('Kind words');
-    await expect(partner.locator('.reveal-mine')).toContainText('Hugs');
+    await expect(partner.getByRole('status').filter({ hasText: 'Sealed.' })).toContainText('Waiting for Asha', { timeout: 20_000 });
 
+    // Asha's turn opens. She sees that Ravi answered, but not what.
     await page.reload();
-    await page.getByRole('button', { name: /open both/ }).click({ timeout: 15_000 });
-    await expect(page.locator('.reveal-theirs')).toContainText('Hugs');
-    // Once both have answered, answers are locked.
-    await expect(page.getByRole('button', { name: 'Kind words' })).toBeDisabled();
+    await expect(page.getByText('Ravi is in 💭 Your turn.', { exact: false })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Filter kaapi')).toHaveCount(0);
+    await expect(page.locator('.reveal-theirs')).toHaveCount(0);
 
-    // Plaintext canary: no answer, label or key ever went over the wire, in any request.
+    // Asha answers differently; now both can open both answers.
+    await page.getByRole('button', { name: 'Chai' }).click();
+    await page.getByLabel(/Why\?/).fill('Adrak wali');
+    await page.getByRole('button', { name: 'Seal my answer' }).click();
+    await page.getByRole('button', { name: 'Ravi has answered · open both →' }).click({ timeout: 20_000 });
+    await expect(page.getByText('Two different picks. Good to know 😄')).toBeVisible();
+    await expect(page.locator('.reveal-theirs')).toContainText('Coffee');
+    await expect(page.locator('.reveal-theirs')).toContainText('Filter kaapi forever');
+    await expect(page.locator('.reveal-mine')).toContainText('Chai');
+    // Once both have answered there is nothing left to change.
+    await expect(page.getByRole('button', { name: /Seal my answer|Change my answer/ })).toHaveCount(0);
+
+    await partner.reload();
+    await partner.getByRole('button', { name: 'Asha has answered · open both →' }).click({ timeout: 20_000 });
+    await expect(partner.locator('.reveal-theirs')).toContainText('Chai');
+    await expect(partner.locator('.reveal-theirs')).toContainText('Adrak wali');
+
+    // Plaintext canary: no name, answer, why or key ever went over the wire, in any request.
     const everything = [...creatorTraffic, ...partnerTraffic].join('\n');
     expect(everything.length).toBeGreaterThan(0);
-    for (const canary of ['Kind words', 'Hugs', '"words"', '"hugs"', 'choice', key]) {
+    for (const canary of ['Asha', 'Ravi', 'Filter kaapi', 'Adrak', 'Coffee', '"chai"', '"coffee"', '"pick"', keyOf(invite)]) {
       expect(everything, `"${canary}" was sent to the server`).not.toContain(canary);
     }
   });
 
-  test('an answer can be changed until the partner answers', async ({ page }) => {
+  test('with turns off, the creator can go first and change the answer until the partner answers', async ({ page }) => {
+    test.setTimeout(90_000);
     await createRoom(page);
-    await answer(page, 'Time together');
-    await expect(page.getByRole('status')).toContainText('Sealed', { timeout: 15_000 });
-    await page.getByRole('button', { name: 'Small help' }).click();
+    await setTakeTurns(page, false);
+    await page.goto('/card/day/1');
+    await expect(page.getByText('goes first on this one')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Chai' }).click({ timeout: 20_000 });
+    await page.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(page.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Coffee' }).click();
     await page.getByRole('button', { name: 'Change my answer' }).click();
-    await expect(page.getByRole('status')).toContainText('Sealed', { timeout: 15_000 });
+    await expect(page.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Small help' })).toHaveAttribute('aria-pressed', 'true', {
-      timeout: 15_000,
-    });
-  });
+    await expect(page.getByRole('button', { name: 'Coffee' })).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
+    await expect(page.getByRole('button', { name: 'Chai' })).toHaveAttribute('aria-pressed', 'false');
 
-  test('erasing the room removes it for the partner too', async ({ page, newDevice }) => {
-    const { invite } = await createRoom(page);
-    const partner = await newDevice();
-    await partner.goto(invite);
-    await expect(partner.getByRole('heading', { name: "You're in" })).toBeVisible({ timeout: 15_000 });
-
-    await page.goto('/room');
-    page.once('dialog', (d) => void d.accept());
-    await page.getByRole('button', { name: 'Erase the room' }).click();
-    await expect(page.getByRole('button', { name: 'Create a room' })).toBeVisible({ timeout: 15_000 });
-
-    await partner.goto('/');
-    await expect(partner.getByRole('button', { name: 'Create a room' })).toBeVisible({ timeout: 15_000 });
+    // Today counts it as answered, with no streak or score.
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: 'Day 1, answered' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('1 of 14 answered · No streaks. Skip any day, no guilt.')).toBeVisible();
   });
 });

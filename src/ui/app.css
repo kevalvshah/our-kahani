@@ -187,6 +187,10 @@ h1:focus { outline: none; }
 }
 .day.is-today { border-color: var(--k-pink); background: var(--k-pink-soft); box-shadow: 0 0 0 4px var(--k-pink-soft); }
 .day.is-past { color: var(--k-muted); }
+/* Seven 44px days do not fit a 320px phone: five a row there (days stay full-size tap targets). */
+@media (max-width: 22.5rem) {
+  .days { grid-template-columns: repeat(5, 1fr); }
+}
 
 /* ---------- Card ---------- */
 .back {

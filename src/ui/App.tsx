@@ -98,7 +98,22 @@ function Shell() {
       first.current = false;
       return;
     }
-    main.current?.querySelector<HTMLElement>('h1')?.focus();
+    // Screens that load on demand show "Loading…" first: wait for their heading to arrive.
+    const root = main.current;
+    if (!root) return;
+    const focusHeading = () => {
+      const h1 = root.querySelector<HTMLElement>('h1');
+      if (h1) h1.focus();
+      return !!h1;
+    };
+    if (focusHeading()) return;
+    const watch = new MutationObserver(() => focusHeading() && watch.disconnect());
+    watch.observe(root, { childList: true, subtree: true });
+    const stop = setTimeout(() => watch.disconnect(), 10_000);
+    return () => {
+      watch.disconnect();
+      clearTimeout(stop);
+    };
   }, [route]);
 
   function updateRoom(next: Room | null) {

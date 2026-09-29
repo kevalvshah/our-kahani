@@ -4,7 +4,7 @@
 // - /assets/* (hashed, immutable): cache first.
 // - Page loads: network first, falling back to the cached app shell when offline.
 
-const SHELL = 'ok-shell-v2';
+const SHELL = 'ok-shell-v3';
 const ASSETS = 'ok-assets-v1';
 const MAX_ASSETS = 80;
 
@@ -40,28 +40,39 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
-      caches.open(ASSETS).then(async (cache) => {
-        const hit = await cache.match(req);
+      (async () => {
+        const hit = await caches.match(req);
         if (hit) return hit;
         const res = await fetch(req);
         if (res.ok) {
-          await cache.put(req, res.clone());
-          void trim(cache);
+          const copy = res.clone();
+          event.waitUntil(caches.open(ASSETS).then(async (cache) => {
+            await cache.put(req, copy);
+            await trim(cache);
+          }));
         }
         return res;
-      }),
+      })(),
     );
     return;
   }
 
   if (req.mode === 'navigate') {
+    // Hand the page back as soon as it arrives; keep a copy of the shell in the background.
+    // (Waiting for the cache write before responding hangs navigations in WebKit.)
     event.respondWith(
-      fetch(req)
-        .then(async (res) => {
-          if (res.ok) await (await caches.open(SHELL)).put('/', res.clone());
+      (async () => {
+        try {
+          const res = await fetch(req);
+          if (res.ok) {
+            const copy = res.clone();
+            event.waitUntil(caches.open(SHELL).then((c) => c.put('/', copy)));
+          }
           return res;
-        })
-        .catch(async () => (await caches.match('/')) ?? Response.error()),
+        } catch {
+          return (await caches.match('/')) ?? Response.error();
+        }
+      })(),
     );
   }
 });
