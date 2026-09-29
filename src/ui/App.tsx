@@ -41,6 +41,7 @@ const Packs = lazy(() => import('./screens/Packs').then((m) => m.Packs));
 const PackScreen = lazy(() => import('./screens/Packs').then((m) => m.PackScreen));
 const AddCard = lazy(() => import('./screens/Packs').then((m) => m.AddCard));
 const DreamsBoard = lazy(() => import('./screens/Rituals').then((m) => m.DreamsBoard));
+const Likes = lazy(() => import('./screens/Likes').then((m) => m.Likes));
 const HardOrHarmful = lazy(() => import('./screens/Safety').then((m) => m.HardOrHarmful));
 const KahaniBook = lazy(() => import('./screens/Book').then((m) => m.KahaniBook));
 const Saved = lazy(() => import('./screens/Saved').then((m) => m.Saved));
@@ -64,6 +65,7 @@ const NAV: { route: keyof typeof PATHS; label: string; emoji: string }[] = [
   { route: 'thanks', label: 'Shukriya jar', emoji: '🫙' },
   { route: 'huddle', label: 'Weekly huddle', emoji: '🤝' },
   { route: 'dreams', label: 'Dreams board', emoji: '🌠' },
+  { route: 'likes', label: 'Likes and dislikes', emoji: '📝' },
   { route: 'gentle', label: 'Gentle Corner', emoji: '💛' },
   { route: 'talk', label: 'Dil ki Baat', emoji: '🫶' },
   { route: 'saved', label: 'Saved', emoji: '🔖' },
@@ -297,6 +299,8 @@ function Screen({ route }: { route: Route }): ComponentChildren {
       return <ShukriyaJar />;
     case 'huddle':
       return <WeeklyHuddle />;
+    case 'likes':
+      return <Likes />;
     case 'dreams':
       return <DreamsBoard />;
     case 'safety':

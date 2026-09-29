@@ -1,5 +1,6 @@
 import { createContext, type ComponentChildren } from 'preact';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { FoodStyle } from '../features/food';
 import type { AnswerStatus } from '../net/api';
 import { controller, type DataRecord } from '../state/controller';
 import type { Room } from '../state/room';
@@ -15,6 +16,8 @@ export interface Profile {
   name: string;
   country?: string;
   greeting?: string;
+  /** Food style; food cards follow the stricter of the two (see features/food.ts). */
+  food?: FoodStyle;
 }
 
 export interface RoomData {

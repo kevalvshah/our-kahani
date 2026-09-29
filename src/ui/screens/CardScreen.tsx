@@ -16,6 +16,7 @@ import {
   type Answer,
   type BonusCard,
 } from '../../features/cardLogic';
+import { foodOptions, roomFood } from '../../features/food';
 import { nextCardFor } from '../../features/progress';
 import { currentSettings, waitsForPartner } from '../../features/settings';
 import { Back, Check, Done, Em, Link, OptTile, Problem, RevealRow, Wait } from '../components';
@@ -134,7 +135,11 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
     }
   }, [mine]);
 
-  const opts = allOptions(card, draft, theirs);
+  const food = roomFood(d.myProfile?.food, d.partnerProfile?.food);
+  const opts = foodOptions(allOptions(card, draft, theirs), food, [draft.pick, ...(draft.picks ?? []), theirs?.pick, ...(theirs?.picks ?? [])]);
+  const laterRef = `later:${ref}`;
+  const iSavedLater = !!d.mine(K.LATER, laterRef);
+  const theySavedLater = !!d.theirs(K.LATER, laterRef);
   const canCustom = card.type === 'choice' || card.type === 'pick' || card.type === 'multi';
   const hasWhy = card.type === 'choice' || card.type === 'pick' || card.type === 'nhie' || card.type === 'multi';
   const changed = JSON.stringify(draft) !== JSON.stringify(mine ?? {});
@@ -301,6 +306,20 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
               including us.
             </Wait>
           )}
+          {!revealed && !mine && (
+            <div class="pass-row">
+              <button type="button" class="btn-small" disabled={sending} onClick={() => void seal({ notUs: true })}>
+                Not us 🙂
+              </button>
+              {!iSavedLater && (
+                <button type="button" class="btn-small" onClick={() => void d.put(K.LATER, laterRef, { l: 1 })}>
+                  Ask me again later 🔒
+                </button>
+              )}
+            </div>
+          )}
+          {!mine && iSavedLater && <p class="small muted">Saved for later 🔒 Answer whenever you are ready. {d.partner} only sees that you are saving it.</p>}
+          {!theirs && !partnerIn && theySavedLater && <p class="small muted">{d.partner} is saving this one for later 🔒</p>}
           {!mine && partnerIn && <Wait>{d.partner} is in 💭 Your turn. Answer and both open up.</Wait>}
           {!mine && !partnerIn && !ready && <p class="small muted hint-line">One tap. It stays hidden until you both answer.</p>}
 
@@ -442,6 +461,7 @@ function Reveal({
   });
 
   const show = (a: Answer, who: 'me' | 'partner') => {
+    if (a.notUs) return 'Not us 🙂';
     if (card.type === 'multi') {
       return (a.picks ?? []).map((id) => (
         <span key={id} class="reveal-line">

@@ -15,6 +15,8 @@ export interface Answer {
   rates?: Record<string, string>;
   /** Options this person added with "Something else…" (shown at the reveal). */
   custom?: Opt[];
+  /** "Not us 🙂": this card does not fit this person. Counts as an answer. */
+  notUs?: boolean;
   /** A voice note (recall cards): the encrypted audio is in the photo store under `obj`. */
   voice?: VoiceNote;
 }
@@ -66,6 +68,7 @@ export function optionLabel(opts: Opt[], id: string | undefined): string {
 
 export function isAnswered(card: Card, a: Answer | undefined): boolean {
   if (!a) return false;
+  if (a.notUs) return true;
   switch (card.type) {
     case 'multi':
       return (a.picks?.length ?? 0) > 0;
@@ -83,6 +86,7 @@ export function isAnswered(card: Card, a: Answer | undefined): boolean {
 /** Plain text of an answer, for Saved notes and the Excel download. */
 export function answerText(card: Card, a: Answer | undefined, opts: Opt[] = allOptions(card, a)): string {
   if (!a) return '';
+  if (a.notUs) return 'Not us';
   const plain = (id: string) => opts.find((o) => o.id === id)?.l ?? id;
   switch (card.type) {
     case 'multi':
@@ -120,6 +124,8 @@ export function labelFor(entry: CardEntry): string {
 
 /** The headline once both have answered. */
 export function revealBanner(card: Card, mine: Answer, theirs: Answer, names: { me: string; partner: string; bettor?: string }): string {
+  if (mine.notUs && theirs.notUs) return 'Neither of you vibed with this one 😄 Next!';
+  if (mine.notUs || theirs.notUs) return 'One of you passed with a smile 🙂 Fair enough.';
   const opts = allOptions(card, mine, theirs);
   switch (card.type) {
     case 'nhie':

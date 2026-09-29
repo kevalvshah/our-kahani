@@ -22,8 +22,23 @@ function cardText(card: Card): string[] {
   if ('ph' in card) out.push(card.ph);
   if ('banner' in card && card.banner) out.push(card.banner);
   const opts = 'opts' in card ? card.opts : 'items' in card ? card.items : [];
-  for (const opt of opts) out.push(opt.l, opt.sub ?? '');
+  // Egg and non-veg dishes are allowed only as tagged options (shown when both people eat them);
+  // they are checked by the food test below instead.
+  for (const opt of opts) if (opt.diet !== 'egg' && opt.diet !== 'nonveg') out.push(opt.l, opt.sub ?? '');
   return out;
+}
+
+function allCards(): { where: string; card: Card }[] {
+  return [
+    ...Object.entries(SEASON).map(([day, s]) => ({ where: `Season 1 day ${day}`, card: s.card })),
+    ...PACKS.flatMap((p) => p.cards.map((card, i) => ({ where: `${p.id} ${i + 1}`, card }))),
+    ...SEASONS.flatMap((s) => s.cards.map((c, i) => ({ where: `${s.id} ${i + 1}`, card: c.card }))),
+  ];
+}
+
+function everyText(card: Card): string[] {
+  const opts = 'opts' in card ? card.opts : 'items' in card ? card.items : [];
+  return ['q' in card ? card.q : '', 'ph' in card ? card.ph : '', ...opts.map((o) => o.l)];
 }
 
 function optionIds(card: Card): string[] | null {
@@ -239,5 +254,46 @@ describe('Relationship tool lists', () => {
         else if (x && typeof x === 'object') texts.push(...Object.values(x).map(String));
       }
     expect(bannedIn(texts)).toEqual([]);
+  });
+});
+
+describe('inclusion', () => {
+  const GENDERED = /\b(he|she|him|his|her|hers|husband|wife|boyfriend|girlfriend|bride|groom|hubby|wifey)\b/i;
+  // Cards that assume a life someone may not have. Each one here was reviewed and kept on purpose;
+  // a new one fails until it is reviewed and added.
+  const ASSUMES = /\b(your (mum|mom|dad|mother|father|parents|in-laws|job|boss|office|salary|college|wedding)|back home)\b/i;
+  const REVIEWED = new Set<string>([]);
+
+  it('no card assumes a gender', () => {
+    const hits = allCards().flatMap(({ where, card }) => everyText(card).filter((t) => GENDERED.test(t)).map((t) => `${where}: ${t}`));
+    expect(hits).toEqual([]);
+  });
+
+  it('cards that assume parents, a job or a wedding are reviewed', () => {
+    const hits = allCards().flatMap(({ where, card }) => everyText(card).filter((t) => ASSUMES.test(t) && !REVIEWED.has(t)).map((t) => `${where}: ${t}`));
+    expect(hits).toEqual([]);
+  });
+
+  it('festivals of every faith appear, not just one', () => {
+    const text = allCards().flatMap(({ card }) => everyText(card)).join(' ');
+    const GROUPS: Record<string, RegExp> = {
+      Hindu: /\b(diwali|holi|navratri|durga puja|ganesh|pongal|onam|lohri)\b/gi,
+      Muslim: /\b(eid|ramadan|ramzan|iftar|chaand raat)\b/gi,
+      Sikh: /\b(gurpurab|baisakhi|vaisakhi|langar)\b/gi,
+      Christian: /\b(christmas|easter)\b/gi,
+      Jain: /\b(paryushan|mahavir)\b/gi,
+      Parsi: /\b(navroz|nowruz)\b/gi,
+      Buddhist: /\b(buddha purnima|vesak)\b/gi,
+    };
+    for (const [faith, re] of Object.entries(GROUPS)) expect(text.match(re)?.length ?? 0, faith).toBeGreaterThanOrEqual(2);
+  });
+
+  it('egg and non-veg appear only as tagged options, with vegetarian choices beside them', () => {
+    const FOOD = /\b(chicken|mutton|lamb|fish|prawns?|egg|eggs|omelette|beef|pork|meat|keema|kebab)\b/i;
+    for (const { where, card } of allCards()) {
+      const opts = 'opts' in card ? card.opts : [];
+      for (const o of opts) if (FOOD.test(o.l)) expect(o.diet, `${where}: ${o.l}`).toMatch(/^(egg|nonveg)$/);
+      if (opts.some((o) => o.diet === 'egg' || o.diet === 'nonveg')) expect(opts.filter((o) => !o.diet).length, where).toBeGreaterThanOrEqual(3);
+    }
   });
 });

@@ -2,7 +2,11 @@
 // Rules (CLAUDE.md): no alcohol, non-vegetarian food, pets, ex-partners or heavy topics; films
 // appear as emoji plus title only; no lyrics or dialogue; inclusive of every region and faith.
 
-export type Opt = { id: string; e: string; l: string; sub?: string };
+import type { Diet, RawCard } from './packTypes';
+import { MORE_PACKS } from './morePacks';
+
+/** `diet` marks a food option that not every couple eats: shown only when both people's food choice allows it. */
+export type Opt = { id: string; e: string; l: string; sub?: string; diet?: Diet };
 
 export type Card =
   | { type: 'choice' | 'pick' | 'nhie' | 'guess'; q: string; opts: Opt[]; ans?: string; cheer?: boolean }
@@ -71,12 +75,6 @@ export const TRY_LABELS: Record<string, string> = { keen: 'Keen 🙌', maybe: 'M
 // ---------------------------------------------------------------------------
 // Packs
 // ---------------------------------------------------------------------------
-type RawCard =
-  | { t: 'choice' | 'guess'; q: string; o: [string, string, string][]; ans?: string; cheer?: boolean }
-  | { t: 'nhie'; q: string }
-  | { t: 'multi'; q: string; o: [string, string, string][]; cheer?: boolean }
-  | { t: 'line' | 'recall'; q: string; ph: string; banner?: string; cheer?: boolean };
-
 export interface Pack {
   id: string;
   name: string;
@@ -89,7 +87,7 @@ function pack(id: string, name: string, e: string, blurb: string, raw: RawCard[]
   const cards = raw.map((c): Card => {
     if (c.t === 'nhie') return { type: 'nhie', q: c.q, opts: NHIE_OPTS };
     if (!('o' in c)) return { type: c.t, q: c.q, ph: c.ph, banner: c.banner, cheer: c.cheer };
-    const opts = c.o.map(([oid, oe, ol]: [string, string, string]) => o(oid, oe, ol));
+    const opts = c.o.map(([oid, oe, ol, diet]) => (diet ? { ...o(oid, oe, ol), diet } : o(oid, oe, ol)));
     if (c.t === 'multi') return { type: 'multi', q: c.q, opts, cheer: c.cheer };
     return { type: c.t, q: c.q, opts, ans: 'ans' in c ? c.ans : undefined, cheer: c.cheer };
   });
@@ -190,7 +188,7 @@ export const PACKS: Pack[] = [
     { t: 'multi', q: 'Comfort food from home?', o: [['dal', '🍛', 'Dal chawal'], ['rajma', '🫘', 'Rajma chawal'], ['idli', '🍘', 'Idli sambar'], ['thepla', '🫓', 'Thepla'], ['poha', '🍚', 'Poha'], ['khichdi', '🥣', 'Khichdi'], ['paratha', '🥙', 'Aloo paratha'], ['curd', '🥛', 'Curd rice']] },
     { t: 'choice', q: 'Chai at home is…', o: [['masala', '🫚', 'Masala chai'], ['elaichi', '🌿', 'Elaichi chai'], ['filter', '☕', 'Filter coffee, actually'], ['bag', '🫖', 'A tea bag (do not tell anyone)']] },
     { t: 'multi', q: 'Community meals you have loved being part of?', o: [['langar', '🙏', 'Langar at a gurdwara'], ['prasad', '🪔', 'Prasad at a mandir'], ['iftar', '🌙', 'An iftar with friends'], ['church', '⛪', 'A church lunch'], ['jain', '🧘', 'A Jain community meal'], ['hall', '🏫', 'A community hall dinner'], ['notyet', '✨', 'Not yet, would love to']] },
-    { t: 'line', q: 'A word from your mother tongue you wish English had?', ph: 'The word and what it means ✍️', banner: 'Two favourite words 🗣️' },
+    { t: 'line', q: 'A word from your home language you wish English had?', ph: 'The word and what it means ✍️', banner: 'Two favourite words 🗣️' },
     { t: 'choice', q: 'Explaining your name to new people?', o: [['easy', '😌', 'Easy, they get it'], ['tutorial', '📚', 'A full pronunciation tutorial'], ['short', '✂️', 'I have a short version ready']] },
   ]),
   pack('fest', 'Festival Season', '🎆', 'Celebrating far from home, playfully', [
@@ -278,7 +276,7 @@ export const PACKS: Pack[] = [
     { t: 'guess', q: '🍱✉️🚂', ans: 'lunchbox', o: [['lunchbox', '🍱', 'The Lunchbox'], ['piku', '🚕', 'Piku'], ['ev', '🗽', 'English Vinglish'], ['swades', '🛰️', 'Swades']] },
     { t: 'guess', q: '🗽🗣️🍬', ans: 'ev', o: [['ev', '🗽', 'English Vinglish'], ['queen', '👑', 'Queen'], ['lunchbox', '🍱', 'The Lunchbox'], ['khnh', '🌇', 'Kal Ho Naa Ho']] },
     { t: 'guess', q: '🔥🌊🤝', ans: 'rrr', o: [['rrr', '🔥', 'RRR'], ['bahu', '🏰', 'Baahubali'], ['lagaan', '🏏', 'Lagaan'], ['swades', '🛰️', 'Swades']] },
-  ]),
+  ]),  ...MORE_PACKS.map(([id, name, e, blurb, raw]) => pack(id, name, e, blurb, raw)),
 ];
 
 export const TYPE_LABEL: Record<string, string> = {

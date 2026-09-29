@@ -129,6 +129,9 @@ export function buildArchive(d: RoomData, media: MediaFile[] = []): { bytes: Uin
   const dreamRows = [['Dream', 'Type', 'Added by']];
   for (const x of d.list<{ type: string; t: string }>(K.DREAM)) dreamRows.push([x.data.t, x.data.type, x.mine ? me : partner]);
   if (dreamRows.length > 1) sheets.push({ name: 'Dreams', rows: dreamRows, widths: [50, 14, 14] });
+  const likeRows = [['Who', 'Topic', 'Like or not', 'Line']];
+  for (const x of d.list<{ topic: string; like: boolean; t: string }>(K.CHEAT)) likeRows.push([x.mine ? me : partner, x.data.topic, x.data.like ? 'Loves' : 'Not for me', x.data.t]);
+  if (likeRows.length > 1) sheets.push({ name: 'Likes', rows: likeRows, widths: [14, 12, 12, 50] });
 
   const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag;
   sheets.push({

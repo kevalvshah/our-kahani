@@ -45,6 +45,7 @@ export const AREA_PATH: Record<Area, string> = {
   thanks: PATHS.thanks,
   huddle: PATHS.huddle,
   dreams: PATHS.dreams,
+  likes: PATHS.likes,
 };
 
 export interface Toast extends Item {

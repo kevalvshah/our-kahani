@@ -226,3 +226,18 @@ describe('then vs now', () => {
     expect(revealBanner(card, { pick: 'same' }, { pick: 'changed' }, names)).toBe('Somebody has changed their mind 👀');
   });
 });
+
+describe('not us', () => {
+  const card: Card = { type: 'choice', q: 'Chai or coffee?', opts: [{ id: 'chai', e: '☕', l: 'Chai' }, { id: 'coffee', e: '🫘', l: 'Coffee' }] };
+  const names = { me: 'You', partner: 'Ravi' };
+  it('counts as an answer on any card and reads as "Not us"', () => {
+    expect(isAnswered(card, { notUs: true })).toBe(true);
+    expect(isAnswered({ type: 'multi', q: 'x', opts: [] }, { notUs: true })).toBe(true);
+    expect(answerText(card, { notUs: true })).toBe('Not us');
+  });
+  it('has its own reveal line', () => {
+    expect(revealBanner(card, { notUs: true }, { notUs: true }, names)).toMatch(/Neither of you/);
+    expect(revealBanner(card, { notUs: true }, { pick: 'chai' }, names)).toMatch(/passed with a smile/);
+    expect(revealBanner(card, { pick: 'chai' }, { notUs: true }, names)).toMatch(/passed with a smile/);
+  });
+});

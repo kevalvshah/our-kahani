@@ -92,36 +92,55 @@ describe('firstWaiting', () => {
 });
 
 describe('nextCardFor', () => {
-  it('moves to the next unfinished card in a pack', () => {
+  it('from a pack card, Season 1 still comes first', () => {
     const d = fake([ans('pack:garba:2', { pick: 'bold' })]);
-    expect(nextCardFor(d, entryFor('pack:garba:1')!)).toBe('pack:garba:3');
-    const last = PACKS.find((p) => p.id === 'garba')!.cards.length;
-    // At the end of a pack, play carries on (never stops early).
-    const after = nextCardFor(d, entryFor(`pack:garba:${last}`)!);
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(`pack:garba:${last}`);
+    expect(nextCardFor(d, entryFor('pack:garba:1')!)).toBe('day:1');
   });
   it('moves to the next waiting season card, not the same one', () => {
-    const firstPack = `pack:${PACKS[0]!.id}:1`;
     expect(nextCardFor(fake([], 2), entryFor('day:1')!)).toBe('day:2');
     expect(nextCardFor(fake([ans('day:1', { pick: 'chai' })], 2), entryFor('day:1')!)).toBe('day:2');
     expect(nextCardFor(fake(allSeason()), entryFor('day:14')!)).toBe('season:s2:1');
-    expect(nextCardFor(fake([...allSeason(), ...allLater()]), entryFor('day:14')!)).toBe(firstPack);
+    expect(nextCardFor(fake([...allSeason(), ...allLater()]), entryFor('day:14')!)).toMatch(/^pack:/);
   });
-  it('keeps playing through the packs after today, and says so when there is nothing left', () => {
-    const firstPack = `pack:${PACKS[0]!.id}:1`;
+  it('after the seasons, packs are mixed: never the same pack twice, never one type three times in a row', () => {
+    const records = [...allSeason(), ...allLater()];
+    const played: string[] = [];
+    let after: string | undefined;
+    for (let i = 0; i < 40; i++) {
+      const next = keepPlaying(fake(records), after);
+      expect(next).toMatch(/^pack:/);
+      played.push(next!);
+      records.push(ans(next!, { pick: 'a', picks: ['a'], text: 'a' }));
+      after = next!;
+    }
+    const packs = played.map((r) => r.split(':')[1]);
+    const types = played.map((r) => entryFor(r)!.card.type);
+    for (let i = 1; i < played.length; i++) expect(packs[i], `step ${i}`).not.toBe(packs[i - 1]);
+    for (let i = 2; i < played.length; i++) expect(types[i] === types[i - 1] && types[i] === types[i - 2], `step ${i}: ${types[i]}`).toBe(false);
+    expect(new Set(packs).size).toBeGreaterThanOrEqual(10);
+  });
+  it('the mix is the same on both phones, and different between rooms', () => {
+    const records = [...allSeason(), ...allLater()];
+    const a = keepPlaying(fake(records));
+    expect(keepPlaying(fake(records))).toBe(a);
+    const other = { ...fake(records), room: { ...fake(records).room, id: 'another-room' } } as RoomData;
+    const firsts = new Set(['r', 'another-room', 'x1', 'x2', 'x3'].map((id) => keepPlaying({ ...other, room: { ...other.room, id } } as RoomData)));
+    expect(firsts.size).toBeGreaterThan(1);
+  });
+  it('keeps playing through the packs, and says so when there is nothing left', () => {
     const doneToday = fake([...allSeason(), ...allLater()], 1);
     expect(keepPlaying(fake(allSeason(), 1))).toBe('season:s2:1');
     expect(firstSeasonCard(fake(allSeason(), 1), 'season:s2:1')).toBe('season:s2:2');
-    expect(keepPlaying(doneToday)).toBe(firstPack);
-    expect(keepPlaying(doneToday, firstPack)).toBeNull();
-    expect(firstPackCard(doneToday)).toBe(firstPack);
+    expect(firstPackCard(doneToday)).toBe(`pack:${PACKS[0]!.id}:1`);
     // Every pack card answered: nothing left to carry on to.
     const all = PACKS.flatMap((p) =>
       p.cards.map((c, i) => ans(`pack:${p.id}:${i + 1}`, { pick: 'a', picks: ['a'], text: 'a', rates: c.type === 'try' ? Object.fromEntries(c.items.map((it) => [it.id, 'keen'])) : {} })),
     );
     expect(firstPackCard(fake(all))).toBeNull();
     expect(keepPlaying(fake([...allSeason(), ...allLater(), ...all]))).toBeNull();
+    // One card left in one pack: offered even straight after a card from that pack.
+    const lastOne = all.filter((r) => r.ref !== 'pack:garba:2');
+    expect(keepPlaying(fake([...allSeason(), ...allLater(), ...lastOne]), 'pack:garba:1')).toBe('pack:garba:2');
     expect(firstSeasonCard(doneToday)).toBeNull();
     expect(seasonProgress(doneToday, 's1')).toEqual({ done: SEASON_DAYS, total: SEASON_DAYS });
     expect(seasonProgress(fake([]), 's2')).toEqual({ done: 0, total: SEASONS[0]!.cards.length });

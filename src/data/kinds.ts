@@ -50,6 +50,10 @@ export const K = {
   REPAIR_REPLY: 154,
   DREAM: 155,
   DREAM_REACT: 156,
+  /** "Ask me again later 🔒" on a card: the partner sees only that it is saved for later. */
+  LATER: 157,
+  /** Likes and dislikes (food, shopping, gifts, dates): one line each, shared with the partner. */
+  CHEAT: 158,
   // 200-299: private to the author, encrypted with their own notes key
   SAVED: 200,
 } as const;

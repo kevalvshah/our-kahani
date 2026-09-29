@@ -21,7 +21,8 @@ test.describe('accessibility', { tag: '@a11y' }, () => {
     for (const scheme of ['light', 'dark'] as const) {
       test(`${screen} (${scheme}) has no WCAG 2.2 AA violations`, async ({ stage }) => {
         test.setTimeout(SCREEN_TIMEOUT);
-        const shown = await stage.open(screen, { colorScheme: scheme });
+        // Reduced motion: measure the settled screen, not a card halfway through its fade-in.
+        const shown = await stage.open(screen, { colorScheme: scheme, reducedMotion: 'reduce' });
         // Check the whole screen at once: the sticky header and tab bar would otherwise cover part
         // of whatever sits at the fold, which depends on font metrics, not on the design.
         const size = shown.viewportSize()!;

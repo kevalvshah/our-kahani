@@ -281,6 +281,7 @@ export const SCREENS = {
   shukriya: { who: 'creator', path: '/shukriya', heading: 'Shukriya jar', mask: ['.field-label'] },
   huddle: { who: 'creator', path: '/huddle', heading: 'Weekly huddle' },
   dreams: { who: 'creator', path: '/dreams', heading: 'Dreams board' },
+  likes: { who: 'creator', path: '/likes-and-dislikes', heading: 'Likes and dislikes' },
   'hard-or-harmful': { who: 'creator', path: '/hard-or-harmful', heading: 'Is this hard, or is this harmful?' },
   // The book collects whatever the shared test couple has answered so far (test order).
   book: { who: 'creator', path: '/our-kahani-book', heading: /our kahani/i, noScreenshot: true },

@@ -66,6 +66,24 @@ test.describe('seasons and together tools', { tag: '@journey' }, () => {
     await page.goto('/dreams');
     await expect(page.getByText('see the Northern Lights')).toBeVisible({ timeout: 20_000 });
 
+    // "Not us 🙂" counts as an answer and gets its own reveal line.
+    for (const p of [page, b]) {
+      await p.goto('/card/day/3');
+      await p.getByRole('button', { name: 'Not us 🙂' }).click({ timeout: 20_000 });
+    }
+    await page.goto('/card/day/3');
+    await page.getByRole('button', { name: /open both/ }).click({ timeout: 20_000 });
+    await expect(page.getByText(/Neither of you vibed/)).toBeVisible();
+
+    // Likes and dislikes reach the partner; food style follows the stricter choice.
+    await b.goto('/likes-and-dislikes');
+    await b.getByRole('button', { name: /Non-veg/ }).click();
+    await b.locator('#like').fill('extra-spicy pani puri');
+    await b.getByRole('button', { name: 'Add to my list' }).click();
+    await page.goto('/likes-and-dislikes');
+    await expect(page.getByText('extra-spicy pani puri')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/right now that is vegetarian/)).toBeVisible();
+
     // The "hard or harmful" page is reachable and sends nothing.
     await page.goto('/hard-or-harmful');
     await expect(page.getByRole('heading', { name: 'Is this hard, or is this harmful?' })).toBeVisible();
