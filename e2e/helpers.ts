@@ -208,7 +208,16 @@ export const SCREENS = {
   'in-app-browser': { who: 'instagram', path: '/', heading: 'Open this in Safari or Chrome' },
 
   // First run, on the creator's phone.
-  'profile-setup': { who: 'newcomer', path: '/', step: 'name', heading: /From pehli baat/ },
+  // The welcome screen shares this heading while the room is still opening: wait for the name field.
+  'profile-setup': {
+    who: 'newcomer',
+    path: '/',
+    step: 'name',
+    heading: /From pehli baat/,
+    ready: async (page) => {
+      await expect(page.getByLabel('Your first name')).toBeVisible({ timeout: 20_000 });
+    },
+  },
   invite: { who: 'newcomer', path: '/invite', step: 'alone', heading: 'Send this to your person', mask: ['.invite', '.emoji'] },
   'today-waiting': {
     who: 'newcomer',
