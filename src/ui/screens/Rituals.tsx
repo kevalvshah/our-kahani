@@ -193,6 +193,13 @@ interface Dream {
 
 const stamp = () => Date.now().toString(36);
 
+const PLAN_TYPES = ['date', 'dine', 'shop'];
+const PLACEHOLDER: Record<string, string> = {
+  date: 'have a sunset picnic this Saturday',
+  dine: 'try the dosa place near the station',
+  shop: 'window-shop the Christmas market, small budget each',
+};
+
 export function DreamsBoard() {
   const d = useRoomData();
   const dreams = d.list<Dream>(K.DREAM).slice().reverse();
@@ -209,7 +216,7 @@ export function DreamsBoard() {
   return (
     <section>
       <Back href={PATHS.today} label="← Today" />
-      <ScreenTitle emoji="🌠" lead="Big or small, silly or serious: the things you want to do together one day.">
+      <ScreenTitle emoji="🌠" lead="Big dreams and small plans: trips, date nights, places to eat, things to shop for together.">
         Dreams board
       </ScreenTitle>
       <div class="panel">
@@ -221,9 +228,9 @@ export function DreamsBoard() {
           ))}
         </div>
         <label class="field-label" for="dream">
-          One day, let's…
+          {PLAN_TYPES.includes(type) ? "Let's…" : "One day, let's…"}
         </label>
-        <input id="dream" class="field" maxLength={140} value={text} placeholder="see the Northern Lights with a flask of chai" autocomplete="off" onInput={(e) => setText((e.target as HTMLInputElement).value)} />
+        <input id="dream" class="field" maxLength={140} value={text} placeholder={PLACEHOLDER[type] ?? 'see the Northern Lights with a flask of chai'} autocomplete="off" onInput={(e) => setText((e.target as HTMLInputElement).value)} />
         <button type="button" class="btn btn-primary btn-block" disabled={!text.trim()} onClick={() => void add()}>
           Add to the board 🌠
         </button>

@@ -384,6 +384,15 @@ html { scroll-padding-top: 5.5rem; scroll-padding-bottom: 5.5rem; }
 .field-area { resize: vertical; line-height: 1.5; }
 .why-wrap { margin-top: 0.5rem; }
 .hint-line { margin-top: 0.875rem; }
+.like-cols { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-top: 1.25rem; }
+@media (min-width: 40rem) { .like-cols { grid-template-columns: 1fr 1fr; } }
+.like-topic { margin-bottom: 0.875rem; }
+.like-list { list-style: none; padding: 0; margin: 0.25rem 0 0; display: flex; flex-direction: column; gap: 0.375rem; }
+.like-list li { display: flex; align-items: center; gap: 0.5rem; background: var(--k-surface); border: 1px solid var(--k-line); border-radius: 0.75rem; padding: 0.5rem 0.75rem; }
+.like-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.like-x { min-width: 2.75rem; min-height: 2.75rem; border: none; background: transparent; color: var(--k-muted); font-size: 1.25rem; cursor: pointer; }
+.pass-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.875rem; }
+.pass-row .btn-small { min-height: 2.75rem; }
 
 .options-stack { grid-template-columns: 1fr; }
 .options-three { grid-template-columns: repeat(3, 1fr); }

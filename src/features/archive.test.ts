@@ -225,6 +225,8 @@ describe('savedSheets', () => {
           { kind: K.HUDDLE, ref: 'huddle:2026-W40', mine: false, data: { best: 'family', hard: 'none', need: 'call', line: 'ok' } },
           { kind: K.DREAM, ref: 'dream:a', mine: true, data: { type: 'travel', t: 'Northern Lights' } },
           { kind: K.DREAM, ref: 'dream:b', mine: false, data: { type: 'home', t: 'A garden' } },
+          { kind: K.CHEAT, ref: 'cheat:a', mine: true, data: { topic: 'food', like: true, t: 'extra-spicy pani puri' } },
+          { kind: K.CHEAT, ref: 'cheat:b', mine: false, data: { topic: 'shop', like: false, t: 'crowded sale days' } },
           ...both('season:s2:1', { pick: 'same' }, { pick: 'changed' }),
         ]),
       ).bytes,
@@ -236,6 +238,8 @@ describe('savedSheets', () => {
     expect(s.Weekly).toContain('family · none · call · ok');
     expect(s.Dreams).toContain('Northern Lights');
     expect(s.Dreams).toContain('Ravi Kumar');
+    expect(s.Likes).toContain('extra-spicy pani puri');
+    expect(s.Likes).toContain('Not for me');
     expect(s.Answers).toContain('Asli Kahani');
   });
 });

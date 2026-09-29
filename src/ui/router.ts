@@ -31,6 +31,7 @@ export type Route =
   | { name: 'thanks' }
   | { name: 'huddle' }
   | { name: 'dreams' }
+  | { name: 'likes' }
   | { name: 'safety' }
   | { name: 'book' }
   | { name: 'join' };
@@ -61,6 +62,7 @@ export const PATHS = {
   thanks: '/shukriya',
   huddle: '/huddle',
   dreams: '/dreams',
+  likes: '/likes-and-dislikes',
   safety: '/hard-or-harmful',
   book: '/our-kahani-book',
 } as const;

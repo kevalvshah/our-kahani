@@ -4,7 +4,7 @@
 // - /assets/* (hashed, immutable): cache first.
 // - Page loads: network first, falling back to the cached app shell when offline.
 
-const SHELL = 'ok-shell-v4';
+const SHELL = 'ok-shell-v5';
 const ASSETS = 'ok-assets-v1';
 const MAX_ASSETS = 80;
 

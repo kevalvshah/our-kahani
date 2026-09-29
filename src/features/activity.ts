@@ -6,7 +6,7 @@ import type { AnswerStatus } from '../net/api';
 // already-decrypted records only; nothing here leaves the device.
 
 /** A place in the app with its own counter (route names). */
-export type Area = 'today' | 'packs' | 'micro' | 'antakshari' | 'story' | 'photo' | 'movie' | 'gentle' | 'seasons' | 'talk' | 'thanks' | 'huddle' | 'dreams';
+export type Area = 'today' | 'packs' | 'micro' | 'antakshari' | 'story' | 'photo' | 'movie' | 'gentle' | 'seasons' | 'talk' | 'thanks' | 'huddle' | 'dreams' | 'likes';
 
 export interface Rec {
   kind: number;
@@ -52,6 +52,7 @@ const KINDS: Record<number, { area: Area; one: string; many?: string }> = {
   [K.PAUSE]: { area: 'talk', one: 'needs a little time and is not going anywhere 💛' },
   [K.DREAM]: { area: 'dreams', one: 'added a dream 🌠', many: 'added {n} dreams 🌠' },
   [K.DREAM_REACT]: { area: 'dreams', one: 'loved one of your dreams 🌠' },
+  [K.CHEAT]: { area: 'likes', one: 'added a like or dislike 📝', many: 'added {n} likes and dislikes 📝' },
 };
 
 /** The partner's records since a time, grouped into short lines. */
@@ -148,4 +149,4 @@ export function badges(records: Rec[], seenAt: Partial<Record<Area, number>>, wa
   return out;
 }
 
-const KIND_AREAS: Record<Area, true> = { today: true, packs: true, micro: true, antakshari: true, story: true, photo: true, movie: true, gentle: true, seasons: true, talk: true, thanks: true, huddle: true, dreams: true };
+const KIND_AREAS: Record<Area, true> = { today: true, packs: true, micro: true, antakshari: true, story: true, photo: true, movie: true, gentle: true, seasons: true, talk: true, thanks: true, huddle: true, dreams: true, likes: true };

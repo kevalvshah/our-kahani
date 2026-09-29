@@ -102,6 +102,9 @@ export const DREAM_TYPES: Item[] = [
   ['learning', '📚', 'Learning'],
   ['health', '🌿', 'Health'],
   ['adventure', '🧭', 'Adventure'],
+  ['date', '🗓️', 'Date plan'],
+  ['dine', '🍽️', 'Dine out'],
+  ['shop', '🛍️', 'Shopping'],
 ];
 
 export const SHUKRIYA_PROMPTS: string[] = [

@@ -97,8 +97,14 @@ See `docs/STORAGE-BUDGET.md`.
 - Reveal after both answer. By default the invited person answers first (a room setting; never
   explain it on screen as a rule about anyone's preferences). Both people have opinions: show a
   one-line "why" with answers so it is not one person agreeing with everything.
-- Official packs avoid: alcohol, non-vegetarian food, pets, ex-partners, heavy topics (only
+- Official packs avoid: alcohol, pets, ex-partners, heavy topics (only
   Gentle Corner handles those, opt in). Names are typed by users; never hardcode people.
+- Food (owner's decision): vegetarian by default. Each person picks a food style (pure veg,
+  vegetarian, eggetarian, non-veg); egg and non-veg dishes appear only as tagged options, shown
+  when both people's styles allow them (the stricter one wins). Dishes with onion, garlic or
+  root vegetables are tagged too, for Jain and no-onion-garlic homes. See `src/features/food.ts`.
+- Inclusion: no gendered words; cards that assume parents, a job or a wedding need review; every
+  faith's festivals appear. Humour about situations, never people. `content.test.ts` checks this.
 - Copyright: no lyrics, poster images, or film dialogue. Films appear as emoji plus title.
 - Indo-English voice with light Hindi words, inclusive of all Indian regions and faiths.
   Ten Indic scripts are used for the name and tagline (see prototype). Have native speakers
