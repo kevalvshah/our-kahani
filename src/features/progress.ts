@@ -44,12 +44,35 @@ export function firstSeasonCard(d: RoomData, skip?: string): string | null {
   return null;
 }
 
-/** What to play next: Season 1, then Seasons 2-5, then the packs. Never stops early. */
+/** A small stable hash, so each room gets its own pack order (the same on both phones). */
+function hash(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/**
+ * The next pack card, mixed: packs take turns (least played first, in an order shuffled per
+ * room), and the next card avoids the pack and the card type just played whenever it can.
+ */
+export function mixedPackCard(d: RoomData, after?: string): string | null {
+  const last = after ? entryFor(after) : null;
+  const order = [...PACKS].sort((a, b) => hash(d.room.id + a.id) - hash(d.room.id + b.id));
+  // Least-played packs first, so every pack gets a turn; the room's order breaks ties.
+  const waiting = order
+    .flatMap((p) => {
+      const i = p.cards.findIndex((_, n) => packRef(p.id, n) !== after && !doneByMe(d, packRef(p.id, n)));
+      const played = p.cards.filter((_, n) => doneByMe(d, packRef(p.id, n))).length;
+      return i < 0 ? [] : [{ pack: p.id, ref: packRef(p.id, i), type: p.cards[i]!.type, played }];
+    })
+    .sort((a, b) => a.played - b.played);
+  const fresh = waiting.find((w) => w.pack !== last?.pack && w.type !== last?.card.type);
+  return (fresh ?? waiting.find((w) => w.pack !== last?.pack) ?? waiting[0])?.ref ?? null;
+}
+
+/** What to play next: Season 1, then Seasons 2-5, then the packs, mixed. Never stops early. */
 export function keepPlaying(d: RoomData, after?: string): string | null {
-  const next = firstWaiting(d, after) ?? firstSeasonCard(d, after);
-  if (next) return next;
-  const pack = firstPackCard(d);
-  return pack && pack !== after ? pack : null;
+  return firstWaiting(d, after) ?? firstSeasonCard(d, after) ?? mixedPackCard(d, after);
 }
 
 /** Progress in a season (Season 2-5 id, or 's1' for Pehli Baat). */
@@ -61,14 +84,8 @@ export function seasonProgress(d: RoomData, id: string): { done: number; total: 
   return { done: refs.filter((r) => doneByMe(d, r)).length, total: refs.length };
 }
 
-/** The next card after this one: next in the pack, or the next waiting season card. */
+/** The next card after this one: whatever Keep playing offers next (packs mixed, never one type in a row). */
 export function nextCardFor(d: RoomData, entry: CardEntry): string | null {
-  if (entry.pack) {
-    const pack = PACKS.find((p) => p.id === entry.pack)!;
-    const idx = Number(entry.id.split(':')[2]) - 1;
-    for (let i = idx + 1; i < pack.cards.length; i++) if (!doneByMe(d, packRef(pack.id, i))) return packRef(pack.id, i);
-    return keepPlaying(d, entry.id);
-  }
   return keepPlaying(d, entry.id);
 }
 
