@@ -13,6 +13,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Browser tests create and erase real rooms, so they run against the separate our-kahani-ci
+# Supabase project, never production. Both values are public by design.
+env:
+  CI_SUPABASE_URL: https://yarkzlhuklweotdaywcr.supabase.co
+  CI_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7VU8E8yHnbiwe1ds9YTFqQ_ONgKd9Ns
+
 jobs:
   checks:
     name: Static checks, unit tests, build
@@ -44,7 +50,7 @@ jobs:
     name: Browser tests (${{ matrix.project }})
     needs: checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
       options: --ipc=host
@@ -62,6 +68,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Functional, security, accessibility, responsive and visual tests
+        env:
+          VITE_SUPABASE_URL: ${{ env.CI_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ env.CI_SUPABASE_PUBLISHABLE_KEY }}
         run: npx playwright test --project=${{ matrix.project }}
       - name: Collect new visual baselines (if any were missing)
         if: always()
@@ -130,9 +139,9 @@ jobs:
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
           exit $code
-      - name: Functional and security tests against the preview
+      - name: Smoke tests against the preview (no rooms are created)
         if: steps.wait.outputs.ready == 'true'
-        run: npx playwright test --project=chromium --project=iphone-safari --grep "@functional|@security"
+        run: npx playwright test --project=chromium --project=iphone-safari --grep @smoke
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -169,8 +178,8 @@ jobs:
       - run: npm ci
       - name: Wait for Cloudflare to serve this commit
         run: node scripts/wait-for-deploy.mjs "$BASE_URL" "$GITHUB_SHA" 900
-      - name: Functional and security tests against production
-        run: npx playwright test --project=chromium --project=iphone-safari --grep "@functional|@security"
+      - name: Smoke tests against production (no rooms are created)
+        run: npx playwright test --project=chromium --project=iphone-safari --grep @smoke
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

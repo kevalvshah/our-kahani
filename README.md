@@ -6,9 +6,9 @@ Private, end-to-end encrypted card games for two people getting to know each oth
 mobile or laptop browser. Free, no ads, no tracking. Made with the Indian diaspora in mind
 (UK, US, Canada, Australia, South Africa, UAE and beyond), open to everyone.
 
-> Status: design and prototype. `prototype/index.html` is a clickable demo of every screen.
-> The real app is in Stage 1 (see `docs/BUILD-PLAN.md`). Run it with `npm ci && npm run dev`;
-> test it with `npm run qa` (see `docs/QA.md`).
+> Status: Stages 1 to 7 built, Stage 8 partly (see `docs/BUILD-PLAN.md`). Live at
+> https://kahani.unicodegroup.com. Run it with `npm ci && npm run dev`; test it with
+> `npm run qa` (see `docs/QA.md`).
 
 ## What it is
 - One small card at a time: this-or-that, tick-any, one-line, Never Have I Ever, emoji film
@@ -24,14 +24,15 @@ mobile or laptop browser. Free, no ads, no tracking. Made with the Indian diaspo
 - End-to-end encrypted. The database holds scrambled data only, so even the developer cannot
   read names, answers, photos, voice notes or saved notes.
 - No email or phone number needed. No ads. No tracking. No third-party scripts.
-- You hold the key. Lose your phone and your 12-word recovery phrase and nobody can bring the
+- You hold the key. Lose your phone and forget your room phrase and nobody can bring the
   room back, including us.
 - Honest limits are in `docs/SECURITY.md`.
 
-## Tech (planned)
-Vite and TypeScript on Cloudflare Pages. Supabase (Postgres, Realtime, anonymous auth) for
-ciphertext records. Cloudflare R2 with a small Worker for encrypted photos and voice.
-Browser only: no app store, no native apps.
+## Tech
+Vite, Preact and TypeScript on Cloudflare Pages. Supabase (Postgres, anonymous auth, row level
+security) for ciphertext records. Cloudflare R2 behind a Pages Function for encrypted photos and
+voice notes. An installable PWA; browser only: no app store, no native apps. Details in
+`docs/ARCHITECTURE.md`.
 
 ## Repo map
 - `CLAUDE.md` rules for Claude Code and contributors

@@ -1,16 +1,34 @@
 import { useEffect, useState } from 'preact/hooks';
 import { parseJoinPath, takeInviteKeyFromLocation } from '../../crypto/invite';
-import { importRoomKey } from '../../crypto/roomKey';
-import { safetyCode } from '../../crypto/safetyCode';
+import { controller } from '../../state/controller';
 import { useRoom } from '../../state/roomContext';
 import { Em, Link, ScreenTitle } from '../components';
 import { PATHS } from '../router';
+import { problemText } from '../problems';
 import { useCreateRoom } from './Today';
 
 export function Invite() {
-  const { room } = useRoom();
-  const create = useCreateRoom();
+  const { room, setRoom } = useRoom();
+  const { create, busy, error } = useCreateRoom();
   const [copied, setCopied] = useState(false);
+
+  // Check whether the partner has joined (then the invite is no longer needed).
+  useEffect(() => {
+    if (!room || room.partnerJoined || room.role !== 'creator') return;
+    let live = true;
+    const check = () =>
+      void controller()
+        .refresh(room)
+        .then((next) => live && next && next.partnerJoined && setRoom(next))
+        .catch(() => {});
+    const timer = setInterval(check, 10_000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [room?.id, room?.partnerJoined]);
 
   if (!room) {
     return (
@@ -18,9 +36,14 @@ export function Invite() {
         <ScreenTitle emoji="🔗" lead="Make your room first. Its key is made on this phone and goes into the link you send.">
           Invite &amp; safety code
         </ScreenTitle>
-        <button type="button" class="btn btn-primary btn-block" onClick={create}>
-          Create a room
+        <button type="button" class="btn btn-primary btn-block" onClick={create} disabled={busy}>
+          {busy ? 'Making your room…' : 'Create a room'}
         </button>
+        {error && (
+          <p class="caption error" role="alert">
+            {error}
+          </p>
+        )}
       </section>
     );
   }
@@ -28,11 +51,20 @@ export function Invite() {
   if (!room.invite) {
     return (
       <section>
-        <ScreenTitle emoji="🔗" lead="You joined with your person's link, so the link stays with them.">
-          Invite &amp; safety code
+        <ScreenTitle
+          emoji="🔗"
+          lead={
+            room.partnerJoined
+              ? room.role === 'creator'
+                ? 'You are both in. The link is not needed any more, so this phone has forgotten it.'
+                : 'You are both in. The invite link has done its job and nobody else can use it.'
+              : 'You joined with your person’s link, so the link stays with them.'
+          }
+        >
+          {room.partnerJoined ? 'You’re both in' : 'Invite & safety code'}
         </ScreenTitle>
         <SafetyCode code={room.safetyCode} />
-        <TwelveWords />
+        <RoomPhraseNote />
       </section>
     );
   }
@@ -54,7 +86,7 @@ export function Invite() {
     <section>
       <ScreenTitle
         emoji="🔗"
-        lead="Use a chat you trust, or read it out. The key lives in the part after the # and never reaches our server."
+        lead="Use a chat you trust, or read it out. The key lives in the part after the # and never reaches our server. The link works for 48 hours."
       >
         Send this to your person
       </ScreenTitle>
@@ -79,7 +111,7 @@ export function Invite() {
         </div>
       </div>
       <SafetyCode code={room.safetyCode} />
-      <TwelveWords />
+      <RoomPhraseNote />
     </section>
   );
 }
@@ -96,16 +128,16 @@ function SafetyCode({ code }: { code: string[] }) {
   );
 }
 
-function TwelveWords() {
+function RoomPhraseNote() {
   return (
     <div class="panel panel-gold">
       <div class="panel-title">
-        Your twelve words <Em>📝</Em>
+        Your way back in <Em>🔑</Em>
       </div>
       <p class="small">
-        Coming next: twelve words to write down. They are the only way back if this browser forgets you — which
-        Safari does after a week of not opening the room. On iPhone, add Our Kahani to your Home Screen to make
-        that far less likely.
+        Once you both lock your hashtag, you each pick a phrase. Hashtag plus phrase opens the room on any device, and it is
+        the only way back if this browser forgets you, which Safari does after a week of not opening the room. On iPhone,
+        add Our Kahani to your Home Screen to make that far less likely.
       </p>
     </div>
   );
@@ -113,32 +145,52 @@ function TwelveWords() {
 
 export function Join() {
   const { room, setRoom } = useRoom();
-  const [state, setState] = useState<'loading' | 'missing' | 'ready'>(room ? 'ready' : 'loading');
+  const [state, setState] = useState<'working' | 'missing' | 'failed' | 'done'>('working');
+  const [problem, setProblem] = useState('');
 
   useEffect(() => {
     const roomId = parseJoinPath(location.pathname);
-    // Always read and strip the fragment, even when the path is bad or a room is open.
+    // Always read and strip the fragment first, even when the path is bad.
     const raw = takeInviteKeyFromLocation(location, history);
-    if (room) return;
     if (!raw || !roomId) {
-      setState('missing');
+      setState(room ? 'done' : 'missing');
       return;
     }
-    void (async () => {
-      const key = await importRoomKey(raw);
-      const code = await safetyCode(raw);
-      setRoom({ id: roomId, role: 'invitee', key, safetyCode: code, startedAt: Date.now() });
-      setState('ready');
-    })();
+    void controller()
+      .join(roomId, raw)
+      .then((joined) => {
+        setRoom(joined);
+        setState('done');
+      })
+      .catch((e: unknown) => {
+        setProblem(problemText(e));
+        setState('failed');
+      });
   }, []);
 
-  if (state === 'loading') return null;
-  if (state === 'missing' || !room) {
+  if (state === 'working') {
+    return (
+      <section>
+        <ScreenTitle lead="Checking the invite and saving the key on this phone.">Joining your room…</ScreenTitle>
+      </section>
+    );
+  }
+  if (state === 'missing') {
     return (
       <section>
         <ScreenTitle lead="Ask for the link again and open the whole thing in Safari or Chrome.">
           This invite link is incomplete
         </ScreenTitle>
+      </section>
+    );
+  }
+  if (state === 'failed' || !room) {
+    return (
+      <section>
+        <ScreenTitle lead={problem}>We could not open this room</ScreenTitle>
+        <Link class="btn btn-secondary btn-block" href={PATHS.today}>
+          Go to today
+        </Link>
       </section>
     );
   }
@@ -149,7 +201,7 @@ export function Join() {
       </ScreenTitle>
       <SafetyCode code={room.safetyCode} />
       <Link class="btn btn-primary btn-block" href={PATHS.today}>
-        Go to today →
+        Continue →
       </Link>
     </section>
   );

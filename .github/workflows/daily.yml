@@ -1,0 +1,39 @@
+name: Daily
+
+# Once a day:
+# - Storage check on the live Supabase project (fails, so GitHub emails, at 60% and above;
+#   at 70% the database itself pauses new rooms). This call is also the keep-alive ping that stops
+#   a free project from pausing after a quiet week.
+# - Asks the live site to delete the encrypted photos of rooms that were erased or ended.
+
+on:
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: ${{ vars.PRODUCTION_URL || 'https://our-kahani.pages.dev' }}
+      # Public by design (the app ships them); the production project.
+      SUPABASE_URL: https://xyaahikxzykzehgtlwrf.supabase.co
+      SUPABASE_KEY: sb_publishable_nu6DV-AEeza7BojWpTP6CQ_a88QrB3J
+    steps:
+      - name: Purge files of erased rooms
+        run: |
+          code=$(curl -s -o out.json -w '%{http_code}' -X POST "$SITE/media/purge")
+          cat out.json; echo
+          # 503 means the R2 binding is not added yet: nothing is stored, nothing to purge.
+          if [ "$code" != 200 ] && [ "$code" != 503 ]; then echo "::error::purge failed: $code"; exit 1; fi
+      - name: Storage check and keep-alive
+        run: |
+          body=$(curl -sf -X POST "$SUPABASE_URL/rest/v1/rpc/storage_health" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" -H 'Content-Type: application/json' -d '{}')
+          echo "$body"
+          pct=$(echo "$body" | jq -r '.percent')
+          if awk "BEGIN{exit !($pct >= 80)}"; then echo "::error::Database at ${pct}% (80% alert). New rooms are paused."; exit 1; fi
+          if awk "BEGIN{exit !($pct >= 60)}"; then echo "::error::Database at ${pct}% (60% alert)."; exit 1; fi

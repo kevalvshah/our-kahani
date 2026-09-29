@@ -17,5 +17,7 @@ describe('room days', () => {
     expect(daysLeft(room, 0)).toBe(28);
     expect(daysLeft(room, 9 * DAY)).toBe(19);
     expect(daysLeft(room, 60 * DAY)).toBe(0);
+    // The server's end date with a phone clock a few seconds behind still reads 28.
+    expect(daysLeft({ startedAt: 0, endsAt: 28 * DAY + 5000 }, 0)).toBe(28);
   });
 });

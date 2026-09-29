@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { regionFromLocale, safetyFooter } from './safetyFooter';
+import { regionFromLocale, safetyFooter, safetyFooterFor } from './safetyFooter';
 
 describe('safety footer', () => {
   it.each([
@@ -28,5 +28,11 @@ describe('safety footer', () => {
     expect(regionFromLocale('zh-Hant-TW')).toBe('TW');
     expect(regionFromLocale('not a tag')).toBeNull();
     expect(regionFromLocale('und')).toBeNull();
+  });
+
+  it('prefers the country chosen in the profile', () => {
+    expect(safetyFooterFor('AU', ['en-GB']).country).toBe('Australia');
+    expect(safetyFooterFor('IN', ['en-GB'])).toEqual({ country: null, lines: [] });
+    expect(safetyFooterFor(undefined, ['en-GB']).country).toBe('United Kingdom');
   });
 });
