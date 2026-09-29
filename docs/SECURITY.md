@@ -20,6 +20,14 @@ backups or logs. Only the two people in a room can.
   wrap key and stored by `save_backup`. On another device, "Enter my room" asks for both;
   `recover_room` returns the backup and moves the membership to that browser's anonymous
   account. Until the hashtag locks, the key lives only on the device.
+- **Partner rescue**: if someone loses both their device and their phrase, their partner (on any
+  device where the room is open) types their own phrase to open their own backup, then their
+  device makes a one-time rescue code (80 random bits, Crockford base32). HKDF from code +
+  hashtag gives a lookup token (server keeps its SHA-256) and a key that seals the room key. The
+  server hands the sealed copy out once, within 24 hours (`use_rescue`), moving the lost person's
+  place to the new browser, removing their old backup and their old private notes (sealed with
+  a notes key nobody has any more). They then pick a new phrase. The old device loses access.
+  Support cannot do any of this: there is no server-side reset.
 - **Personal notes**: each person has their own key for Saved notes; the partner never has it.
 - **Key storage**: non-extractable CryptoKey in IndexedDB where possible. Safari can delete
   script-writable storage after 7 days of Safari use without interaction (Home Screen web apps
@@ -39,6 +47,8 @@ backups or logs. Only the two people in a room can.
 - SHA-256 hashes of the join token and of the recovery lookup token, and the recovery backup
   sealed under a key from hashtag + room phrase.
 - For photos and voice notes: the R2 object id, size and time, all ciphertext.
+- For a partner rescue (24 hours): who made it and for whom, when it expires, the SHA-256 of its
+  lookup token and the room key sealed under a key from the code. Never the code.
 - If a person switches notifications on: their device's push address (a random URL at Google,
   Mozilla, Apple or Microsoft) and when they last nudged their partner. Pushes carry no payload;
   the push service learns only that a push arrived.
@@ -53,7 +63,10 @@ It never sees a name, answer, note, hashtag, caption, photo, voice note, key or 
   encrypted by default as far as we know; verify. Instagram's in-app browser has been reported
   to inject scripts; require Safari or Chrome.
 - Screenshots, unlocked phones, shoulder-surfing are out of scope.
-- If keys and the room phrase are both lost, data is gone.
+- If keys and the room phrase are both lost, only the partner can help (rescue code). If both
+  people lose everything, data is gone.
+- A partner can use a rescue to take over the other person's place (they already share the room
+  key). The rescued person's old device then shows the room as gone, which makes this visible.
 - The room phrase is chosen by a person, so it is weaker than random words. Whoever holds the
   database could try guesses offline against the stored backup; 600,000 PBKDF2 rounds make each
   guess slow and the hashtag salt makes each guess work for one room only, but a phrase that is

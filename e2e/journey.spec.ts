@@ -153,4 +153,54 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     await fresh.getByRole('button', { name: /open both/ }).click({ timeout: 20_000 });
     await expect(fresh.locator('.reveal-theirs')).toContainText('Coffee');
   });
+
+  test('partner rescue: a one-time code from the partner’s phone brings a lost person back, once', async ({ page, newDevice }) => {
+    test.setTimeout(240_000);
+    const { invite } = await createAndSetUp(page, 'Mira');
+    const lostPhone = await newDevice();
+    await joinAndSetUp(lostPhone, invite, 'Kabir');
+    const hashtag = await lockHashtag(page, lostPhone);
+    await setPhrase(lostPhone, uniquePhrase('kite festival on the terrace'));
+    const miraPhrase = uniquePhrase('filter coffee and rainy mornings');
+    await setPhrase(page, miraPhrase);
+    await lostPhone.goto('/card/day/1');
+    await lostPhone.getByRole('button', { name: 'Coffee' }).click();
+    await lostPhone.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(lostPhone.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
+
+    // Kabir loses his phone and his phrase. Mira makes a rescue code; her own phrase is checked.
+    await page.goto('/room');
+    await page.getByRole('button', { name: 'Help Kabir back in' }).click({ timeout: 20_000 });
+    await page.getByLabel(/Your own phrase/).fill('not my phrase at all today');
+    await page.getByRole('button', { name: 'Make the rescue code' }).click();
+    await expect(page.getByRole('alert')).toContainText('not your phrase', { timeout: 30_000 });
+    await page.getByLabel(/Your own phrase/).fill(miraPhrase);
+    await page.getByRole('button', { name: 'Make the rescue code' }).click();
+    const code = ((await page.locator('.rescue-code').textContent({ timeout: 30_000 })) ?? '').trim();
+    expect(code).toMatch(/^[0-9A-Z]{4}(-[0-9A-Z]{4}){3}$/);
+
+    // On a new device: hashtag + rescue code, then a new phrase. His answer is still his.
+    const newPhone = await newDevice();
+    await newPhone.goto('/recover');
+    await newPhone.getByRole('button', { name: 'I have a rescue code from my person' }).click();
+    await newPhone.getByLabel("Your room's hashtag").fill(hashtag);
+    await newPhone.getByLabel('Rescue code from your person').fill(code.toLowerCase().replace(/-/g, ' '));
+    await newPhone.getByRole('button', { name: 'Use the rescue code' }).click();
+    await expect(newPhone.getByRole('heading', { name: /Your room phrase/ })).toBeVisible({ timeout: 30_000 });
+    await setPhrase(newPhone, uniquePhrase('a brand new phrase for kabir'));
+    await expect(newPhone.getByRole('heading', { name: /Namaste, Kabir/ })).toBeVisible({ timeout: 20_000 });
+    await newPhone.goto('/card/day/1');
+    await expect(newPhone.getByRole('button', { name: 'Coffee' })).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
+
+    // The lost phone no longer opens the room, and the code does not work a second time.
+    await lostPhone.goto('/');
+    await expect(lostPhone.getByRole('button', { name: 'Create a room' })).toBeVisible({ timeout: 20_000 });
+    const another = await newDevice();
+    await another.goto('/recover');
+    await another.getByRole('button', { name: 'I have a rescue code from my person' }).click();
+    await another.getByLabel("Your room's hashtag").fill(hashtag);
+    await another.getByLabel('Rescue code from your person').fill(code);
+    await another.getByRole('button', { name: 'Use the rescue code' }).click();
+    await expect(another.getByRole('alert')).toContainText('does not work', { timeout: 30_000 });
+  });
 });

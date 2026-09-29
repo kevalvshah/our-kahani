@@ -21,6 +21,8 @@ No other servers. Railway is not needed.
 - `private.key_backups`: SHA-256 of a lookup token from hashtag + room phrase, and the key backup
   sealed under a key from the same secret.
 - `private.media_purge`: ids of erased or ended rooms, for 8 days, so R2 files are deleted.
+- `private.rescues`: one pending partner rescue per room (24 hours): who for, SHA-256 of the
+  lookup token, the room key sealed under a key from the rescue code.
 
 Record kinds (`src/data/kinds.ts`), enforced by `private.can_read_record`:
 
@@ -40,7 +42,8 @@ Caps: 5000 records and 20 photos per room; 16 KB per envelope; 40 media objects 
 `create_room`, `join_room`, `room_answers` (who has answered what, never content),
 `erase_room`, `vote_keep`, `save_backup`, `recover_room`, `media_allowed`,
 `media_purge_list`, `storage_health`, `push_subscribe`, `push_unsubscribe`, `push_targets`
-(plus service-role-only `push_secret`, `push_init`, `push_forget`).
+(plus service-role-only `push_secret`, `push_init`, `push_forget`), `read_backup`,
+`create_rescue`, `rescue_status`, `cancel_rescue`, `use_rescue`.
 
 ## Notifications (optional, per device)
 Switch on the Room data screen. The browser's push address is stored by `push_subscribe`

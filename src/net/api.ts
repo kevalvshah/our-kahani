@@ -58,6 +58,8 @@ export class ApiError extends Error {
       | 'too-many-rooms'
       | 'not-found'
       | 'phrase-taken'
+      | 'rescue-invalid'
+      | 'no-partner'
       | 'paused'
       | 'read-only'
       | 'offline'
@@ -78,6 +80,8 @@ function failWith(error: { code?: string; message?: string } | null, offline: bo
   if (code === 'P0006') throw new ApiError('This room has ended', 'room-ended');
   if (code === 'P0007') throw new ApiError('That hashtag and phrase do not match a room', 'not-found');
   if (code === 'P0008') throw new ApiError('New rooms are paused', 'paused');
+  if (code === 'P0009') throw new ApiError('That rescue code does not work', 'rescue-invalid');
+  if (code === 'P0010') throw new ApiError('Nobody to rescue yet', 'no-partner');
   if (code === '25006') throw new ApiError('The server is read-only for now', 'read-only');
   throw new ApiError(error?.message || 'Something went wrong', 'other');
 }
@@ -218,6 +222,42 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
       if (error) fail(error);
       const row = (data as { room_id: string; role: 'creator' | 'invitee'; envelope: string }[] | null)?.[0];
       if (!row) throw new ApiError('That hashtag and phrase do not match a room', 'not-found');
+      return { roomId: row.room_id, role: row.role, envelope: fromBytea(row.envelope) };
+    },
+
+    // ---- Partner rescue ----------------------------------------------------
+
+    /** This person's own key backup (null if hashtag + phrase do not match it). Moves nothing. */
+    async readBackup(token: Bytes): Promise<Bytes | null> {
+      const { data, error } = await db.rpc('read_backup', { p_token: toBytea(token) });
+      if (error) fail(error);
+      return typeof data === 'string' ? fromBytea(data) : null;
+    },
+
+    /** Stores the sealed room key for the partner for 24 hours; returns when it expires. */
+    async createRescue(roomId: string, token: Bytes, envelope: Bytes): Promise<number> {
+      const { data, error } = await db.rpc('create_rescue', { p_room: roomId, p_token: toBytea(token), p_envelope: toBytea(envelope) });
+      if (error) fail(error);
+      return Date.parse(data as string);
+    },
+
+    /** When this person's own rescue for the room expires, or null if none is waiting. */
+    async rescueStatus(roomId: string): Promise<number | null> {
+      const { data, error } = await db.rpc('rescue_status', { p_room: roomId });
+      if (error) fail(error);
+      return typeof data === 'string' ? Date.parse(data) : null;
+    },
+
+    async cancelRescue(roomId: string): Promise<void> {
+      const { error } = await db.rpc('cancel_rescue', { p_room: roomId });
+      if (error) fail(error);
+    },
+
+    async useRescue(token: Bytes): Promise<{ roomId: string; role: 'creator' | 'invitee'; envelope: Bytes }> {
+      const { data, error } = await db.rpc('use_rescue', { p_token: toBytea(token) });
+      if (error) fail(error);
+      const row = (data as { room_id: string; role: 'creator' | 'invitee'; envelope: string }[] | null)?.[0];
+      if (!row) throw new ApiError('That rescue code does not work', 'rescue-invalid');
       return { roomId: row.room_id, role: row.role, envelope: fromBytea(row.envelope) };
     },
 

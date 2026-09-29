@@ -6,7 +6,7 @@ import { useRoomData, type Profile } from '../../data/RoomData';
 import { controller } from '../../state/controller';
 import { useRoom } from '../../state/roomContext';
 import { Brand } from '../Brand';
-import { Em, Field, Problem, ScreenTitle } from '../components';
+import { Em, Field, Problem, ScreenTitle, SupportLine } from '../components';
 import { problemText } from '../problems';
 import { navigate, PATHS } from '../router';
 
@@ -154,6 +154,7 @@ export function RoomPhrase() {
           open. Safari clears a site's data after a week without a visit: on iPhone, add Our Kahani to your Home Screen.
         </p>
       </div>
+      <SupportLine />
     </section>
   );
 }
@@ -163,16 +164,19 @@ export function RoomPhrase() {
 // ---------------------------------------------------------------------------
 export function Recover() {
   const { setRoom } = useRoom();
+  const [mode, setMode] = useState<'phrase' | 'rescue'>('phrase');
   const [hashtag, setHashtag] = useState('');
   const [phrase, setPhrase] = useState('');
+  const [code, setCode] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const secret = mode === 'phrase' ? phrase : code;
 
-  async function recover() {
+  async function enter() {
     setBusy(true);
     setProblem(null);
     try {
-      setRoom(await controller().recover(hashtag, phrase));
+      setRoom(mode === 'phrase' ? await controller().recover(hashtag, phrase) : await controller().useRescue(hashtag, code));
       navigate(PATHS.today);
     } catch (e) {
       setProblem(problemText(e));
@@ -181,22 +185,54 @@ export function Recover() {
     }
   }
 
+  function switchTo(next: 'phrase' | 'rescue') {
+    setMode(next);
+    setProblem(null);
+  }
+
   return (
     <section>
-      <ScreenTitle emoji="🔑" lead="Your room's hashtag and your own phrase. Everything is unlocked on this device; the phrase never leaves it.">
+      <ScreenTitle
+        emoji="🔑"
+        lead={
+          mode === 'phrase'
+            ? "Your room's hashtag and your own phrase. Everything is unlocked on this device; the phrase never leaves it."
+            : 'Lost your device and your phrase? Your person can make you a one-time rescue code from their phone or laptop.'
+        }
+      >
         Enter your room
       </ScreenTitle>
       <div class="panel">
         <Field id="rtag" label="Your room's hashtag" value={hashtag} onInput={(v) => setHashtag(normaliseHashtag(v))} placeholder="#ChaiAurCoffee" maxLength={25} />
-        <Field id="rphrase" label="Your phrase" value={phrase} onInput={setPhrase} maxLength={120} />
+        {mode === 'phrase' ? (
+          <Field id="rphrase" label="Your phrase" value={phrase} onInput={setPhrase} maxLength={120} />
+        ) : (
+          <Field id="rcode" label="Rescue code from your person" value={code} onInput={setCode} placeholder="ABCD-EFGH-JKMN-PQRS" maxLength={24} />
+        )}
         <Problem text={problem} />
-        <button type="button" class="btn btn-primary btn-block" disabled={busy || !hashtag || !phrase.trim()} onClick={() => void recover()}>
-          {busy ? 'Unlocking…' : 'Enter the room'}
+        <button type="button" class="btn btn-primary btn-block" disabled={busy || !hashtag || !secret.trim()} onClick={() => void enter()}>
+          {busy ? 'Unlocking…' : mode === 'phrase' ? 'Enter the room' : 'Use the rescue code'}
         </button>
+        {mode === 'phrase' ? (
+          <button type="button" class="btn btn-secondary btn-block seal" onClick={() => switchTo('rescue')}>
+            I have a rescue code from my person
+          </button>
+        ) : (
+          <>
+            <p class="small muted">
+              After this you pick a new phrase. Your old private notes cannot come back: they were locked with a key only
+              your old device had.
+            </p>
+            <button type="button" class="btn btn-secondary btn-block seal" onClick={() => switchTo('phrase')}>
+              I know my phrase
+            </button>
+          </>
+        )}
         <p class="small muted">
-          Opening it here moves your place in the room to this device. Your person's phone is not affected.
+          Opening it here moves your place in the room to this device. Your person's devices are not affected.
         </p>
       </div>
+      <SupportLine />
     </section>
   );
 }

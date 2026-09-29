@@ -176,6 +176,18 @@ h1:focus { outline: none; }
 .note { font-size: 0.78125rem; color: var(--k-muted); line-height: 1.5; margin: 1rem 0 0; max-width: 56ch; }
 .note-dashed { font-size: 0.8125rem; margin-top: 1.25rem; padding: 14px; border: 1px dashed var(--k-line); border-radius: 14px; }
 
+/* ---------- Rescue and support ---------- */
+.rescue-code {
+  font-family: var(--k-mono); font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; text-align: center;
+  margin: 0.5rem 0 0.75rem; padding: 12px; border-radius: 14px; background: var(--k-surface); overflow-wrap: anywhere;
+}
+.link-button {
+  background: none; border: 0; padding: 0; font: inherit; color: var(--k-ink); text-decoration: underline; cursor: pointer;
+  min-height: 2.75rem;
+}
+.support { margin-top: 1rem; }
+.support a { color: var(--k-ink); }
+
 /* ---------- Days ---------- */
 .days {
   list-style: none; padding: 0; margin: 0 0 0.625rem; max-width: 26.25rem;
