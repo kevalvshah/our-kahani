@@ -176,9 +176,14 @@ describe('Seasons 2 to 5', () => {
     });
   });
 
-  it('Season 2 opens with six Then vs Now cards pointing at answerable Season 1 days', () => {
+  it('Season 2 opens with Then vs Now, six of them spread out (never two in a row), pointing at answerable Season 1 days', () => {
     const s2 = SEASONS.find((s) => s.id === 's2')!;
-    expect(s2.cards.slice(0, 6).every((c) => c.card.type === 'then')).toBe(true);
+    expect(s2.cards[0]!.card.type).toBe('then');
+    expect(s2.cards.filter((c) => c.card.type === 'then')).toHaveLength(6);
+    for (const s of SEASONS)
+      s.cards.forEach((c, i) => {
+        if (i > 0) expect(c.card.type === 'then' && s.cards[i - 1]!.card.type === 'then', `${s.id} card ${i + 1}`).toBe(false);
+      });
     for (const s of SEASONS)
       for (const { card } of s.cards)
         if (card.type === 'then') {
@@ -295,5 +300,12 @@ describe('inclusion', () => {
       for (const o of opts) if (FOOD.test(o.l)) expect(o.diet, `${where}: ${o.l}`).toMatch(/^(egg|nonveg)$/);
       if (opts.some((o) => o.diet === 'egg' || o.diet === 'nonveg')) expect(opts.filter((o) => !o.diet).length, where).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe('variety', () => {
+  it('playing straight through the seasons never gives one card type three times in a row', () => {
+    const order = [...Object.values(SEASON).map((s) => s.card.type), ...SEASONS.flatMap((s) => s.cards.map((c) => c.card.type))];
+    for (let i = 2; i < order.length; i++) expect(order[i] === order[i - 1] && order[i] === order[i - 2], `card ${i + 1}: ${order[i]}`).toBe(false);
   });
 });
