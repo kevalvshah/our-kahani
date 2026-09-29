@@ -8,6 +8,9 @@ import { createAndSetUp, joinAndSetUp } from './flow';
 // showing only "Your room needs attention"). Needs the production build (the service worker is
 // only registered there), which is what the test web server serves.
 
+// This file is about the service worker, so it is allowed here (blocked everywhere else).
+test.use({ serviceWorkers: 'allow' });
+
 test.describe('installed app (PWA) and notifications', { tag: ['@pwa', '@functional'] }, () => {
   test.skip(({ browserName, isMobile }) => browserName !== 'chromium' || !!isMobile, 'Chromium desktop: the DevTools protocol drives install and push');
 

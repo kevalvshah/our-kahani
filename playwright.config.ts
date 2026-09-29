@@ -24,6 +24,10 @@ export default defineConfig({
           }
         : undefined,
     trace: 'retain-on-failure',
+    // The offline service worker is tested on its own (e2e/pwa.spec.ts). Everywhere else it is
+    // blocked: tests watch and route requests, and Playwright's Firefox can stall page loads
+    // that a worker handles.
+    serviceWorkers: 'block',
   },
   // Latest Chromium, Firefox and WebKit on laptop and phone sizes (docs/WEB-ONLY.md).
   projects: [
