@@ -194,7 +194,7 @@ production smoke test after each merge still runs (production is public).
 | No third-party scripts or hosts, no inline scripts, strict CSP | `check-dist.mjs`; `security.spec.ts` |
 | Touch targets at least 44 px, keyboard accessible, phone-first | `a11y.spec.ts` |
 | Room isolation, reveal rule, answer locks, erase | `supabase/tests/rls.sql` |
-| Private notes, write-once hashtag, capsule, saved copies, caps, keep votes, recovery, photo store checks, storage guard | `supabase/tests/features.sql` |
+| Private notes, write-once hashtag, capsule, saved copies, caps, keep votes, recovery adds a device (multi-device), jar and huddle sealed until both write, Dil ki Baat and dreams shared, photo store checks, storage guard | `supabase/tests/features.sql` |
 | Plaintext canary: no name, answer, note, song or key in any request, on either phone | `journey.spec.ts`; `security.spec.ts` |
 | The whole product with two people (setup, words, hashtag, cards, reveal, packs, games, saved notes, recovery) | `journey.spec.ts` |
 | Photo store: members only, size and count caps, purge of erased rooms | `mediaFunction.test.ts` |

@@ -4,6 +4,13 @@ const PORT = 4173;
 // Set BASE_URL to test a deployed site instead of a local build (post-deploy smoke test).
 const BASE_URL = process.env.BASE_URL;
 
+// Local builds under test talk to the CI Supabase project, never production: the tests create
+// and erase real rooms and anonymous users. Both values are public by design.
+if (!BASE_URL && !process.env.VITE_SUPABASE_URL) {
+  process.env.VITE_SUPABASE_URL = 'https://yarkzlhuklweotdaywcr.supabase.co';
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_7VU8E8yHnbiwe1ds9YTFqQ_ONgKd9Ns';
+}
+
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
