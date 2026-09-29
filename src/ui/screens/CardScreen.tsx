@@ -568,6 +568,7 @@ export function SaveButton({
           note: '',
           date: '',
           t: Date.now(),
+          ...(theirs.voice ? { voice: theirs.voice } : {}),
         })
       }
     >

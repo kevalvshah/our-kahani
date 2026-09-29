@@ -24,9 +24,13 @@ async function mediaFiles(d: ReturnType<typeof useRoomData>): Promise<MediaFile[
   for (const p of d.list<{ obj: string }>(K.PHOTO)) {
     wanted.push({ obj: p.data.obj, kind: K.PHOTO, name: `photo-${stamp(p.createdAt)}-${p.mine ? 'me' : 'partner'}.jpg` });
   }
-  for (const a of d.list<Answer>(K.ANSWER)) {
-    const v = a.data.voice;
-    if (v) wanted.push({ obj: v.obj, kind: K.VOICE, name: `voice-${stamp(a.createdAt)}-${a.mine ? 'me' : 'partner'}.${v.type.includes('mp4') ? 'm4a' : v.type.includes('ogg') ? 'ogg' : 'webm'}` });
+  // Voice notes can sit on any record: answers, songs, story lines, pings, heads-ups, saved notes.
+  const seenObj = new Set<string>();
+  for (const r of d.records) {
+    const v = (r.data as { voice?: Answer['voice'] } | null)?.voice;
+    if (!v || seenObj.has(v.obj)) continue;
+    seenObj.add(v.obj);
+    wanted.push({ obj: v.obj, kind: K.VOICE, name: `voice-${stamp(r.createdAt)}-${r.mine ? 'me' : 'partner'}.${v.type.includes('mp4') ? 'm4a' : v.type.includes('ogg') ? 'ogg' : 'webm'}` });
   }
   const out: MediaFile[] = [];
   for (const w of wanted) {
@@ -350,7 +354,7 @@ export function mediaExpiringSoon(d: ReturnType<typeof useRoomData>, lastDownloa
   const keep = 28 * 86_400_000;
   const soon = (at: number) => at > lastDownload && now - at > keep - week && now - at < keep;
   const photos = d.list(K.PHOTO).filter((p) => soon(p.createdAt)).length;
-  const voices = d.list<Answer>(K.ANSWER).filter((a) => a.data.voice && soon(a.createdAt)).length;
+  const voices = d.records.filter((r) => !!(r.data as { voice?: unknown } | null)?.voice && soon(r.createdAt)).length;
   return photos + voices;
 }
 

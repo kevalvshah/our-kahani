@@ -15,7 +15,7 @@ import { canRecordVoice, startVoice, type Recording } from './voiceRecorder';
 
 const voiceCtx = (roomId: string, obj: string) => ({ roomId, recordId: obj, kind: K.VOICE });
 
-export function VoiceRecord({ onSent }: { onSent: (v: VoiceNote) => void }) {
+export function VoiceRecord({ onSent, label }: { onSent: (v: VoiceNote) => void; label?: string }) {
   const d = useRoomData();
   const [rec, setRec] = useState<Recording | null>(null);
   const [started, setStarted] = useState(0);
@@ -87,7 +87,7 @@ export function VoiceRecord({ onSent }: { onSent: (v: VoiceNote) => void }) {
         </>
       ) : (
         <button type="button" class="btn btn-secondary btn-block seal" disabled={busy} onClick={() => void begin()}>
-          {busy ? 'Locking and sending…' : `🎙️ Record a voice note instead (${VOICE_SECONDS} s)`}
+          {busy ? 'Locking and sending…' : (label ?? `🎙️ Record a voice note instead (${VOICE_SECONDS} s)`)}
         </button>
       )}
       <Problem text={problem} />

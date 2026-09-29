@@ -1,3 +1,5 @@
+import { VoicePlayer, VoiceRecord } from '../Voice';
+import type { VoiceNote } from '../../features/cardLogic';
 import { InstallHint } from '../Install';
 import { useState } from 'preact/hooks';
 import { dayRef, PACKS, SEASON } from '../../content/cards';
@@ -406,7 +408,8 @@ const seenKey = (room: string) => `ok.ping-seen.${room}`;
 
 function PartnerPing() {
   const d = useRoomData();
-  const ping = d.theirs<{ at: number }>(K.PING, 'ping')?.data.at;
+  const pingData = d.theirs<{ at: number; voice?: VoiceNote }>(K.PING, 'ping')?.data;
+  const ping = pingData?.at;
   const [seen, setSeen] = useState(() => {
     try {
       return Number(localStorage.getItem(seenKey(d.room.id)) ?? 0);
@@ -417,7 +420,10 @@ function PartnerPing() {
   if (!ping || ping <= seen) return null;
   return (
     <div class="pingbar">
-      <span>{d.partner} is thinking of you 💛</span>
+      <span>
+        {d.partner} is thinking of you 💛
+        {pingData?.voice && <VoicePlayer note={pingData.voice} who={d.partner} />}
+      </span>
       <button
         type="button"
         class="btn-small"
@@ -452,6 +458,15 @@ function ThinkingOfYou() {
       >
         <Em>💛</Em> Send a “thinking of you”
       </button>
+      {d.room.partnerJoined && !sent && (
+        <VoiceRecord
+          label="🎙️ Send a voice hug"
+          onSent={(voice) => {
+            void d.put(K.PING, 'ping', { at: Date.now(), voice });
+            setSent(true);
+          }}
+        />
+      )}
       {sent && <Done>Sent 💛 {d.partner} will see it next time they open the app.</Done>}
     </>
   );

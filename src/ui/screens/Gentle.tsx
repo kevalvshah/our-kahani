@@ -1,3 +1,5 @@
+import { VoicePlayer, VoiceRecord } from '../Voice';
+import type { VoiceNote } from '../../features/cardLogic';
 import { useState } from 'preact/hooks';
 import { G_DEPTH, G_HELPS, G_PROMISES, G_TOPICS, listLabel } from '../../content/extras';
 import { K } from '../../data/kinds';
@@ -19,6 +21,8 @@ interface GNote {
   depth: string;
   line: string;
   canSave: boolean;
+  /** Optional voice note with the heads-up (kept 28 days). */
+  voice?: VoiceNote;
 }
 
 interface GOpt {
@@ -221,6 +225,11 @@ function Compose({ onDone }: { onDone: () => void }) {
         Anything else? <span class="muted">(optional)</span>
       </label>
       <input id="gline" class="field" maxLength={140} value={draft.line} placeholder="One line, only if you want" autocomplete="off" onInput={(e) => setDraft({ ...draft, line: (e.target as HTMLInputElement).value })} />
+      {draft.voice ? (
+        <Done>🎙️ Voice note added. It goes with your heads-up.</Done>
+      ) : (
+        <VoiceRecord label="🎙️ Add a voice note (optional)" onSent={(voice) => setDraft({ ...draft, voice })} />
+      )}
       <Check on={draft.canSave} onToggle={() => setDraft({ ...draft, canSave: !draft.canSave })}>
         OK for {d.partner} to save this in their notes
         <small class="check-sub">Optional. You can take it back any time, and their saved copy goes too.</small>
@@ -255,6 +264,7 @@ function MyNote({ noteId, note }: { noteId: string; note: GNote }) {
     <>
       <div class="bubble bubble-mine">
         <Summary note={note} />
+        {note.voice && <VoicePlayer note={note.voice} who="you" />}
         <small>{status}</small>
       </div>
       {resp?.promise &&
@@ -288,6 +298,7 @@ function TheirNote({ noteId, note }: { noteId: string; note: GNote }) {
       <h2 class="sub-title">From {d.partner}</h2>
       <div class="bubble bubble-theirs">
         <Summary note={note} />
+        {note.voice && <VoicePlayer note={note.voice} who={d.partner} />}
       </div>
       {note.canSave &&
         (saved ? (
@@ -312,6 +323,7 @@ function TheirNote({ noteId, note }: { noteId: string; note: GNote }) {
                 note: '',
                 date: '',
                 t: Date.now(),
+                ...(note.voice ? { voice: note.voice } : {}),
               })
             }
           >
