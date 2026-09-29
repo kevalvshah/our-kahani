@@ -213,4 +213,29 @@ describe('savedSheets', () => {
     // The input is not reordered.
     expect(items.map((x) => x.q)).toEqual(['Old', 'New', 'Undated']);
   });
+
+  it('adds the weekly jar and huddle both opened, season answers and the dreams board', () => {
+    const zip = readZip(
+      buildArchive(
+        fake([
+          { kind: K.SHUKRIYA, ref: 'jar:2026-W40', mine: true, data: { t: 'the chai' } },
+          { kind: K.SHUKRIYA, ref: 'jar:2026-W40', mine: false, data: { t: 'the walk' } },
+          { kind: K.SHUKRIYA, ref: 'jar:2026-W41', mine: true, data: { t: 'only mine' } },
+          { kind: K.HUDDLE, ref: 'huddle:2026-W40', mine: true, data: { best: 'work', hard: 'tired', need: 'hug' } },
+          { kind: K.HUDDLE, ref: 'huddle:2026-W40', mine: false, data: { best: 'family', hard: 'none', need: 'call', line: 'ok' } },
+          { kind: K.DREAM, ref: 'dream:a', mine: true, data: { type: 'travel', t: 'Northern Lights' } },
+          { kind: K.DREAM, ref: 'dream:b', mine: false, data: { type: 'home', t: 'A garden' } },
+          ...both('season:s2:1', { pick: 'same' }, { pick: 'changed' }),
+        ]),
+      ).bytes,
+    );
+    const s = sheets(zip.get('our-answers.xlsx')!);
+    expect(s.Weekly).toContain('the chai');
+    expect(s.Weekly).toContain('the walk');
+    expect(s.Weekly).not.toContain('only mine');
+    expect(s.Weekly).toContain('family · none · call · ok');
+    expect(s.Dreams).toContain('Northern Lights');
+    expect(s.Dreams).toContain('Ravi Kumar');
+    expect(s.Answers).toContain('Asli Kahani');
+  });
 });

@@ -29,11 +29,15 @@ Record kinds (`src/data/kinds.ts`), enforced by `private.can_read_record`:
 
 | Kinds | Who can read | Examples |
 |---|---|---|
-| 1–49 | the partner only after answering the same ref | card answers, movie votes |
+| 1–49 | the partner only after answering the same ref | card answers (all seasons), movie picks, Shukriya jar, weekly huddle |
 | 50 | the partner 90 days after it was written | time capsule |
 | 100–199 | the partner as soon as it is sent | profile, reactions, games, photos, settings |
 | 140 | as 100–199, but write-once for the room | the hashtag |
+| 150–156 | as 100–199 | Dil ki Baat soft notes and replies, "I need 20 minutes", repairs, dreams and reactions |
 | 200–299 | only the author, under their own notes key | saved notes |
+
+Refs are opaque ids: `day:N` (Season 1), `season:<s2..s5>:N`, `pack:<id>:N`, `gentle:<id>`,
+`movie:<round>`, and `jar:<yyyy-Www>` / `huddle:<yyyy-Www>` (ISO week). See `docs/SEASONS-SPEC.md`.
 
 Answers can be changed until the partner answers, then they lock. A saved copy of the
 partner's record (`copy:<id>`) is deleted by a trigger when the original is taken back.

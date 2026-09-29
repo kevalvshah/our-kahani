@@ -4,6 +4,8 @@ import type { RoomData } from '../data/RoomData';
 import { SEASON_DAYS } from '../state/room';
 import type { Answer, BonusCard } from './cardLogic';
 import { entryFor, isAnswered } from './cardLogic';
+import { SEASONS } from '../content/seasons';
+import { seasonOneRefs, seasonRefs } from './seasons';
 
 // What is done and what is next, for one person. Skipping is always fine: nothing here scores.
 
@@ -36,12 +38,27 @@ export function firstPackCard(d: RoomData): string | null {
   return null;
 }
 
-/** What to play next: anything waiting today, else carry on through the packs. Never stops early. */
+/** The first unanswered card in Seasons 2-5, in order. */
+export function firstSeasonCard(d: RoomData, skip?: string): string | null {
+  for (const s of SEASONS) for (const ref of seasonRefs(s)) if (ref !== skip && !doneByMe(d, ref)) return ref;
+  return null;
+}
+
+/** What to play next: Season 1, then Seasons 2-5, then the packs. Never stops early. */
 export function keepPlaying(d: RoomData, after?: string): string | null {
-  const next = firstWaiting(d, after);
+  const next = firstWaiting(d, after) ?? firstSeasonCard(d, after);
   if (next) return next;
   const pack = firstPackCard(d);
   return pack && pack !== after ? pack : null;
+}
+
+/** Progress in a season (Season 2-5 id, or 's1' for Pehli Baat). */
+export function seasonProgress(d: RoomData, id: string): { done: number; total: number } {
+  const refs = id === 's1' ? seasonOneRefs() : (() => {
+    const s = SEASONS.find((x) => x.id === id);
+    return s ? seasonRefs(s) : [];
+  })();
+  return { done: refs.filter((r) => doneByMe(d, r)).length, total: refs.length };
 }
 
 /** The next card after this one: next in the pack, or the next waiting season card. */

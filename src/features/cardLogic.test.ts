@@ -216,3 +216,13 @@ describe('gentle cards', () => {
     expect(entryFor('gentle:nope')).toBeNull();
   });
 });
+
+describe('then vs now', () => {
+  it('has a warm reveal line for each outcome', () => {
+    const card = { type: 'then' as const, q: 'Still?', from: 'day:1', opts: [] };
+    const names = { me: 'You', partner: 'Ravi' };
+    expect(revealBanner(card, { pick: 'same' }, { pick: 'same' }, names)).toBe('Still true for you both 💛');
+    expect(revealBanner(card, { pick: 'changed' }, { pick: 'changed' }, names)).toBe('You have both changed a little 🌱');
+    expect(revealBanner(card, { pick: 'same' }, { pick: 'changed' }, names)).toBe('Somebody has changed their mind 👀');
+  });
+});

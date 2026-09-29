@@ -23,6 +23,7 @@ Playwright with no test accounts or secrets.
 | Deployment smoke | The real Cloudflare deployment (preview for PRs, production for `main`) works with its real headers | Playwright | same specs, `BASE_URL` set | Yes, after Cloudflare deploys |
 | Server security | Room isolation, hidden answers, locks, private notes, caps, keep votes, recovery, photo store | SQL (acts as several users, rolls back) | `supabase/tests/*.sql` | Manual after each migration (see below) |
 | Full journey | Two people from create to reveal, packs, games, saved notes; recovery on a fresh browser; plaintext canary over all traffic | Playwright against the CI Supabase project | `e2e/journey.spec.ts` | Yes |
+| Seasons and together tools | Then vs Now shows both Season 1 answers; Dil ki Baat note and one-tap reply; the pause banner on the partner's screen; Shukriya jar sealed until both write; dreams board; "hard or harmful" page | Playwright against the CI Supabase project | `e2e/together.spec.ts` | Yes |
 | Manual | Real phones, real chat apps, voice and photo round trips | People | this file | No |
 
 ## Browsers and devices

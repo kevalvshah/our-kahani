@@ -179,6 +179,7 @@ function AnswerCard({ entry, card }: { entry: CardEntry; card: AnswerableCard })
   return (
     <>
       <Heading card={card} />
+      {card.type === 'then' && <ThenBlock from={card.from} />}
 
       {revealed && opened ? (
         <Reveal entry={entry} card={card} mine={mine!} theirs={theirs!} theirsId={theirsRec!.id} bettor={bettor} />
@@ -958,3 +959,31 @@ function TryCard({ entry, card }: { entry: CardEntry; card: Extract<Card, { type
   );
 }
 
+
+/** Then vs Now: both people's earlier Season 1 answers, read on this device only. */
+function ThenBlock({ from }: { from: string }) {
+  const d = useRoomData();
+  const entry = entryFor(from);
+  if (!entry) return null;
+  const mine = d.mine<Answer>(K.ANSWER, from)?.data;
+  const theirs = d.theirs<Answer>(K.ANSWER, from)?.data;
+  const opts = allOptions(entry.card, mine, theirs);
+  const both = isAnswered(entry.card, mine) && isAnswered(entry.card, theirs);
+  return (
+    <div class="then-block">
+      <p class="small muted">Back in Pehli Baat: {questionText(entry)}</p>
+      {both ? (
+        <>
+          <p class="small">
+            <b>You:</b> {answerText(entry.card, mine, opts)}
+          </p>
+          <p class="small">
+            <b>{d.partner}:</b> {answerText(entry.card, theirs, opts)}
+          </p>
+        </>
+      ) : (
+        <p class="small">You had not both opened this one yet. Answer it now, and it will show here next time.</p>
+      )}
+    </div>
+  );
+}

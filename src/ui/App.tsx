@@ -9,6 +9,7 @@ import type { Room } from '../state/room';
 import { RoomContext, type RoomStatus } from '../state/roomContext';
 import { Em, Link } from './components';
 import { AREA_PATH, Badge, Toasts, useActivity } from './Activity';
+import { PartnerPause } from './PauseBanner';
 import type { Area } from '../features/activity';
 import { cardPath, navigate, PATHS, useRoute, type Route, type RouteName } from './router';
 import { Blocked } from './screens/Blocked';
@@ -30,6 +31,15 @@ const Photo = lazy(() => import('./screens/Photo').then((m) => m.Photo));
 const Privacy = lazy(() => import('./screens/Privacy').then((m) => m.Privacy));
 const RoomDataScreen = lazy(() => import('./screens/RoomData').then((m) => m.RoomDataScreen));
 const MediaReminder = lazy(() => import('./screens/RoomData').then((m) => m.MediaReminder));
+const Seasons = lazy(() => import('./screens/Seasons').then((m) => m.Seasons));
+const SeasonScreen = lazy(() => import('./screens/Seasons').then((m) => m.SeasonScreen));
+const Recap = lazy(() => import('./screens/Seasons').then((m) => m.Recap));
+const DilKiBaat = lazy(() => import('./screens/Together').then((m) => m.DilKiBaat));
+const ShukriyaJar = lazy(() => import('./screens/Rituals').then((m) => m.ShukriyaJar));
+const WeeklyHuddle = lazy(() => import('./screens/Rituals').then((m) => m.WeeklyHuddle));
+const DreamsBoard = lazy(() => import('./screens/Rituals').then((m) => m.DreamsBoard));
+const HardOrHarmful = lazy(() => import('./screens/Safety').then((m) => m.HardOrHarmful));
+const KahaniBook = lazy(() => import('./screens/Book').then((m) => m.KahaniBook));
 const Saved = lazy(() => import('./screens/Saved').then((m) => m.Saved));
 const ProfileSetup = lazy(() => import('./screens/Setup').then((m) => m.ProfileSetup));
 const RoomPhrase = lazy(() => import('./screens/Setup').then((m) => m.RoomPhrase));
@@ -41,13 +51,18 @@ const Recover = lazy(() => import('./screens/Setup').then((m) => m.Recover));
 const NAV: { route: keyof typeof PATHS; label: string; emoji: string }[] = [
   { route: 'today', label: 'Today', emoji: '🏠' },
   { route: 'next', label: "Today's card", emoji: '🃏' },
+  { route: 'seasons', label: 'Seasons', emoji: '📚' },
   { route: 'packs', label: 'Packs', emoji: '🗂️' },
   { route: 'movie', label: 'Movie Night', emoji: '🍿' },
   { route: 'micro', label: 'Micro-Dates', emoji: '🎲' },
   { route: 'antakshari', label: 'Antakshari', emoji: '🎵' },
   { route: 'story', label: 'Story Relay', emoji: '📖' },
   { route: 'photo', label: 'Right Now', emoji: '📷' },
+  { route: 'thanks', label: 'Shukriya jar', emoji: '🫙' },
+  { route: 'huddle', label: 'Weekly huddle', emoji: '🤝' },
+  { route: 'dreams', label: 'Dreams board', emoji: '🌠' },
   { route: 'gentle', label: 'Gentle Corner', emoji: '💛' },
+  { route: 'talk', label: 'Dil ki Baat', emoji: '🫶' },
   { route: 'saved', label: 'Saved', emoji: '🔖' },
   { route: 'room', label: 'Room data', emoji: '🗄️' },
   { route: 'invite', label: 'Invite', emoji: '🔗' },
@@ -206,6 +221,8 @@ function NoRoom({ route }: { route: Route }) {
       return <Privacy />;
     case 'invite':
       return <Invite />;
+    case 'safety':
+      return <HardOrHarmful />;
     default:
       return <Welcome />;
   }
@@ -244,6 +261,7 @@ function InRoom({ route, onName, onCounts }: { route: Route; onName: (name: stri
   return (
     <>
       <Toasts items={activity.toasts} onDismiss={activity.dismiss} onOpen={(a) => navigate(AREA_PATH[a])} />
+      <PartnerPause />
       <Screen route={route} />
       {route.name === 'today' && <MediaReminder />}
     </>
@@ -260,6 +278,24 @@ function Screen({ route }: { route: Route }): ComponentChildren {
       queueMicrotask(() => navigate(next ? cardPath(next) : PATHS.today, { replace: true }));
       return null;
     }
+    case 'seasons':
+      return <Seasons />;
+    case 'season':
+      return <SeasonScreen id={route.id} />;
+    case 'recap':
+      return <Recap />;
+    case 'talk':
+      return <DilKiBaat />;
+    case 'thanks':
+      return <ShukriyaJar />;
+    case 'huddle':
+      return <WeeklyHuddle />;
+    case 'dreams':
+      return <DreamsBoard />;
+    case 'safety':
+      return <HardOrHarmful />;
+    case 'book':
+      return <KahaniBook />;
     case 'packs':
       return <Packs />;
     case 'pack':

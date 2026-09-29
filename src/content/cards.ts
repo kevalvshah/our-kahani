@@ -11,7 +11,8 @@ export type Card =
   | { type: 'bet'; q: string; opts: Opt[] }
   | { type: 'noticed' }
   | { type: 'bug' }
-  | { type: 'try'; q: string; items: Opt[] };
+  | { type: 'try'; q: string; items: Opt[] }
+  | { type: 'then'; q: string; from: string; opts: Opt[] };
 
 export interface CardEntry {
   id: string;
@@ -292,6 +293,7 @@ export const TYPE_LABEL: Record<string, string> = {
   noticed: 'Things I noticed',
   bug: 'Bug report',
   try: 'Halfway Date',
+  then: 'Then vs Now',
 };
 
 /** Card refs are stable ids used as the (opaque) `ref` of answer records. */

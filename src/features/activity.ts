@@ -6,7 +6,7 @@ import type { AnswerStatus } from '../net/api';
 // already-decrypted records only; nothing here leaves the device.
 
 /** A place in the app with its own counter (route names). */
-export type Area = 'today' | 'packs' | 'micro' | 'antakshari' | 'story' | 'photo' | 'movie' | 'gentle';
+export type Area = 'today' | 'packs' | 'micro' | 'antakshari' | 'story' | 'photo' | 'movie' | 'gentle' | 'seasons' | 'talk' | 'thanks' | 'huddle' | 'dreams';
 
 export interface Rec {
   kind: number;
@@ -45,6 +45,13 @@ const KINDS: Record<number, { area: Area; one: string; many?: string }> = {
   [K.GENTLE_NOTE]: { area: 'gentle', one: 'shared a heads-up in Gentle Corner 💛' },
   [K.GENTLE_RESPONSE]: { area: 'gentle', one: 'replied in Gentle Corner 💛' },
   [K.GENTLE_REACT]: { area: 'gentle', one: 'reacted in Gentle Corner 💛' },
+  [K.SOFT_NOTE]: { area: 'talk', one: 'sent you something softly 💛' },
+  [K.SOFT_REPLY]: { area: 'talk', one: 'replied to you in Dil ki Baat 💛' },
+  [K.REPAIR]: { area: 'talk', one: 'sent a little repair 🤗' },
+  [K.REPAIR_REPLY]: { area: 'talk', one: 'answered your repair 🤗' },
+  [K.PAUSE]: { area: 'talk', one: 'needs a little time and is not going anywhere 💛' },
+  [K.DREAM]: { area: 'dreams', one: 'added a dream 🌠', many: 'added {n} dreams 🌠' },
+  [K.DREAM_REACT]: { area: 'dreams', one: 'loved one of your dreams 🌠' },
 };
 
 /** The partner's records since a time, grouped into short lines. */
@@ -79,6 +86,9 @@ export function areaOfRef(ref: string): Area | null {
   if (ref.startsWith('pack:')) return 'packs';
   if (ref.startsWith('gentle:')) return 'gentle';
   if (ref.startsWith('movie:')) return 'movie';
+  if (ref.startsWith('season:')) return 'seasons';
+  if (ref.startsWith('jar:')) return 'thanks';
+  if (ref.startsWith('huddle:')) return 'huddle';
   return null;
 }
 
@@ -118,7 +128,11 @@ export function newlyWaiting(now: string[], before: string[], partner: string): 
     text:
       area === 'gentle'
         ? `${partner} answered ${n === 1 ? 'a Gentle Corner card' : `${n} Gentle Corner cards`} · your turn 💛`
-        : `${partner} answered ${n === 1 ? 'a card' : `${n} cards`} · your turn`,
+        : area === 'thanks'
+          ? `${partner} dropped a thank-you in the jar 🫙 Add yours to open it`
+          : area === 'huddle'
+            ? `${partner} did this week's huddle 🤝 Your turn`
+            : `${partner} answered ${n === 1 ? 'a card' : `${n} cards`} · your turn`,
   }));
 }
 
@@ -134,4 +148,4 @@ export function badges(records: Rec[], seenAt: Partial<Record<Area, number>>, wa
   return out;
 }
 
-const KIND_AREAS: Record<Area, true> = { today: true, packs: true, micro: true, antakshari: true, story: true, photo: true, movie: true, gentle: true };
+const KIND_AREAS: Record<Area, true> = { today: true, packs: true, micro: true, antakshari: true, story: true, photo: true, movie: true, gentle: true, seasons: true, talk: true, thanks: true, huddle: true, dreams: true };

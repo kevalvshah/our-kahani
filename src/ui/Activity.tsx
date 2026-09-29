@@ -40,6 +40,11 @@ export const AREA_PATH: Record<Area, string> = {
   photo: PATHS.photo,
   movie: PATHS.movie,
   gentle: PATHS.gentle,
+  seasons: PATHS.seasons,
+  talk: PATHS.talk,
+  thanks: PATHS.thanks,
+  huddle: PATHS.huddle,
+  dreams: PATHS.dreams,
 };
 
 export interface Toast extends Item {

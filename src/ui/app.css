@@ -537,7 +537,8 @@ a.day { text-decoration: none; color: var(--k-ink); }
 
 /* Sealed and waiting: a soft frosted card that breathes once. */
 .wait {
-  background: color-mix(in srgb, var(--k-accent-soft) 70%, transparent);
+  background: color-mix(in srgb, var(--k-accent-soft) 92%, var(--k-surface));
+  color: var(--k-ink);
   border: 1px solid color-mix(in srgb, var(--k-accent) 25%, transparent);
   backdrop-filter: blur(10px) saturate(140%);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
@@ -564,6 +565,24 @@ a.day { text-decoration: none; color: var(--k-ink); }
   0% { opacity: 0; transform: translateY(6px) scale(0.98); }
   60% { opacity: 1; transform: translateY(0) scale(1.01); }
   100% { opacity: 1; transform: none; }
+}
+
+.pause-banner {
+  margin: 0 0 12px; padding: 10px 14px; border-radius: 14px; font-size: 0.875rem;
+  background: color-mix(in srgb, var(--k-gold-soft) 80%, transparent); border: 1px solid color-mix(in srgb, var(--k-gold) 30%, transparent);
+}
+.then-block { margin: 6px 0 14px; padding: 12px 14px; border-radius: 16px; background: var(--k-surface2); border-left: 4px solid var(--k-gold); }
+.then-block p { margin: 2px 0; }
+.need-menu { margin: 1rem 0; }
+.dream-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 10px; margin-top: 1rem; }
+.dream { display: grid; gap: 6px; padding: 14px; border-radius: 18px; background: var(--k-surface); border: 1.5px solid var(--k-line); }
+.dream p { margin: 0; font-weight: 600; }
+.soft-note .chip-row { margin-top: 8px; }
+.book-names { font-family: var(--k-serif); font-size: 1.5rem; margin: 1rem 0; }
+.book-chapter { break-inside: avoid; margin-bottom: 1rem; }
+@media print {
+  .sidebar, .tabs, .app-header, .back, .no-print, .toasts, .pause-banner, .skip { display: none !important; }
+  body, .scroll { background: #fff !important; color: #000 !important; overflow: visible !important; }
 }
 
 @media (min-width: 1024px) {

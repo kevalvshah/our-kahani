@@ -6,6 +6,10 @@ export const K = {
   // 1-49: answers, revealed only once both have answered the same ref
   ANSWER: 1,
   MOVIE_VOTES: 2,
+  /** Shukriya jar: one thank-you a week each, opened when both have written (per week). */
+  SHUKRIYA: 3,
+  /** Weekly huddle: best thing, hard thing, one need; opened when both have done it. */
+  HUDDLE: 4,
   // 50: time capsule line, opens 90 days after it was written
   CAPSULE: 50,
   // 100-199: shared
@@ -38,6 +42,14 @@ export const K = {
   HASHTAG: 140,
   SEASON_NEXT: 141,
   ROOM_SETTINGS: 142,
+  // Dil ki Baat: saying hard things softly, pausing, repairing; dreams together
+  SOFT_NOTE: 150,
+  SOFT_REPLY: 151,
+  PAUSE: 152,
+  REPAIR: 153,
+  REPAIR_REPLY: 154,
+  DREAM: 155,
+  DREAM_REACT: 156,
   // 200-299: private to the author, encrypted with their own notes key
   SAVED: 200,
 } as const;

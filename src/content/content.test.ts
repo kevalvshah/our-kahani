@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PACKS, type Card } from './cards';
+import { PACKS, SEASON, type Card } from './cards';
 import { GENTLE_CARDS, GENTLE_DEPTHS } from './gentle';
+import { SEASONS } from './seasons';
+import * as together from './together';
 
 const BANNED = [
   'beer', 'wine', 'whisky', 'whiskey', 'vodka', 'rum', 'alcohol', 'drunk',
@@ -11,6 +13,8 @@ const BANNED = [
 ];
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
 const BANNED_RE = BANNED.map((w) => ({ w, re: new RegExp(`\\b${escape(w)}\\b`, 'i') }));
+
+const THERAPY_RE = /\b(trigger\w*|attachment|conflict\w*|vulnerab\w*|boundar\w*|trauma\w*|therap\w*)\b/i;
 
 function cardText(card: Card): string[] {
   const out: string[] = [];
@@ -103,5 +107,137 @@ describe('Gentle Corner deck', () => {
   it('the banned-word check uses word boundaries', () => {
     expect(bannedIn(['I expect exciting things', 'a catalogue of pets and carpets'])).toEqual([]);
     expect(bannedIn(['my ex', 'Egg fried rice'])).toHaveLength(2);
+  });
+});
+
+describe('Season 1 (Pehli Baat)', () => {
+  it('has exactly days 1 to 14', () => {
+    expect(Object.keys(SEASON).map(Number)).toEqual(Array.from({ length: 14 }, (_, i) => i + 1));
+  });
+
+  it('option ids are unique within each card', () => {
+    for (const [n, { card }] of Object.entries(SEASON)) {
+      const ids = optionIds(card);
+      if (ids) expect(new Set(ids).size, `day ${n}`).toBe(ids.length);
+    }
+  });
+
+  it('contains no banned words', () => {
+    expect(bannedIn(Object.values(SEASON).flatMap((s) => [s.tag, ...cardText(s.card)]))).toEqual([]);
+  });
+});
+
+describe('Seasons 2 to 5', () => {
+  const COUNTS = { s2: 24, s3: 18, s4: 18, s5: 18 } as const;
+  const ANSWERABLE = ['choice', 'pick', 'multi', 'nhie', 'line', 'bet'];
+
+  it('are in order with the planned card counts', () => {
+    expect(SEASONS.map((s) => s.id)).toEqual(['s2', 's3', 's4', 's5']);
+    expect(SEASONS.map((s) => s.n)).toEqual([2, 3, 4, 5]);
+    for (const s of SEASONS) expect(s.cards.length, s.id).toBeGreaterThanOrEqual(COUNTS[s.id]);
+  });
+
+  it('every card has one or two needs', () => {
+    for (const s of SEASONS)
+      s.cards.forEach((c, i) => {
+        expect(c.needs.length, `${s.id} card ${i + 1}`).toBeGreaterThanOrEqual(1);
+        expect(c.needs.length, `${s.id} card ${i + 1}`).toBeLessThanOrEqual(2);
+        expect(new Set(c.needs).size).toBe(c.needs.length);
+      });
+  });
+
+  it('option ids are unique within each card', () => {
+    for (const s of SEASONS)
+      s.cards.forEach(({ card }, i) => {
+        const ids = optionIds(card);
+        if (ids) expect(new Set(ids).size, `${s.id} card ${i + 1}`).toBe(ids.length);
+      });
+  });
+
+  it('every Season 2 tick-any and this-or-that card has a pass option', () => {
+    const s2 = SEASONS.find((s) => s.id === 's2')!;
+    s2.cards.forEach(({ card }, i) => {
+      if (card.type === 'multi' || card.type === 'choice') expect(card.opts.map((x) => x.id), `s2 card ${i + 1}`).toContain('pass');
+    });
+  });
+
+  it('Season 2 opens with six Then vs Now cards pointing at answerable Season 1 days', () => {
+    const s2 = SEASONS.find((s) => s.id === 's2')!;
+    expect(s2.cards.slice(0, 6).every((c) => c.card.type === 'then')).toBe(true);
+    for (const s of SEASONS)
+      for (const { card } of s.cards)
+        if (card.type === 'then') {
+          const m = /^day:(\d+)$/.exec(card.from);
+          expect(m, card.from).not.toBeNull();
+          const day = SEASON[Number(m![1])];
+          expect(day, card.from).toBeDefined();
+          expect(ANSWERABLE, card.from).toContain(day!.card.type);
+        }
+  });
+
+  it('stay playful: reflective cards (needs include talk) never come twice in a row, and are at most a third', () => {
+    for (const s of SEASONS) {
+      const talk = s.cards.map((c) => c.needs.includes('talk'));
+      talk.forEach((t, i) => {
+        if (i > 0) expect(t && talk[i - 1], `${s.id} cards ${i} and ${i + 1}`).toBe(false);
+      });
+      expect(talk.filter(Boolean).length * 3, s.id).toBeLessThanOrEqual(s.cards.length);
+    }
+  });
+
+  it('use plain words, not therapy words', () => {
+    const texts = SEASONS.flatMap((s) => [s.name, s.theme, s.blurb, ...s.cards.flatMap((c) => [c.tag, ...cardText(c.card)])]);
+    expect(texts.filter((t) => THERAPY_RE.test(t))).toEqual([]);
+  });
+
+  it('contain no banned words', () => {
+    const texts = SEASONS.flatMap((s) => [s.name, s.stage, s.theme, s.blurb, ...s.cards.flatMap((c) => [c.tag, ...cardText(c.card)])]);
+    expect(bannedIn(texts)).toEqual([]);
+  });
+});
+
+describe('Relationship tool lists', () => {
+  const lists = Object.entries(together).filter(([, v]) => Array.isArray(v)) as [string, unknown[]][];
+
+  it('item ids are unique within each list', () => {
+    for (const [name, list] of lists) {
+      const items = list.filter((x): x is [string, string, string] => Array.isArray(x));
+      if (items.length) expect(new Set(items.map((x) => x[0])).size, name).toBe(items.length);
+    }
+  });
+
+  it('use plain words, not therapy words', () => {
+    const texts: string[] = [];
+    for (const [, list] of lists)
+      for (const x of list) {
+        if (typeof x === 'string') texts.push(x);
+        else if (Array.isArray(x)) texts.push(String(x[2]));
+        else if (x && typeof x === 'object') texts.push(...Object.values(x).map(String));
+      }
+    expect(texts.filter((t) => THERAPY_RE.test(t))).toEqual([]);
+  });
+
+  it('NEED_MENU has the five needs', () => {
+    expect(together.NEED_MENU.map((n) => n.id)).toEqual(['spark', 'talk', 'fun', 'plan', 'thanks']);
+  });
+
+  it('SOFT_REPLIES and REPAIRS have the planned lengths', () => {
+    expect(together.SOFT_REPLIES).toHaveLength(5);
+    expect(together.REPAIRS).toHaveLength(6);
+    expect(together.WHEN_HINTS).toHaveLength(6);
+    expect(together.SHUKRIYA_PROMPTS).toHaveLength(12);
+    expect(together.HARMFUL_SIGNS).toHaveLength(7);
+    expect(together.HARD_SIGNS).toHaveLength(7);
+  });
+
+  it('contain no banned words', () => {
+    const texts: string[] = [];
+    for (const [, list] of lists)
+      for (const x of list) {
+        if (typeof x === 'string') texts.push(x);
+        else if (Array.isArray(x)) texts.push(String(x[2]));
+        else if (x && typeof x === 'object') texts.push(...Object.values(x).map(String));
+      }
+    expect(bannedIn(texts)).toEqual([]);
   });
 });

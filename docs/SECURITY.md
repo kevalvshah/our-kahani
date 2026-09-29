@@ -39,7 +39,8 @@ backups or logs. Only the two people in a room can.
 
 ## What the server can see
 - A room exists, its two anonymous member ids and roles, when it started and ends.
-- For each record: its kind (a number), an opaque ref such as `day:3` or `pack:warm:2`, who
+- For each record: its kind (a number), an opaque ref such as `day:3`, `season:s2:4`,
+  `pack:warm:2` or `jar:2026-W40`, who
   wrote it and when, and its padded size (plaintext is padded to 64, 256, 1024, 4096 or 12288
   bytes, so a size never gives away an answer).
 - Who has answered which card (to apply the reveal rule), never the answer.
@@ -58,6 +59,9 @@ backups or logs. Only the two people in a room can.
 It never sees a name, answer, note, hashtag, caption, photo, voice note, key or room phrase.
 
 ## Honest limits (say these to users)
+- Kind numbers show *which* tool was used, not what was said: the server can tell that a
+  Dil ki Baat note (150), an "I need 20 minutes" pause (152) or a repair (153) was sent, and
+  when, but never its words, feeling or need. Same as Gentle Corner (130–133) today.
 - We serve the app's code. A changed version could steal keys. Mitigate: open source, strict
   CSP, no third-party scripts, pinned dependencies, reproducible builds later.
 - The invite link carries the key. Whoever can read the message it is sent in could copy it.

@@ -62,4 +62,19 @@ describe('activity', () => {
     expect(badges(records, { photo: 10, antakshari: 6 }, { today: 2 }, 'Ravi')).toEqual({ today: 2, antakshari: 1 });
     expect(badges(records, {}, {}, 'Ravi')).toEqual({ photo: 1, antakshari: 2 });
   });
+
+  it('covers seasons, the jar, the huddle and Dil ki Baat', () => {
+    expect(areaOfRef('season:s2:1')).toBe('seasons');
+    expect(areaOfRef('jar:2026-W40')).toBe('thanks');
+    expect(areaOfRef('huddle:2026-W40')).toBe('huddle');
+    expect(newlyWaiting(['jar:2026-W40', 'huddle:2026-W40'], [], 'Ravi').map((i) => i.text)).toEqual([
+      'Ravi dropped a thank-you in the jar 🫙 Add yours to open it',
+      "Ravi did this week's huddle 🤝 Your turn",
+    ]);
+    expect(newSince([rec(K.SOFT_NOTE, 5), rec(K.PAUSE, 6), rec(K.DREAM, 7), rec(K.DREAM, 8)], 0, 'Ravi').map((i) => i.text)).toEqual([
+      'Ravi sent you something softly 💛',
+      'Ravi needs a little time and is not going anywhere 💛',
+      'Ravi added 2 dreams 🌠',
+    ]);
+  });
 });

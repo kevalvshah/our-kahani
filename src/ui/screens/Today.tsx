@@ -1,3 +1,4 @@
+import { NEED_MENU } from '../../content/together';
 import { VoicePlayer, VoiceRecord } from '../Voice';
 import type { VoiceNote } from '../../features/cardLogic';
 import { InstallHint } from '../Install';
@@ -186,6 +187,8 @@ export function Today() {
         </>
       )}
       <ThinkingOfYou />
+      <NeedMenu />
+      <Row emoji="📚" tint="gold" title="Your seasons" sub="Five seasons of your story, at your own pace" pill="Play" href={PATHS.seasons} />
 
       <h2 class="section-title">
         <Em>🃏</Em> Card packs
@@ -493,4 +496,27 @@ function UpcomingDate() {
 /** Cards in a pack the partner has answered and this person has not. */
 function waitingHere(d: { status: import('../../net/api').AnswerStatus[] }, packId: string): number {
   return waitingCounts(waitingRefs(d.status)).packs[packId] ?? 0;
+}
+
+/** "What do we need right now?" Routes to the right thing, whatever season you are in. */
+function NeedMenu() {
+  const go: Record<string, string> = {
+    spark: PATHS.micro,
+    talk: PATHS.talk,
+    fun: PATHS.antakshari,
+    plan: PATHS.dreams,
+    thanks: PATHS.thanks,
+  };
+  return (
+    <div class="need-menu">
+      <p class="field-label">What do we need right now?</p>
+      <div class="chip-row">
+        {NEED_MENU.map((n) => (
+          <Link key={n.id} class="chip" href={go[n.id] ?? PATHS.today} title={n.sub}>
+            {n.e} {n.l}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }
