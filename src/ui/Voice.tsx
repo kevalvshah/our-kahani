@@ -23,11 +23,18 @@ export function VoiceRecord({ onSent, label }: { onSent: (v: VoiceNote) => void;
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const live = useRef(true);
+  const current = useRef<Recording | null>(null);
+  current.current = rec;
 
-  useEffect(() => () => {
-    live.current = false;
-    rec?.cancel();
-  }, [rec]);
+  // Only when the screen closes: stop listening and drop any recording in progress.
+  // (Tied to `rec` before, this ran as soon as recording started, so no note was ever sent.)
+  useEffect(
+    () => () => {
+      live.current = false;
+      current.current?.cancel();
+    },
+    [],
+  );
   useEffect(() => {
     if (!rec) return;
     const t = setInterval(() => setNow(Date.now()), 250);
