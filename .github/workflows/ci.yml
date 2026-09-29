@@ -72,12 +72,16 @@ jobs:
           VITE_SUPABASE_URL: ${{ env.CI_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ env.CI_SUPABASE_PUBLISHABLE_KEY }}
         run: npx playwright test --project=${{ matrix.project }}
-      - name: Collect new visual baselines (if any were missing)
+      - name: Collect new visual baselines (missing ones, and changed ones to review)
         if: always()
         run: |
-          mkdir -p new-baselines
+          mkdir -p new-baselines/e2e/visual.spec.ts-snapshots
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git ls-files --others --exclude-standard -- 'e2e/*-snapshots/*' | xargs -r cp --parents -t new-baselines
+          # A screen that changed on purpose: its new screenshot, named as its baseline. Review before committing.
+          find test-results -name '*-actual.png' 2>/dev/null | while read -r f; do
+            cp "$f" "new-baselines/e2e/visual.spec.ts-snapshots/$(basename "$f" -actual.png)-${{ matrix.project }}-linux.png"
+          done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
