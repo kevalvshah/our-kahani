@@ -229,7 +229,9 @@ export function Recover() {
           </>
         )}
         <p class="small muted">
-          Opening it here moves your place in the room to this device. Your person's devices are not affected.
+          {mode === 'phrase'
+            ? 'This adds this device to your place in the room (up to four). Your other devices keep working.'
+            : 'A rescue signs your old devices out and puts your place on this one.'}
         </p>
       </div>
       <SupportLine />

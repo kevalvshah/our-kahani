@@ -151,10 +151,7 @@ export function RoomDataScreen() {
         <AnswerOrder />
         <NotificationSwitch />
         <Rescue />
-        <p class="small muted">
-          Using a laptop too? Open this site there, choose “Enter my room” and type your hashtag and phrase. Your room opens on
-          that device instead of this one.
-        </p>
+        <Devices />
         {confirm ? (
           <div class="panel panel-pink">
             <div class="panel-title">Erase this room now?</div>
@@ -180,6 +177,61 @@ export function RoomDataScreen() {
       </div>
       <SupportLine />
     </section>
+  );
+}
+
+/** This person's devices: add one with hashtag + phrase; sign the others out if one is lost. */
+function Devices() {
+  const d = useRoomData();
+  const [devices, setDevices] = useState<{ addedAt: number; thisDevice: boolean }[] | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => {
+    void controller().myDevices(d.room).then(setDevices).catch(() => setDevices(null));
+  }, [d.room.id]);
+  const others = (devices ?? []).filter((x) => !x.thisDevice).length;
+  const day = (ms: number) => new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+  async function signOut() {
+    const n = await controller().signOutOtherDevices(d.room).catch(() => 0);
+    setMsg(n ? `Signed out ${n} other ${n === 1 ? 'device' : 'devices'}.` : 'Nothing to sign out.');
+    setConfirm(false);
+    setDevices(await controller().myDevices(d.room).catch(() => null));
+  }
+
+  return (
+    <div class="panel">
+      <div class="panel-title">Your devices{devices ? ` · ${devices.length}` : ''}</div>
+      {devices && devices.length > 0 && (
+        <ul class="device-list">
+          {devices.map((x, i) => (
+            <li key={i}>
+              {x.thisDevice ? '📍 This device' : `Another device`} <span class="muted">· added {day(x.addedAt)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p class="small">
+        Play on your phone and laptop: on the other device choose <b>Enter my room</b> and type your hashtag and phrase
+        (up to four devices).
+      </p>
+      {msg && <Done>{msg}</Done>}
+      {others > 0 &&
+        (confirm ? (
+          <div class="btn-pair">
+            <button type="button" class="btn btn-danger" onClick={() => void signOut()}>
+              Sign them out
+            </button>
+            <button type="button" class="btn btn-secondary btn-narrow" onClick={() => setConfirm(false)}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button type="button" class="btn btn-secondary btn-block" onClick={() => setConfirm(true)}>
+            Lost one? Sign out my other devices
+          </button>
+        ))}
+    </div>
   );
 }
 
@@ -262,8 +314,8 @@ function Rescue() {
     <div class="panel">
       <div class="panel-title">Help {d.partner} back in</div>
       <p class="small">
-        If {d.partner} lost their device and their phrase, you can make a one-time rescue code for them. It works once, for
-        24 hours. Their old private notes cannot come back.
+        If {d.partner} lost their devices and their phrase, you can make a one-time rescue code for them. It works once, for
+        24 hours, and signs their old devices out. Their old private notes cannot come back.
       </p>
       {waiting && step === 'idle' && (
         <p class="small">

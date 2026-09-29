@@ -47,6 +47,8 @@ backups or logs. Only the two people in a room can.
 - SHA-256 hashes of the join token and of the recovery lookup token, and the recovery backup
   sealed under a key from hashtag + room phrase.
 - For photos and voice notes: the R2 object id, size and time, all ciphertext.
+- How many devices each person uses (each is a separate anonymous account) and when each was
+  added; which seat (creator or invitee) each record, vote and backup belongs to.
 - For a partner rescue (24 hours): who made it and for whom, when it expires, the SHA-256 of its
   lookup token and the room key sealed under a key from the code. Never the code.
 - If a person switches notifications on: their device's push address (a random URL at Google,

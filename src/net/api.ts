@@ -23,7 +23,9 @@ export function fromBytea(value: string): Bytes {
 export interface RecordRow {
   id: string;
   room_id: string;
-  author_id: string;
+  author_id: string | null;
+  /** Whose record it is: the creator's or the invitee's seat (any of their devices). */
+  seat: 'creator' | 'invitee';
   kind: number;
   ref: string;
   envelope: Bytes;
@@ -137,7 +139,7 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
     async records(roomId: string, kind: number, ref: string): Promise<RecordRow[]> {
       const { data, error } = await db
         .from('records')
-        .select('id, room_id, author_id, kind, ref, envelope, created_at')
+        .select('id, room_id, author_id, seat, kind, ref, envelope, created_at')
         .eq('room_id', roomId)
         .eq('kind', kind)
         .eq('ref', ref);
@@ -176,7 +178,7 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
     async allRecords(roomId: string): Promise<RecordRow[]> {
       const { data, error } = await db
         .from('records')
-        .select('id, room_id, author_id, kind, ref, envelope, created_at')
+        .select('id, room_id, author_id, seat, kind, ref, envelope, created_at')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true })
         .limit(5000);
@@ -259,6 +261,25 @@ export function createApi(opts: { url: string; apiKey: string; session: SessionM
       const row = (data as { room_id: string; role: 'creator' | 'invitee'; envelope: string }[] | null)?.[0];
       if (!row) throw new ApiError('That rescue code does not work', 'rescue-invalid');
       return { roomId: row.room_id, role: row.role, envelope: fromBytea(row.envelope) };
+    },
+
+    // ---- Devices -----------------------------------------------------------
+
+    /** This person's devices in the room (each is its own anonymous account). */
+    async myDevices(roomId: string): Promise<{ addedAt: number; thisDevice: boolean }[]> {
+      const { data, error } = await db.rpc('my_devices', { p_room: roomId });
+      if (error) fail(error);
+      return ((data as { added_at: string; this_device: boolean }[] | null) ?? []).map((d) => ({
+        addedAt: Date.parse(d.added_at),
+        thisDevice: d.this_device,
+      }));
+    },
+
+    /** Signs this person's other devices out of the room; returns how many. */
+    async signOutOtherDevices(roomId: string): Promise<number> {
+      const { data, error } = await db.rpc('sign_out_other_devices', { p_room: roomId });
+      if (error) fail(error);
+      return Number(data ?? 0);
     },
 
     async eraseRoom(roomId: string): Promise<void> {

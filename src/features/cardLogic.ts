@@ -1,3 +1,4 @@
+import { GENTLE_PREFIX, gentleEntry } from './gentleDeck';
 import { entryForRef, NHIE_OPTS, TRY_LABELS, type Card, type CardEntry, type Opt } from '../content/cards';
 import { PACK_LABEL } from '../content/extras';
 
@@ -40,6 +41,7 @@ export function bonusEntry(ref: string, bonus: BonusCard): CardEntry {
 
 export function entryFor(ref: string, bonus?: BonusCard): CardEntry | null {
   if (ref.startsWith('bonus:')) return bonus ? bonusEntry(ref, bonus) : null;
+  if (ref.startsWith(GENTLE_PREFIX)) return gentleEntry(ref);
   return entryForRef(ref);
 }
 

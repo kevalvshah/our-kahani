@@ -50,7 +50,11 @@ export function CardScreen({ cardRef }: { cardRef: string }) {
 
   return (
     <section>
-      <Back href={pack ? packPath(pack.id) : PATHS.today} label={pack ? `← ${pack.name}` : '← Today'} />
+      {cardRef.startsWith('gentle:') ? (
+        <Back href={PATHS.gentle} label="← Gentle Corner" />
+      ) : (
+        <Back href={pack ? packPath(pack.id) : PATHS.today} label={pack ? `← ${pack.name}` : '← Today'} />
+      )}
       <div class="question-card">
         <div class="question-meta">
           <span class="pack-tag">{tagText}</span>

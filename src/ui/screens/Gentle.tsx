@@ -3,10 +3,13 @@ import { G_DEPTH, G_HELPS, G_PROMISES, G_TOPICS, listLabel } from '../../content
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
 import { FIND_A_HELPLINE, safetyFooterFor } from '../../features/safetyFooter';
-import { Back, Check, Done, OptTile, Problem, RevealRow, Wait } from '../components';
-import { PATHS } from '../router';
+import { Back, Check, Done, Link, OptTile, Problem, RevealRow, Wait } from '../components';
+import { GENTLE_DEPTHS, type GentleDepth } from '../../content/gentle';
+import { deckFor, gentleRef, sharedDepth } from '../../features/gentleDeck';
+import { doneByMe } from '../../features/progress';
+import { cardPath, PATHS } from '../router';
 
-// Gentle Corner: opt-in by both people. A heads-up can be saved by the partner only if the
+// Gentle Corner: either person can open it (an invite); it starts only when the other joins. A heads-up can be saved by the partner only if the
 // sharer ticked "OK to save"; taking it back deletes saved copies (the server cascades the
 // delete to any private copy of it). Only verified helpline numbers are shown.
 
@@ -18,14 +21,22 @@ interface GNote {
   canSave: boolean;
 }
 
+interface GOpt {
+  on: boolean;
+  depth?: GentleDepth;
+}
+
 export function GentleCorner() {
   const d = useRoomData();
-  const myOn = !!d.mine<{ on: boolean }>(K.GENTLE_OPT, 'gentle')?.data.on;
-  const theirOn = !!d.theirs<{ on: boolean }>(K.GENTLE_OPT, 'gentle')?.data.on;
+  const mineOpt = d.mine<GOpt>(K.GENTLE_OPT, 'gentle')?.data;
+  const theirOpt = d.theirs<GOpt>(K.GENTLE_OPT, 'gentle')?.data;
+  const myOn = !!mineOpt?.on;
+  const theirOn = !!theirOpt?.on;
   const open = myOn && theirOn;
   const myNote = d.mine<GNote>(K.GENTLE_NOTE, 'note');
   const theirNote = d.theirs<GNote>(K.GENTLE_NOTE, 'note');
   const [compose, setCompose] = useState(false);
+  const setOpt = (next: GOpt) => void d.put(K.GENTLE_OPT, 'gentle', next);
 
   return (
     <section>
@@ -40,15 +51,36 @@ export function GentleCorner() {
           details, and you can take back anything you share.
         </p>
 
-        {!open ? (
+        {!open && theirOn && !myOn ? (
+          <div class="panel panel-gold">
+            <div class="panel-title">{d.partner} invited you in 💛</div>
+            <p class="small">
+              {d.partner} opened Gentle Corner. It opens for both of you only if you join too. No pressure, and no reason
+              needed either way.
+            </p>
+            <div class="btn-pair">
+              <button type="button" class="btn btn-primary" onClick={() => setOpt({ on: true, depth: mineOpt?.depth ?? 'light' })}>
+                Join 💛
+              </button>
+              <button type="button" class="btn btn-secondary btn-narrow" onClick={() => setOpt({ on: false, depth: mineOpt?.depth })}>
+                Not now
+              </button>
+            </div>
+          </div>
+        ) : !open ? (
           <>
-            <p class="small muted">It only opens when you both switch it on. Either of you can switch it off again, no explanation needed.</p>
+            <p class="small muted">
+              Either of you can open it; it starts only when the other joins too. Either of you can switch it off again, no
+              explanation needed.
+            </p>
             <div class="switch-row">
               <span class="row-text">
-                <span class="row-title">Gentle Corner is {myOn ? 'on for you' : 'off'}</span>
-                <span class="row-sub">{myOn ? `It opens when ${d.partner} switches it on too.` : 'Nothing opens until you both say yes.'}</span>
+                <span class="row-title">{myOn ? `Waiting for ${d.partner} to join` : 'Gentle Corner is off'}</span>
+                <span class="row-sub">
+                  {myOn ? `${d.partner} gets a gentle invite. Nothing opens until they say yes.` : `Switch it on to invite ${d.partner}.`}
+                </span>
               </span>
-              <button type="button" role="switch" aria-checked={myOn} aria-label="Gentle Corner" class="switch" onClick={() => void d.put(K.GENTLE_OPT, 'gentle', { on: !myOn })}>
+              <button type="button" role="switch" aria-checked={myOn} aria-label="Gentle Corner" class="switch" onClick={() => setOpt({ on: !myOn, depth: mineOpt?.depth ?? 'light' })}>
                 <span class="switch-track">
                   <span class="switch-knob" />
                 </span>
@@ -57,8 +89,9 @@ export function GentleCorner() {
           </>
         ) : (
           <>
+            <Deck mine={mineOpt?.depth} theirs={theirOpt?.depth} onPick={(depth) => setOpt({ on: true, depth })} />
+            <h2 class="sub-title">Heads-ups</h2>
             {theirNote && <TheirNote noteId={theirNote.id} note={theirNote.data} />}
-            <h2 class="sub-title">Yours</h2>
             {myNote ? (
               <MyNote noteId={myNote.id} note={myNote.data} />
             ) : compose ? (
@@ -68,7 +101,7 @@ export function GentleCorner() {
                 ＋ Share a heads-up
               </button>
             )}
-            <button type="button" class="btn btn-secondary btn-block seal" onClick={() => void d.put(K.GENTLE_OPT, 'gentle', { on: false })}>
+            <button type="button" class="btn btn-secondary btn-block seal" onClick={() => setOpt({ on: false, depth: mineOpt?.depth })}>
               I need a break from this
             </button>
           </>
@@ -76,6 +109,59 @@ export function GentleCorner() {
         <SafetyNote />
       </div>
     </section>
+  );
+}
+
+/** The depth each person is comfortable with, and the cards open at the shared depth. */
+function Deck({ mine, theirs, onPick }: { mine?: GentleDepth; theirs?: GentleDepth; onPick: (d: GentleDepth) => void }) {
+  const d = useRoomData();
+  const shared = sharedDepth(mine, theirs);
+  const cards = deckFor(shared);
+  const sharedLabel = GENTLE_DEPTHS.find((x) => x.id === shared)!;
+  const done = cards.filter((c) => doneByMe(d, gentleRef(c.id))).length;
+  return (
+    <>
+      <h2 class="sub-title">How deep would you like to go?</h2>
+      <p class="small muted">
+        Pick what feels right for you. Cards go only as deep as the lighter of your two choices, and {d.partner} never sees
+        which one you picked.
+      </p>
+      <div class="depth-grid" role="group" aria-label="How deep">
+        {GENTLE_DEPTHS.map((x) => (
+          <button key={x.id} type="button" class={(mine ?? 'light') === x.id ? 'depth is-on' : 'depth'} aria-pressed={(mine ?? 'light') === x.id} onClick={() => onPick(x.id)}>
+            <span class="depth-e" aria-hidden="true">
+              {x.e}
+            </span>
+            <span class="depth-l">{x.l}</span>
+            <span class="depth-sub">{x.sub}</span>
+          </button>
+        ))}
+      </div>
+      <p class="small">
+        Open together: <b>{sharedLabel.e} {sharedLabel.l}</b> · {done}/{cards.length} answered
+      </p>
+      <div class="rows">
+        {cards.map((c) => {
+          const ref = gentleRef(c.id);
+          const mineDone = doneByMe(d, ref);
+          const theirsIn = d.partnerAnswered(K.ANSWER, ref);
+          const q = 'q' in c.card ? c.card.q : '';
+          return (
+            <Link key={c.id} class="row" href={cardPath(ref)}>
+              <span class="row-emoji" aria-hidden="true">
+                {GENTLE_DEPTHS.find((x) => x.id === c.depth)!.e}
+              </span>
+              <span class="row-text">
+                <span class="row-title">{q}</span>
+                <span class="row-sub">
+                  {mineDone ? (theirsIn ? 'Both answered · open it' : 'Answered · waiting') : theirsIn ? `${d.partner} answered · your turn` : 'Not yet'}
+                </span>
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

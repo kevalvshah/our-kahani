@@ -43,7 +43,9 @@ script, and Google Fonts.
    plaintext? If yes, encrypt it or do not store it.
 8. Saved notes are private to each person and encrypted with a key the partner never has.
    Saving never notifies the partner (surprises stay surprises). First run says saving exists.
-9. Gentle Corner (sensitive sharing) is opt-in by both people. A heads-up can be saved by the
+9. Gentle Corner (sensitive sharing) is opt-in by both people: either can open it, which invites
+   the other; nothing is shared until both have said yes. Its deck goes only as deep as the lighter
+   of the two people's chosen depths (light, personal, emotional, deep). A heads-up can be saved by the
    partner only if the sharer ticked "OK to save". Taking it back deletes saved copies. Never
    put a partner's Gentle Corner entry in an export unless they allowed saving. The safety
    footer is country-aware and lists only numbers we have verified: UK 999 and Samaritans

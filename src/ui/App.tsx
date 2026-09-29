@@ -2,12 +2,14 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { K } from '../data/kinds';
 import { RoomDataProvider, useMaybeRoomData } from '../data/RoomData';
-import { firstWaiting } from '../features/progress';
+import { keepPlaying } from '../features/progress';
 import { isInAppBrowser } from '../platform/inAppBrowser';
 import { controller } from '../state/controller';
 import { dayOfSeason, daysLeft, SEASON_DAYS, type Room } from '../state/room';
 import { RoomContext, type RoomStatus } from '../state/roomContext';
 import { Em, Link } from './components';
+import { AREA_PATH, Badge, Toasts, useActivity } from './Activity';
+import type { Area } from '../features/activity';
 import { cardPath, navigate, PATHS, useRoute, type Route, type RouteName } from './router';
 import { Blocked } from './screens/Blocked';
 import { lazy } from './lazy';
@@ -71,6 +73,8 @@ function Shell() {
   const [offline, setOffline] = useState(false);
   // The room's hashtag once both have locked it: the room's name in the header and tab title.
   const [roomName, setRoomName] = useState<string | null>(null);
+  // Counters for the nav (new things and cards waiting), reported by the room below.
+  const [counts, setCounts] = useState<Partial<Record<Area, number>>>({});
   const route = useRoute();
   const main = useRef<HTMLElement>(null);
   const first = useRef(true);
@@ -139,6 +143,7 @@ function Shell() {
               <Link key={n.route} href={PATHS[n.route]} class={route.name === n.route ? 'side-link is-active' : 'side-link'} aria-current={route.name === n.route ? 'page' : undefined}>
                 <Em>{n.emoji}</Em>
                 <span>{n.label}</span>
+                <Badge n={counts[n.route as Area]} label={n.label} />
               </Link>
             ))}
           </nav>
@@ -165,7 +170,7 @@ function Shell() {
             <div class="content">
               {room ? (
                 <RoomDataProvider room={room}>
-                  <InRoom route={route} onName={setRoomName} />
+                  <InRoom route={route} onName={setRoomName} onCounts={setCounts} />
                 </RoomDataProvider>
               ) : (
                 <NoRoom route={route} />
@@ -178,6 +183,7 @@ function Shell() {
               <Link key={t.route} href={PATHS[t.route]} class={active(t.route) ? 'tab is-active' : 'tab'} aria-current={route.name === t.route ? 'page' : undefined}>
                 <Em>{t.emoji}</Em>
                 <span class="tab-label">{t.label}</span>
+                <Badge n={t.route === 'packs' ? (counts.packs ?? 0) : t.route === 'today' ? (Object.entries(counts).filter(([a]) => a !== 'packs').reduce((x, [, n]) => x + (n ?? 0), 0)) : 0} label={t.label} />
               </Link>
             ))}
           </nav>
@@ -206,8 +212,14 @@ function NoRoom({ route }: { route: Route }) {
 }
 
 /** Screens inside a room, after first-run setup. */
-function InRoom({ route, onName }: { route: Route; onName: (name: string | null) => void }) {
+function InRoom({ route, onName, onCounts }: { route: Route; onName: (name: string | null) => void; onCounts: (c: Partial<Record<Area, number>>) => void }) {
   const d = useMaybeRoomData()!;
+  const activity = useActivity(d, route.name);
+  const countsKey = JSON.stringify(activity.badges);
+  useEffect(() => {
+    onCounts(activity.badges);
+    return () => onCounts({});
+  }, [countsKey]);
   const hashtag = d.list<{ tag: string }>(K.HASHTAG)[0]?.data.tag ?? null;
   useEffect(() => {
     onName(hashtag);
@@ -231,6 +243,7 @@ function InRoom({ route, onName }: { route: Route; onName: (name: string | null)
   if (!d.room.backedUp && d.list(K.HASHTAG).length > 0) return <RoomPhrase />;
   return (
     <>
+      <Toasts items={activity.toasts} onDismiss={activity.dismiss} onOpen={(a) => navigate(AREA_PATH[a])} />
       <Screen route={route} />
       {route.name === 'today' && <RetentionModal />}
     </>
@@ -243,7 +256,7 @@ function Screen({ route }: { route: Route }): ComponentChildren {
     case 'card':
       return <CardScreen key={route.ref} cardRef={route.ref} />;
     case 'next': {
-      const next = firstWaiting(d);
+      const next = keepPlaying(d);
       queueMicrotask(() => navigate(next ? cardPath(next) : PATHS.today, { replace: true }));
       return null;
     }

@@ -12,8 +12,9 @@ No other servers. Railway is not needed.
 
 ## Data model (`supabase/migrations`)
 - `rooms`: id, created_at, ends_at (28 days), cycle.
-- `members`: room_id, user_id, role (`creator` or `invitee`). Maximum two.
-- `records`: id, room_id, author_id, kind (smallint), ref (opaque card id), submitted,
+- `members`: room_id, user_id, role (`creator` or `invitee`). Two seats (people); each seat can
+  have up to four devices, each its own anonymous account. Rules compare seats, not accounts.
+- `records`: id, room_id, author_id (the device, nullable), seat, kind (smallint), ref (opaque card id), submitted,
   created_at, envelope (bytea: version, IV, ciphertext, tag). Everything a person reads
   (names, answers, notes, hashtag, photo captions) lives inside `envelope`.
 - `keep_votes`: room_id, user_id, cycle. Each person sees only their own vote.

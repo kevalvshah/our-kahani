@@ -26,6 +26,7 @@ export const K = {
   WATCHED: 114,
   STORY_CHAPTER: 115,
   ANTA_SAVED: 116,
+  MICRO_NOTE: 117,
   PHOTO: 120,
   PHOTO_REACTION: 121,
   /** Not a record: binds encrypted voice-note audio to its purpose (the note lives in an answer). */

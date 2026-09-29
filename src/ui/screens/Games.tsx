@@ -129,10 +129,74 @@ export function MicroDates() {
                 Not this one, spin again
               </button>
             )}
+            <MicroNotes round={round} />
           </>
         )}
       </div>
     </section>
+  );
+}
+
+/** Links, notes or what to watch for this micro-date. Encrypted like everything else. */
+function MicroNotes({ round }: { round: number }) {
+  const d = useRoomData();
+  const [text, setText] = useState('');
+  const notes = d.list<{ t: string; round: number }>(K.MICRO_NOTE).filter((n) => n.data.round === round);
+
+  async function add() {
+    const t = text.trim().slice(0, 300);
+    if (!t) return;
+    setText('');
+    await d.add(K.MICRO_NOTE, `micronote:${round}:${stamp()}`, { t, round });
+  }
+
+  return (
+    <div class="micro-notes">
+      <label class="field-label" for="mnote">
+        Share a link, a note or what to watch
+      </label>
+      {notes.length > 0 && (
+        <ul class="thread">
+          {notes.map((n) => (
+            <li key={n.id} class={n.mine ? 'bubble bubble-mine' : 'bubble bubble-theirs'}>
+              <NoteText t={n.data.t} />
+              <small>{n.mine ? 'You' : d.partner}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+      <textarea
+        id="mnote"
+        class="field field-area"
+        rows={2}
+        maxLength={300}
+        value={text}
+        placeholder="e.g. a YouTube link, “Panchayat S3 E2”, or “bring chai”"
+        onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+      />
+      <button type="button" class="btn btn-secondary btn-block" disabled={!text.trim()} onClick={() => void add()}>
+        Share it 🔗
+      </button>
+      <p class="small muted">Locked on your phone before it is sent, like everything else here.</p>
+    </div>
+  );
+}
+
+/** Plain text, with https links made clickable (opened in a new tab, no referrer). */
+function NoteText({ t }: { t: string }) {
+  const parts = t.split(/(https:\/\/[^\s]+)/g);
+  return (
+    <span class="note-text">
+      {parts.map((p, i) =>
+        /^https:\/\/[^\s]+$/.test(p) ? (
+          <a key={i} href={p} target="_blank" rel="noopener noreferrer">
+            {p}
+          </a>
+        ) : (
+          p
+        ),
+      )}
+    </span>
   );
 }
 

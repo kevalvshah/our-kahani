@@ -209,3 +209,10 @@ describe('revealBanner', () => {
     expect(b(choice, { pick: 'chai' }, { pick: 'coffee' })).toBe('Two different picks. Good to know 😄');
   });
 });
+
+describe('gentle cards', () => {
+  it('resolve through entryFor', () => {
+    expect(entryFor('gentle:g-light-1')?.id).toBe('gentle:g-light-1');
+    expect(entryFor('gentle:nope')).toBeNull();
+  });
+});

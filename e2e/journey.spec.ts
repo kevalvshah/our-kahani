@@ -203,4 +203,46 @@ test.describe('the full journey', { tag: '@journey' }, () => {
     await another.getByRole('button', { name: 'Use the rescue code' }).click();
     await expect(another.getByRole('alert')).toContainText('does not work', { timeout: 30_000 });
   });
+
+  test('multi-device: the same person on phone and laptop at once; signing the other out', async ({ page, newDevice }) => {
+    test.setTimeout(240_000);
+    const { invite } = await createAndSetUp(page, 'Asha');
+    const ravi = await newDevice();
+    await joinAndSetUp(ravi, invite, 'Ravi');
+    const hashtag = await lockHashtag(page, ravi);
+    await setPhrase(ravi, uniquePhrase('monsoon evenings with adrak chai'));
+    const ashaPhrase = uniquePhrase('mango lassi on sunday mornings');
+    await setPhrase(page, ashaPhrase);
+
+    // Asha adds her laptop with hashtag + phrase. Her phone keeps working.
+    const laptop = await newDevice({ viewport: { width: 1280, height: 800 } });
+    await laptop.goto('/recover');
+    await laptop.getByLabel("Your room's hashtag").fill(hashtag);
+    await laptop.getByLabel('Your phrase').fill(ashaPhrase);
+    await laptop.getByRole('button', { name: 'Enter the room' }).click();
+    await expect(laptop.getByRole('heading', { name: /Namaste, Asha/ })).toBeVisible({ timeout: 30_000 });
+
+    // Ravi answers first; Asha answers on the laptop; her phone sees it as hers and opens the reveal.
+    await ravi.goto('/card/day/1');
+    await ravi.getByRole('button', { name: 'Coffee' }).click();
+    await ravi.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(ravi.getByText('Sealed.')).toBeVisible({ timeout: 20_000 });
+    await laptop.goto('/card/day/1');
+    await laptop.getByRole('button', { name: 'Chai' }).click({ timeout: 20_000 });
+    await laptop.getByRole('button', { name: 'Seal my answer' }).click();
+    await expect(laptop.getByRole('button', { name: /open both/ })).toBeVisible({ timeout: 20_000 });
+    await page.goto('/card/day/1');
+    await expect(page.getByRole('button', { name: /open both/ })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: /open both/ }).click();
+    await expect(page.locator('.reveal-mine')).toContainText('Chai');
+
+    // Room data lists two devices; the laptop signs the phone out.
+    await laptop.goto('/room');
+    await expect(laptop.getByText('Your devices · 2')).toBeVisible({ timeout: 20_000 });
+    await laptop.getByRole('button', { name: 'Lost one? Sign out my other devices' }).click();
+    await laptop.getByRole('button', { name: 'Sign them out' }).click();
+    await expect(laptop.getByText('Signed out 1 other device.')).toBeVisible({ timeout: 20_000 });
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Create a room' })).toBeVisible({ timeout: 20_000 });
+  });
 });

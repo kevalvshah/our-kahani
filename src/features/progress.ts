@@ -30,16 +30,29 @@ export function firstWaiting(d: RoomData): string | null {
   return null;
 }
 
+/** The first unanswered card in the packs, in pack order: for playing on after today's card. */
+export function firstPackCard(d: RoomData): string | null {
+  for (const p of PACKS) for (let i = 0; i < p.cards.length; i++) if (!doneByMe(d, packRef(p.id, i))) return packRef(p.id, i);
+  return null;
+}
+
+/** What to play next: anything waiting today, else carry on through the packs. Never stops early. */
+export function keepPlaying(d: RoomData, after?: string): string | null {
+  const next = firstWaiting(d);
+  if (next && next !== after) return next;
+  const pack = firstPackCard(d);
+  return pack && pack !== after ? pack : null;
+}
+
 /** The next card after this one: next in the pack, or the next waiting season card. */
 export function nextCardFor(d: RoomData, entry: CardEntry): string | null {
   if (entry.pack) {
     const pack = PACKS.find((p) => p.id === entry.pack)!;
     const idx = Number(entry.id.split(':')[2]) - 1;
     for (let i = idx + 1; i < pack.cards.length; i++) if (!doneByMe(d, packRef(pack.id, i))) return packRef(pack.id, i);
-    return null;
+    return keepPlaying(d, entry.id);
   }
-  const next = firstWaiting(d);
-  return next && next !== entry.id ? next : null;
+  return keepPlaying(d, entry.id);
 }
 
 export function packProgress(d: RoomData, packId: string): { done: number; total: number } {

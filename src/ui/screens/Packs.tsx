@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { PACKS, packRef, TYPE_LABEL } from '../../content/cards';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
+import { waitingCounts, waitingRefs } from '../../features/activity';
 import { doneByMe, packProgress } from '../../features/progress';
 import { newId } from '../../crypto/ids';
 import { Back, Done, Link, Problem, Row, ScreenTitle } from '../components';
@@ -18,7 +19,7 @@ export function Packs() {
       <div class="rows">
         {PACKS.map((p) => {
           const pr = packProgress(d, p.id);
-          return <Row key={p.id} emoji={p.e} tint={pr.done === pr.total ? 'plain' : 'gold'} title={p.name} sub={p.blurb} pill={`${pr.done}/${pr.total}`} href={packPath(p.id)} />;
+          return <Row key={p.id} emoji={p.e} tint={pr.done === pr.total ? 'plain' : 'gold'} title={p.name} sub={p.blurb} pill={waitingHere(d, p.id) ? `${waitingHere(d, p.id)} your turn · ${pr.done}/${pr.total}` : `${pr.done}/${pr.total}`} href={packPath(p.id)} />;
         })}
       </div>
     </section>
@@ -173,4 +174,9 @@ export function AddCard() {
       </div>
     </section>
   );
+}
+
+/** Cards in a pack the partner has answered and this person has not. */
+function waitingHere(d: { status: import('../../net/api').AnswerStatus[] }, packId: string): number {
+  return waitingCounts(waitingRefs(d.status)).packs[packId] ?? 0;
 }

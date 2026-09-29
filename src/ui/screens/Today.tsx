@@ -5,7 +5,8 @@ import { hashtagOptions, normaliseHashtag } from '../../content/extras';
 import { K } from '../../data/kinds';
 import { useRoomData } from '../../data/RoomData';
 import type { BonusCard } from '../../features/cardLogic';
-import { doneByMe, firstWaiting, packProgress, seasonDone } from '../../features/progress';
+import { waitingCounts, waitingRefs } from '../../features/activity';
+import { doneByMe, firstWaiting, keepPlaying, packProgress, seasonDone } from '../../features/progress';
 import { upcomingSaved, untilText, type SavedItem } from '../../features/saved';
 import { controller } from '../../state/controller';
 import { dayOfSeason, daysLeft, SEASON_DAYS } from '../../state/room';
@@ -173,7 +174,17 @@ export function Today() {
           <span class="cta-meta">{next.startsWith('day:') ? `Day ${next.split(':')[1]} →` : '→'}</span>
         </Link>
       ) : (
-        <Done>Nothing waiting on you 🎉 Try a pack, or add a card for {d.partner}.</Done>
+        <>
+          <Done>Today's card is done 🎉 Want more? Keep going as long as you like.</Done>
+          {keepPlaying(d) && (
+            <Link class="btn btn-cta" href={cardPath(keepPlaying(d)!)}>
+              <span>
+                <Em>▶️</Em> Keep playing
+              </span>
+              <span class="cta-meta">Next card →</span>
+            </Link>
+          )}
+        </>
       )}
       <ThinkingOfYou />
 
@@ -191,7 +202,7 @@ export function Today() {
               tint={pr.done === pr.total ? 'plain' : 'gold'}
               title={p.name}
               sub={p.blurb}
-              pill={`${pr.done}/${pr.total}`}
+              pill={waitingHere(d, p.id) ? `${waitingHere(d, p.id)} your turn · ${pr.done}/${pr.total}` : `${pr.done}/${pr.total}`}
               href={packPath(p.id)}
             />
           );
@@ -465,4 +476,9 @@ function UpcomingDate() {
       </Link>
     </div>
   );
+}
+
+/** Cards in a pack the partner has answered and this person has not. */
+function waitingHere(d: { status: import('../../net/api').AnswerStatus[] }, packId: string): number {
+  return waitingCounts(waitingRefs(d.status)).packs[packId] ?? 0;
 }
